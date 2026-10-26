@@ -99,12 +99,21 @@
             <option value="level">Gemeinsames Level mit Budget und Zielen</option>
           </select>
         </label>
-        <label class="field" id="mp-level-wrap">Level
+        <label class="field" id="mp-level-wrap">Karte / Level
           <select id="mp-level"></select>
         </label>
+        <p id="level-compat-hint" class="status warn small" hidden></p>
         <p class="muted small" id="mp-mode-help"></p>
       </div>
-      <p id="guest-wait" class="muted" hidden>Warte darauf, dass der Host das Spiel startet …</p>
+
+      <div id="guest-options" hidden>
+        <h3>Spieleinstellungen (vom Host festgelegt)</h3>
+        <div class="guest-info-box">
+          <div><b>Modus:</b> <span id="guest-mode-val">Endlos-Krankenhaus</span></div>
+          <div><b>Karte:</b> <span id="guest-level-val">Demo-Level (Originalkrankenhaus)</span></div>
+        </div>
+        <p id="guest-wait" class="muted">Warte darauf, dass der Host das Spiel startet …</p>
+      </div>
 
       <div class="row">
         <button id="btn-start" class="btn primary" disabled>Spiel starten</button>

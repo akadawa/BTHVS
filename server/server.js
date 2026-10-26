@@ -89,8 +89,8 @@ class Room {
     this.code = code;
     this.max = max;
     this.started = false;
-    this.config = null;
-    this.players = new Map(); // id -> {id, name, token, ws|null}
+    this.config = { mode: "freebuild", level: "demo" };
+    this.players = new Map(); // id -> {id, name, demo, token, ws|null}
     this.nextId = 0;
     this.hostId = null;
     this.emptySince = null;
@@ -99,6 +99,7 @@ class Room {
     return [...this.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
+      demo: !!p.demo,
       host: p.id === this.hostId,
       connected: !!p.ws,
     }));
@@ -156,12 +157,12 @@ function handle(ws, msg) {
       const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 2));
       const room = new Room(newCode(), max);
       rooms.set(room.code, room);
-      const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), token: String(msg.token || ""), ws };
+      const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), demo: !!msg.demo, token: String(msg.token || ""), ws };
       room.players.set(p.id, p);
       room.hostId = p.id;
       ws.room = room;
       ws.pid = p.id;
-      send(ws, { t: "joined", code: room.code, id: p.id, host: true, max: room.max, players: room.playerList() });
+      send(ws, { t: "joined", code: room.code, id: p.id, host: true, max: room.max, players: room.playerList(), config: room.config });
       break;
     }
     case "join": {
@@ -174,11 +175,12 @@ function handle(ws, msg) {
       let rejoin = false;
       if (p) {
         p.ws = ws;
+        if (msg.demo !== undefined) p.demo = !!msg.demo;
         rejoin = true;
       } else {
         if (room.started) return send(ws, { t: "error", error: "already_started" });
         if (room.connectedCount() >= room.max) return send(ws, { t: "error", error: "room_full" });
-        p = { id: room.nextId++, name: String(msg.name || "Player").slice(0, 24), token, ws };
+        p = { id: room.nextId++, name: String(msg.name || "Player").slice(0, 24), demo: !!msg.demo, token, ws };
         room.players.set(p.id, p);
       }
       room.emptySince = null;
@@ -192,18 +194,26 @@ function handle(ws, msg) {
         max: room.max,
         players: room.playerList(),
         started: room.started,
-        config: room.started ? room.config : null,
+        config: room.config,
         rejoin,
       });
-      room.broadcast({ t: "players", players: room.playerList(), joined: p.id, rejoin }, p.id);
+      room.broadcast({ t: "players", players: room.playerList(), joined: p.id, rejoin, config: room.config }, p.id);
+      break;
+    }
+    case "lobby_config": {
+      const room = ws.room;
+      if (!room || ws.pid !== room.hostId || room.started) return;
+      if (msg.mode) room.config.mode = String(msg.mode);
+      if (msg.level) room.config.level = String(msg.level);
+      room.broadcast({ t: "lobby_config", mode: room.config.mode, level: room.config.level });
       break;
     }
     case "start": {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
       room.started = true;
-      room.config = Object.assign({}, msg.config || {}, {
-        players: room.playerList().filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name })),
+      room.config = Object.assign({}, room.config, msg.config || {}, {
+        players: room.playerList().filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name, demo: p.demo })),
       });
       room.broadcast({ t: "start", config: room.config });
       break;

@@ -203,31 +203,59 @@
   }
 
   // ----------------------------------------------------------- level list
-  /** What the host can pick. `full` = needs the full game's graphics. */
+  /** What the host can pick. `full: true` = requires all players to have full game files. */
   const LEVELS = [
     { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false, modes: ["freebuild", "level"] },
-    { id: "level1", label: "Level 1 – Originalkampagne", full: true, modes: ["level"] },
-    { id: "avatar", label: "Avatar (Custom)", full: true, modes: ["freebuild", "level"] },
-    { id: "confined_v5", label: "Confined (Custom)", full: true, modes: ["freebuild", "level"] },
-    { id: "finisham", label: "Finisham (Custom)", full: true, modes: ["freebuild", "level"] },
-    { id: "st.peter's", label: "St. Peter's (Custom)", full: true, modes: ["freebuild", "level"] },
+    { id: "avatar", label: "Avatar (Große Stadt)", full: false, modes: ["freebuild", "level"] },
+    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: false, modes: ["freebuild", "level"] },
+    { id: "finisham", label: "Finisham (Flusslandschaft)", full: false, modes: ["freebuild", "level"] },
+    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: false, modes: ["freebuild", "level"] },
+    { id: "level1", label: "Level 1 – Originalkampagne", full: true, modes: ["freebuild", "level"] },
   ];
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
     const mode = $("#mp-mode").value;
-    const demo = state.data ? state.data.demo : true;
-    const cur = sel.value;
+    const L = state.lobby;
+    const anyDemo = L && L.players && L.players.length > 0
+      ? L.players.some((p) => p.demo)
+      : (state.data ? state.data.demo : true);
+
+    const cur = sel.value || (L && L.level) || "demo";
     sel.innerHTML = "";
+    let foundCurrent = false;
+
     for (const l of LEVELS) {
       if (!l.modes.includes(mode)) continue;
-      if (demo && l.full) continue;
       const o = document.createElement("option");
       o.value = l.id;
-      o.textContent = l.label;
+      if (anyDemo && l.full) {
+        o.disabled = true;
+        o.textContent = l.label + " (ausgegraut – benötigt Vollversion bei allen)";
+      } else {
+        o.textContent = l.label;
+        if (l.id === cur) foundCurrent = true;
+      }
       sel.appendChild(o);
     }
-    if (cur) sel.value = cur;
+
+    if (foundCurrent) {
+      sel.value = cur;
+    } else {
+      const firstEnabled = Array.from(sel.options).find((o) => !o.disabled);
+      if (firstEnabled) sel.value = firstEnabled.value;
+    }
+
+    const hintEl = $("#level-compat-hint");
+    if (hintEl) {
+      if (anyDemo) {
+        hintEl.hidden = false;
+        hintEl.textContent = "ℹ Mindestens ein Spieler nutzt die Demo-Version. Kampagnen-Karten der Vollversion sind ausgegraut, damit beide dieselbe kompatible Karte spielen können.";
+      } else {
+        hintEl.hidden = true;
+      }
+    }
+
     $("#mp-mode-help").textContent =
       mode === "freebuild"
         ? "Ihr baut zusammen ein Krankenhaus ohne Geld-, Sieg- oder Niederlagen-Druck. Ideal zum entspannten Aufbauen und Aufteilen der Aufgaben."
@@ -294,20 +322,38 @@
       if (!p.connected) li.className = "off";
       li.innerHTML = `<span></span><span class="tag"></span>`;
       li.firstChild.textContent = p.name + (p.id === L.id ? " (du)" : "");
-      li.lastChild.textContent = p.host ? "HOST" : "";
+      const contentTag = p.demo ? "Demo" : "Vollversion";
+      li.lastChild.textContent = (p.host ? "HOST · " : "") + contentTag;
       ul.appendChild(li);
     }
     const connected = L.players.filter((p) => p.connected).length;
     const max = L.max || 2;
     if ($("#players-header")) $("#players-header").textContent = `Spieler im Raum (${connected}/${max})`;
     $("#host-options").hidden = !L.host;
-    $("#guest-wait").hidden = L.host;
+    $("#guest-options").hidden = !!L.host;
     $("#btn-start").hidden = !L.host;
     $("#btn-start").disabled = connected < 2;
     $("#lobby-hint").textContent = L.host
-      ? connected < 2 ? "Warte auf mindestens einen Mitspieler … Teile den Code oder den Einladungslink." : "Alle da? Dann kann es losgehen."
+      ? connected < 2 ? "Warte auf Mitspieler … Teile den Code oder den Einladungslink." : "Alle da? Dann kann es losgehen."
       : "";
-    refreshLevelOptions();
+
+    if (L.host) {
+      refreshLevelOptions();
+    } else {
+      const modeName = L.mode === "level" ? "Gemeinsames Level (Kampagne)" : "Endlos-Krankenhaus (Freies Spiel)";
+      const levelObj = LEVELS.find((x) => x.id === L.level);
+      const levelName = levelObj ? levelObj.label : (L.level || "Demo-Level");
+      if ($("#guest-mode-val")) $("#guest-mode-val").textContent = modeName;
+      if ($("#guest-level-val")) $("#guest-level-val").textContent = levelName;
+    }
+  }
+
+  function broadcastLobbyConfig() {
+    if (state.lobby && state.lobby.host && state.net) {
+      state.lobby.mode = $("#mp-mode").value;
+      state.lobby.level = $("#mp-level").value;
+      state.net.sendRaw({ t: "lobby_config", mode: $("#mp-mode").value, level: $("#mp-level").value });
+    }
   }
 
   async function enterLobby(kind, code) {
@@ -316,14 +362,39 @@
     state.net = net;
     try { await net.connect(); } catch (e) { showMenuError("Verbindung zum Server fehlgeschlagen. Läuft der Server?"); return; }
     const name = playerName();
+    const isDemo = state.data ? !!state.data.demo : true;
     net.on("joined", (m) => {
-      state.lobby = { code: m.code, id: m.id, host: m.host, players: m.players, max: m.max };
+      state.lobby = {
+        code: m.code,
+        id: m.id,
+        host: m.host,
+        players: m.players,
+        max: m.max,
+        mode: m.config && m.config.mode ? m.config.mode : "freebuild",
+        level: m.config && m.config.level ? m.config.level : "demo",
+      };
       net.id = m.id;
       if (m.started && m.config) { startMultiplayer(m.config, true); return; }
       history.replaceState(null, "", "?join=" + m.code);
       renderLobby();
     });
-    net.on("players", (m) => { if (state.lobby && !state.game) { state.lobby.players = m.players; renderLobby(); } });
+    net.on("players", (m) => {
+      if (state.lobby && !state.game) {
+        state.lobby.players = m.players;
+        if (m.config) {
+          if (m.config.mode) state.lobby.mode = m.config.mode;
+          if (m.config.level) state.lobby.level = m.config.level;
+        }
+        renderLobby();
+      }
+    });
+    net.on("lobby_config", (m) => {
+      if (state.lobby && !state.game) {
+        state.lobby.mode = m.mode;
+        state.lobby.level = m.level;
+        if (!state.lobby.host) renderLobby();
+      }
+    });
     net.on("left", (m) => {
       if (!state.lobby) return;
       state.lobby.players = m.players;
@@ -340,8 +411,8 @@
     net.on("close", () => {
       if (!state.game) { state.lobby = null; $("#card-lobby").hidden = true; if (state.net === net) state.net = null; }
     });
-    if (kind === "create") net.sendRaw({ t: "create", name, max: parseInt($("#max-players").value, 10), token: token() });
-    else net.sendRaw({ t: "join", code, name, token: token() });
+    if (kind === "create") net.sendRaw({ t: "create", name, demo: isDemo, max: parseInt($("#max-players").value, 10), token: token() });
+    else net.sendRaw({ t: "join", code, name, demo: isDemo, token: token() });
   }
 
   function playerName() {
@@ -562,7 +633,9 @@
   function setupHud() {
     const net = state.net;
     $("#hud").hidden = false;
-    $("#hud-room").textContent = "Raum " + state.lobby.code + " · " + state.session.mp.players.length + " Spieler";
+    const lObj = LEVELS.find((x) => x.id === (state.session.mp && state.session.mp.level));
+    const mapLabel = lObj ? lObj.label.split(" (")[0] : (state.session.mp && state.session.mp.level || "");
+    $("#hud-room").textContent = "Raum " + state.lobby.code + (mapLabel ? " · " + mapLabel : "") + " · " + state.session.mp.players.length + " Spieler";
     net.on("ping", (ms) => {
       const el = $("#hud-ping");
       el.textContent = ms + " ms";
@@ -748,7 +821,8 @@
     $("#join-code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#btn-join").click(); });
     $("#btn-leave-lobby").onclick = leaveLobby;
     $("#btn-start").onclick = hostStart;
-    $("#mp-mode").onchange = refreshLevelOptions;
+    $("#mp-mode").onchange = () => { refreshLevelOptions(); broadcastLobbyConfig(); };
+    $("#mp-level").onchange = () => { broadcastLobbyConfig(); };
     $("#btn-copy-code").onclick = () => navigator.clipboard.writeText(state.lobby.code).catch(() => {});
     $("#btn-copy-link").onclick = () => navigator.clipboard.writeText(location.origin + location.pathname + "?join=" + state.lobby.code).catch(() => {});
     $("#fatal-reload").onclick = () => (location.href = location.pathname);

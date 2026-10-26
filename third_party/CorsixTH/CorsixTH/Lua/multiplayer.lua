@@ -257,14 +257,31 @@ function Multiplayer:start()
   local success = false
   local err_prefix = _S and _S.errors and _S.errors.load_level_prefix or "Error: "
 
-  if self.level == "demo" or self.level == "" or self.app.using_demo_files then
-    success = self.app:loadLevel(1, "full", nil, nil, nil, nil, err_prefix, nil)
-  else
-    local level_path = self.app:getFullPath("Levels", self.level .. ".level")
-    local map_path = self.app:getFullPath("Levels", self.level .. ".map")
+  local is_custom = false
+  local level_path, map_path
+  if self.level and self.level ~= "" and self.level ~= "demo" and not self.level:match("^level%d+$") then
+    level_path = self.app:getFullPath({"Levels", self.level .. ".level"})
+    map_path = self.app:getFullPath({"Levels", self.level .. ".map"})
     local lfs = require("lfs")
-    if lfs.attributes(level_path, "mode") == "file" then
-      success = self.app:loadLevel(level_path, nil, self.level, map_path, nil, nil, err_prefix, nil)
+    if lfs.attributes(level_path, "mode") == "file" and lfs.attributes(map_path, "mode") == "file" then
+      is_custom = true
+    end
+  end
+
+  if is_custom then
+    print("Multiplayer: Loading custom level " .. tostring(self.level) .. " from " .. tostring(level_path))
+    success = self.app:loadLevel(level_path, nil, self.level, map_path, nil, nil, err_prefix, nil)
+  elseif self.level and self.level:match("^level(%d+)$") and not self.app.using_demo_files then
+    local num = tonumber(self.level:match("^level(%d+)$"))
+    print("Multiplayer: Loading original campaign level " .. tostring(num))
+    success = self.app:loadLevel(num, "full", nil, nil, nil, nil, err_prefix, nil)
+  else
+    print("Multiplayer: Loading demo level")
+    local demo_level = self.app:getFullPath({"Levels", "demo.level"})
+    local demo_map = self.app:getFullPath({"Levels", "demo.map"})
+    local lfs = require("lfs")
+    if lfs.attributes(demo_level, "mode") == "file" and lfs.attributes(demo_map, "mode") == "file" then
+      success = self.app:loadLevel(demo_level, nil, "demo", demo_map, nil, nil, err_prefix, nil)
     else
       success = self.app:loadLevel(1, "full", nil, nil, nil, nil, err_prefix, nil)
     end

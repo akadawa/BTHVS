@@ -82,7 +82,9 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
   display: flex; justify-content: space-between; gap: 8px; }
 #player-list .tag { color: var(--accent); font-size: 12px; font-weight: 700; }
 #player-list li.off { opacity: .5; }
-#host-options { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; }
+#host-options, #guest-options { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; }
+.guest-info-box { background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px;
+  margin: 8px 0; display: grid; gap: 6px; font-size: 14px; }
 footer { text-align: center; margin: 32px auto 0; padding: 10px 20px;
   background: rgba(14, 26, 34, 0.88); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   border: 1px solid var(--line); border-radius: 999px; width: fit-content; max-width: 95%;
