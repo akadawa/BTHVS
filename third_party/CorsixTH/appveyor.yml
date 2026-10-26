@@ -1,0 +1,39 @@
+version: '{build}'
+image: Visual Studio 2022
+pull_requests:
+  do_not_increment_build_number: true
+environment:
+  VCPKG_ROOT: C:\Tools\vcpkg
+  VCPKG_DEFAULT_BINARY_CACHE: C:\vcpkg-bin-cache
+  LUA_PATH: "%APPVEYOR_BUILD_FOLDER%/vcpkg_installed/x64-windows-release/share/lua?.lua;;"
+  LUA_CPATH: "%APPVEYOR_BUILD_FOLDER%/vcpkg_installed/x64-windows-release/bin/?/core.dll;%APPVEYOR_BUILD_FOLDER%/vcpkg_installed/x64-windows-release/bin/?.dll;;"
+init:
+  - mkdir %VCPKG_DEFAULT_BINARY_CACHE%
+cache:
+  - C:\vcpkg-bin-cache -> vcpkg_configuration.json
+configuration: Release
+install:
+  - cd %VCPKG_ROOT%
+  - git pull --quiet
+  - .\bootstrap-vcpkg.bat
+  - cd %APPVEYOR_BUILD_FOLDER%
+
+before_build:
+  - cmd: cmake --preset win-x64-rel -B .
+build:
+  project: CorsixTH_Top_Level.sln
+  verbosity: minimal
+
+test_script:
+  - cmd: ctest --extra-verbose --build-config Release --output-on-failure
+
+after_build:
+- curl -L -o %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/FluidR3.sf3 https://github.com/Jacalz/fluid-soundfont/raw/master/SF3/FluidR3.sf3
+- cp -R %APPVEYOR_BUILD_FOLDER%/CorsixTH/Lua %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/Lua
+- cp -R %APPVEYOR_BUILD_FOLDER%/CorsixTH/Bitmap %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/Bitmap
+- cp -R %APPVEYOR_BUILD_FOLDER%/CorsixTH/Levels %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/Levels
+- cp -R %APPVEYOR_BUILD_FOLDER%/CorsixTH/Campaigns %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/Campaigns
+- cp %APPVEYOR_BUILD_FOLDER%/CorsixTH/CorsixTH.lua %APPVEYOR_BUILD_FOLDER%/CorsixTH/Release/
+artifacts:
+- path: CorsixTH/Release/
+  name: CorsixTH

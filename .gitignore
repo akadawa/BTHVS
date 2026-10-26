@@ -1,0 +1,9 @@
+tools/
+build/
+node_modules/
+tests/node_modules/
+tests/out/
+HOSP.zip
+*.log
+dist/game/
+
