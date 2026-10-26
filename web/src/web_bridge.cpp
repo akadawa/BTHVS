@@ -117,7 +117,10 @@ namespace {
 // web.call(cmd [, arg]) -> string | nil
 int l_web_call(lua_State* L) {
   const char* cmd = luaL_checkstring(L, 1);
-  const char* arg = luaL_optstring(L, 2, "");
+  const char* arg = "";
+  if (!lua_isnoneornil(L, 2)) {
+    arg = luaL_tolstring(L, 2, nullptr);
+  }
   char* r = th_js_call(cmd, arg);
   if (r == nullptr) {
     lua_pushnil(L);

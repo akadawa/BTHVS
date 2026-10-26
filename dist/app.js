@@ -84,6 +84,7 @@
     session: null,
     game: null,
   };
+  window.__bth = state;
 
   /** entries: Array<[relativePath, Uint8Array]> -> normalised data set or throws. */
   function normaliseEntries(entries, name) {
@@ -204,7 +205,7 @@
   // ----------------------------------------------------------- level list
   /** What the host can pick. `full` = needs the full game's graphics. */
   const LEVELS = [
-    { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false, modes: ["level"] },
+    { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false, modes: ["freebuild", "level"] },
     { id: "level1", label: "Level 1 – Originalkampagne", full: true, modes: ["level"] },
     { id: "avatar", label: "Avatar (Custom)", full: true, modes: ["freebuild", "level"] },
     { id: "confined_v5", label: "Confined (Custom)", full: true, modes: ["freebuild", "level"] },
