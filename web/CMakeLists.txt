@@ -80,6 +80,6 @@ target_link_options(corsixth PRIVATE
   -sMODULARIZE=1
   -sEXPORT_NAME=createCorsixTH
   "-sEXPORTED_RUNTIME_METHODS=FS,callMain,ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8,HEAPU8"
-  "-sEXPORTED_FUNCTIONS=_main,_malloc,_free,_th_resize"
+  "-sEXPORTED_FUNCTIONS=_main,_malloc,_free,_th_resize,_th_eval_lua"
   -lidbfs.js
   --preload-file ${STAGE}/corsixth@/corsixth)

@@ -94,6 +94,9 @@ corsixth.require("class")
 -- Load the main App class
 corsixth.require("app")
 
+-- Load Multiplayer support
+corsixth.require("multiplayer")
+
 -- Create an instance of the App class and transfer control to it
 strict_declare_global "TheApp"
 TheApp = App()

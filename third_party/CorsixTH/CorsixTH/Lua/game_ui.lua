@@ -257,6 +257,7 @@ function GameUI:draw(canvas)
     app.map:draw(canvas, dx, dy, config.width, config.height, 0, 0)
   end
   Window.draw(self, canvas, 0, 0) -- NB: not calling UI.draw on purpose
+  if self.app.multiplayer then self.app.multiplayer:draw(canvas, self) end
   self:drawTooltip(canvas)
   if self.simulated_cursor then
     self.simulated_cursor.draw(canvas, self.cursor_x, self.cursor_y)
@@ -652,6 +653,7 @@ function GameUI:onMouseMove(x, y, dx, dy)
 end
 
 function GameUI:onMouseUp(code, x, y)
+  if self.app.multiplayer then self.app.multiplayer:onClick() end
   if self.app.moviePlayer.playing then
     return UI.onMouseUp(self, code, x, y)
   end

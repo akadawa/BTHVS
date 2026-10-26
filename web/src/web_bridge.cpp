@@ -79,6 +79,18 @@ extern "C" EMSCRIPTEN_KEEPALIVE void th_resize(int w, int h) {
   if (win != nullptr) SDL_SetWindowSize(win, w, h);
 }
 
+// Called from JS to evaluate a Lua snippet in the main Lua state.
+extern "C" EMSCRIPTEN_KEEPALIVE const char* th_eval_lua(const char* code) {
+  lua_State* L = th_web_main_state();
+  if (L == nullptr) return "error: no lua state";
+  if (luaL_dostring(L, code) != 0) {
+    const char* err = lua_tostring(L, -1);
+    lua_pop(L, 1);
+    return err ? err : "lua error";
+  }
+  return "ok";
+}
+
 // ------------------------------------------------------------- JS bridge ----
 EM_JS(char*, th_js_call, (const char* cmd, const char* arg), {
   var c = UTF8ToString(cmd), a = UTF8ToString(arg);

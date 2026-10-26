@@ -67,6 +67,7 @@ function App:App()
   self.check_for_updates = TH.GetCompileOptions().update_check
   self.idle_tick = 0
   self.window_active_status = false -- whether window is in focus, set after App:init
+  self.multiplayer = Multiplayer(self)
 end
 
 function App:setCommandLine(...)
@@ -126,6 +127,7 @@ function App:init()
   self:initUserDirectories()
   self:initSavegameDir()
   self:initScreenshotsDir()
+  if self.multiplayer then self.multiplayer:init() end
 
   -- Create the window
   if not SDL.init("video", "timer") then
@@ -368,6 +370,10 @@ function App:init()
 
   -- Load main menu (which creates UI)
   local function callback_after_movie()
+    if self.multiplayer and self.multiplayer.active then
+      self.multiplayer:start()
+      return
+    end
     self:loadMainMenu()
     -- If we couldn't properly load the language, show an information dialog
     if not language_load_success then
@@ -1284,6 +1290,7 @@ function App:dispatch(evt_type, ...)
 end
 
 function App:onTick(...)
+  if self.multiplayer then self.multiplayer:onTick() end
   if (not self.moviePlayer.playing) then
     if self.world then
       self.world:onTick(...)
