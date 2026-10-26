@@ -40,10 +40,10 @@ Vollwertige Portierung der Open-Source-Engine **[CorsixTH](https://corsixth.com)
 npm install
 npm start
 ```
-Der Server läuft standardmäßig auf `http://localhost:8080`.
+Der Server läuft standardmäßig auf `http://localhost:8085` (konfigurierbar per `PORT=...` oder `--port`).
 
 ### 2. Im Browser öffnen
-1. Öffne `http://localhost:8080`.
+1. Öffne `http://localhost:8085`.
 2. Ziehe die beiliegende `HOSP.zip` in den Spieldaten-Bereich.
 3. Wähle **Einzelspieler** oder erstelle einen **Koop-Raum**.
 

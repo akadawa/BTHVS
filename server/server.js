@@ -1,6 +1,6 @@
 /* Static file server + WebSocket room relay for Browser Theme Hospital.
  *
- *   node server/server.js [--port 8080] [--host 0.0.0.0]
+ *   node server/server.js [--port 8085] [--host 0.0.0.0]
  *
  * The relay is intentionally dumb: it only manages lobbies (room codes) and
  * forwards opaque game messages between the members of a room. All game logic
@@ -17,7 +17,7 @@ function arg(name, def) {
   const i = args.indexOf("--" + name);
   return i >= 0 && args[i + 1] ? args[i + 1] : def;
 }
-const PORT = parseInt(process.env.PORT || arg("port", "8080"), 10);
+const PORT = parseInt(process.env.PORT || arg("port", "8085"), 10);
 const HOST = process.env.HOST || arg("host", "0.0.0.0");
 const ROOT = path.resolve(__dirname, "..", "dist");
 const MAX_PLAYERS = 4;
