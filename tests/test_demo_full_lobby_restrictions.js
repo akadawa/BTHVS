@@ -7,7 +7,7 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   const browser = await launch();
 
   // =========================================================================
-  // TEST CASE 1: Host has Demo version -> Vollversion maps MUST be greyed out
+  // TEST CASE 1: Host has Demo version -> ALL maps except 'demo' MUST be greyed out
   // =========================================================================
   console.log("\n--- TEST CASE 1: Demo Host ---");
   const pDemoHost = await newPage(browser, port, "DemoHost");
@@ -26,19 +26,22 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   });
   console.log("Demo Host dropdown options:", demoHostOptions);
 
-  const level1OnDemoHost = demoHostOptions.find((o) => o.value === "level1");
-  if (!level1OnDemoHost || !level1OnDemoHost.disabled) {
-    throw new Error("FAIL: level1 should be disabled for Demo Host!");
+  for (const opt of demoHostOptions) {
+    if (opt.value === "demo") {
+      if (opt.disabled) throw new Error("FAIL: 'demo' map must be enabled for Demo Host!");
+    } else {
+      if (!opt.disabled) throw new Error(`FAIL: '${opt.value}' MUST be disabled/greyed out for Demo Host!`);
+    }
   }
-  console.log("PASS: level1 is disabled/greyed-out for Demo Host!");
+  console.log("PASS: Only 'demo' is enabled; all other maps are disabled/greyed-out for Demo Host!");
   await pDemoHost.close();
 
   // =========================================================================
-  // TEST CASE 2: Host has Vollversion, selects Level 1.
+  // TEST CASE 2: Host has Vollversion, selects Avatar or Level 1.
   // Then Demo Guest joins.
-  // -> Host's Level 1 MUST be greyed out and reset to compatible map!
-  // -> Guest must receive compatible map in real time!
-  // -> When game starts, both must load identical compatible map!
+  // -> Host's non-demo map MUST be greyed out and reset to demo!
+  // -> Guest must receive 'demo' in real time!
+  // -> When game starts, both must load identical demo level!
   // =========================================================================
   console.log("\n--- TEST CASE 2: Full Host + Demo Guest ---");
   const pFullHost = await newPage(browser, port, "FullHost");
@@ -58,11 +61,11 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   await pFullHost.click("#btn-create");
   await pFullHost.waitForSelector("#card-lobby:not([hidden])");
 
-  // While alone, Full Host CAN select level1
-  await pFullHost.selectOption("#mp-level", "level1");
+  // While alone, Full Host CAN select avatar or level1
+  await pFullHost.selectOption("#mp-level", "avatar");
   const hostValBefore = await pFullHost.inputValue("#mp-level");
   console.log("Full Host selected before guest joined:", hostValBefore);
-  if (hostValBefore !== "level1") throw new Error("Full Host should be able to pick level1 while alone!");
+  if (hostValBefore !== "avatar") throw new Error("Full Host should be able to pick avatar while alone!");
 
   // 2. Setup Demo Guest and join
   await loadDemo(pDemoGuest);
@@ -77,27 +80,30 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
 
   // 3. Inspect Host's dropdown now that Demo Guest joined!
   const hostValAfter = await pFullHost.inputValue("#mp-level");
-  const hostLevel1Opt = await pFullHost.evaluate(() => {
+  const hostOptionsAfter = await pFullHost.evaluate(() => {
     const sel = document.querySelector("#mp-level");
-    const opt = Array.from(sel.options).find((o) => o.value === "level1");
-    return { value: opt.value, disabled: opt.disabled, text: opt.textContent };
+    return Array.from(sel.options).map((o) => ({ value: o.value, disabled: o.disabled, text: o.textContent }));
   });
   console.log("Full Host map value after Demo Guest joined:", hostValAfter);
-  console.log("Full Host level1 option state after Demo Guest joined:", hostLevel1Opt);
+  console.log("Full Host options state after Demo Guest joined:", hostOptionsAfter);
 
-  if (!hostLevel1Opt.disabled) {
-    throw new Error("FAIL: level1 MUST be disabled/greyed out once Demo Guest joined!");
+  for (const opt of hostOptionsAfter) {
+    if (opt.value === "demo") {
+      if (opt.disabled) throw new Error("FAIL: 'demo' option must be enabled!");
+    } else {
+      if (!opt.disabled) throw new Error(`FAIL: '${opt.value}' MUST be disabled once Demo Guest joined!`);
+    }
   }
-  if (hostValAfter === "level1") {
-    throw new Error("FAIL: Host map selection was not automatically flipped away from level1!");
+  if (hostValAfter !== "demo") {
+    throw new Error("FAIL: Host map selection was not automatically flipped to demo!");
   }
-  console.log("PASS: Host dropdown automatically greyed out level1 and flipped to:", hostValAfter);
+  console.log("PASS: Host dropdown automatically greyed out all full maps and flipped to: demo");
 
   // 4. Verify Guest received the compatible map in real time
   const guestLobbyLevel = await pDemoGuest.textContent("#guest-level-val");
   console.log("Guest lobby view shows map:", guestLobbyLevel);
-  if (guestLobbyLevel.includes("Originalkampagne") || guestLobbyLevel.includes("Level 1")) {
-    throw new Error("FAIL: Guest should NOT see Level 1 in their lobby view!");
+  if (!guestLobbyLevel.includes("Demo-Level")) {
+    throw new Error("FAIL: Guest should see Demo-Level in their lobby view!");
   }
   console.log("PASS: Guest view correctly shows compatible map:", guestLobbyLevel);
 
@@ -114,11 +120,8 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   const guestSessionLevel = await pDemoGuest.evaluate(() => window.__bth.state.session.mp.level);
   console.log(`Active levels in game -> Host: ${hostSessionLevel} | Guest: ${guestSessionLevel}`);
 
-  if (hostSessionLevel !== guestSessionLevel) {
-    throw new Error(`FAIL: Level mismatch! Host=${hostSessionLevel}, Guest=${guestSessionLevel}`);
-  }
-  if (hostSessionLevel === "level1") {
-    throw new Error("FAIL: Game should NOT have started on level1!");
+  if (hostSessionLevel !== guestSessionLevel || hostSessionLevel !== "demo") {
+    throw new Error(`FAIL: Expected demo level on both! Host=${hostSessionLevel}, Guest=${guestSessionLevel}`);
   }
 
   console.log("ALL RESTRICTION TESTS PASSED PERFECTLY!");

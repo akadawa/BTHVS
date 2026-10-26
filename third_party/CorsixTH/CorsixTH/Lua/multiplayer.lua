@@ -313,9 +313,9 @@ function Multiplayer:start()
   end
   if self.app.using_demo_files then session_has_demo = true end
 
-  -- If any participant uses demo, campaign maps from the full game cannot be used by anyone
-  if session_has_demo and self.level and self.level:match("^level%d+$") then
-    print("Multiplayer: Demo participant detected in session, overriding full campaign level to demo")
+  -- If any participant uses demo, only the demo level is safe and permitted
+  if session_has_demo and self.level and self.level ~= "demo" and self.level ~= "" then
+    print("Multiplayer: Demo participant detected in session, overriding map to demo")
     self.level = "demo"
   end
 

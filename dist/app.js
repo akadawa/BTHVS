@@ -206,10 +206,10 @@
   /** What the host can pick. `full: true` = requires all players to have full game files. */
   const LEVELS = [
     { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false, modes: ["freebuild", "level"] },
-    { id: "avatar", label: "Avatar (Große Stadt)", full: false, modes: ["freebuild", "level"] },
-    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: false, modes: ["freebuild", "level"] },
-    { id: "finisham", label: "Finisham (Flusslandschaft)", full: false, modes: ["freebuild", "level"] },
-    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: false, modes: ["freebuild", "level"] },
+    { id: "avatar", label: "Avatar (Große Stadt)", full: true, modes: ["freebuild", "level"] },
+    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: true, modes: ["freebuild", "level"] },
+    { id: "finisham", label: "Finisham (Flusslandschaft)", full: true, modes: ["freebuild", "level"] },
+    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: true, modes: ["freebuild", "level"] },
     { id: "level1", label: "Level 1 – Originalkampagne", full: true, modes: ["freebuild", "level"] },
   ];
   function refreshLevelOptions() {

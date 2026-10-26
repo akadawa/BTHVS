@@ -85,7 +85,7 @@ const server = http.createServer((req, res) => {
 const rooms = new Map();
 
 function isFullOnlyLevel(lvl) {
-  return /^level\d+$/i.test(String(lvl || ""));
+  return String(lvl || "").toLowerCase() !== "demo";
 }
 
 class Room {
