@@ -615,12 +615,66 @@
     chatLog().appendChild(d);
   }
   function setupChat() {
-    const box = $("#chat"), input = $("#chat-input");
+    const box = $("#chat"), input = $("#chat-input"), header = $("#chat-header");
     const toggle = (show) => {
       box.hidden = show === undefined ? !box.hidden : !show;
       if (!box.hidden) { unread = 0; $("#chat-badge").hidden = true; input.focus(); } else $("#canvas").focus();
     };
     $("#hud-chat-btn").onclick = () => toggle();
+    if ($("#chat-close")) $("#chat-close").onclick = () => toggle(false);
+
+    // Draggable chat window handle
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let initialLeft = 0, initialTop = 0;
+
+    const onDragStart = (clientX, clientY) => {
+      isDragging = true;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      const rect = box.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      // Switch from bottom/left to top/left coordinates
+      box.style.bottom = "auto";
+      box.style.right = "auto";
+      box.style.left = initialLeft + "px";
+      box.style.top = initialTop + "px";
+    };
+
+    const onDragMove = (clientX, clientY) => {
+      if (!isDragging) return;
+      const dx = clientX - dragStartX;
+      const dy = clientY - dragStartY;
+      const maxX = Math.max(0, window.innerWidth - box.offsetWidth);
+      const maxY = Math.max(0, window.innerHeight - box.offsetHeight);
+      const newX = Math.max(0, Math.min(maxX, initialLeft + dx));
+      const newY = Math.max(0, Math.min(maxY, initialTop + dy));
+      box.style.left = newX + "px";
+      box.style.top = newY + "px";
+    };
+
+    if (header) {
+      header.addEventListener("mousedown", (e) => {
+        if (e.target && (e.target.id === "chat-close" || e.target.closest("#chat-close"))) return;
+        onDragStart(e.clientX, e.clientY);
+        e.preventDefault();
+      });
+      window.addEventListener("mousemove", (e) => {
+        onDragMove(e.clientX, e.clientY);
+      });
+      window.addEventListener("mouseup", () => { isDragging = false; });
+
+      header.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1 || (e.target && (e.target.id === "chat-close" || e.target.closest("#chat-close")))) return;
+        onDragStart(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener("touchmove", (e) => {
+        if (isDragging && e.touches.length === 1) onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener("touchend", () => { isDragging = false; });
+    }
+
     $("#chat-form").onsubmit = (e) => {
       e.preventDefault();
       const text = input.value.trim();

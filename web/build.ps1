@@ -1,4 +1,4 @@
-﻿# Builds the browser version of CorsixTH into dist/ (needs tools/emsdk, see README).
+# Builds the browser version of CorsixTH into dist/ (needs tools/emsdk, see README).
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -16,6 +16,9 @@ Copy-Item "$src\CorsixTH.lua" "$stage\CorsixTH.lua"
 
 New-Item -ItemType Directory -Force "$build\wasm" | Out-Null
 Push-Location "$build\wasm"
+# Remove output data package so Ninja re-runs the linker with updated stage files
+if (Test-Path "corsixth.data") { Remove-Item -Force "corsixth.data" }
+if (Test-Path "corsixth.js") { Remove-Item -Force "corsixth.js" }
 emcmake cmake -G Ninja -DCMAKE_BUILD_TYPE=Release "$root\web"
 if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
 cmake --build . -j 8

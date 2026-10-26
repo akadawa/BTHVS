@@ -26,6 +26,7 @@ local UIBottomPanel = _G["UIBottomPanel"]
 
 function UIBottomPanel:UIBottomPanel(ui)
   self:Window()
+  self.draggable = false
 
   local app = ui.app
 

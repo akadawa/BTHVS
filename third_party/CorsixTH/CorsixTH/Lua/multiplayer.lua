@@ -5,6 +5,17 @@ Handles room sync, remote cursors/pings, shared game speed, staff/object sync, a
 
 corsixth.require("class")
 
+local function clean_name(s)
+  if not s then return "Staff" end
+  s = tostring(s)
+  s = s:gsub("<LocalisedString>%s*Current value:%s*", "")
+  s = s:gsub("<LocalisedString>", "")
+  s = s:gsub("Current value:%s*", "")
+  s = s:match("^%s*(.-)%s*$")
+  if not s or s == "" then return "Staff" end
+  return s
+end
+
 class "Multiplayer"
 
 function Multiplayer:Multiplayer(app)
@@ -104,6 +115,17 @@ function Multiplayer:installHooks()
     end
   end
 
+  -- Hook World:loseGame so freebuild mode never loses the game
+  if World and World.loseGame then
+    local orig_loseGame = World.loseGame
+    World.loseGame = function(world_self, player_no, reason, limit)
+      if mp.active and mp.mode == "freebuild" then
+        return
+      end
+      return orig_loseGame(world_self, player_no, reason, limit)
+    end
+  end
+
   -- 2. Hook UIEditRoom:confirm and close so finished rooms are synced to peers without overwriting the builder
   if UIEditRoom then
     if UIEditRoom.confirm then
@@ -175,7 +197,7 @@ function Multiplayer:installHooks()
             local is_res = (type(prof.is_researcher) == "number" and prof.is_researcher >= 1.0 or prof.is_researcher == true) and 1 or 0
             local payload = string.format("hire:%s|%s|%d|%.2f|%d|%d|%d|%d|%d|%d|%d|%d",
               prof.humanoid_class,
-              tostring(prof.name),
+              clean_name(prof.name),
               prof.wage or 100,
               prof.skill or 0.5,
               prof.layer5 or 2,
@@ -201,7 +223,7 @@ function Multiplayer:installHooks()
     local orig_fire = Staff.fire
     Staff.fire = function(staff_self)
       local sid = staff_self.id
-      local sname = staff_self.profile and staff_self.profile.name or "Personal"
+      local sname = staff_self.profile and clean_name(staff_self.profile.name) or "Personal"
       local res = orig_fire(staff_self)
       if mp.active and sid and not mp.internal_action then
         mp.web.call("net.send", string.format("all|fire:%d|%s", sid, sname))
@@ -256,10 +278,6 @@ function Multiplayer:start()
       -- Endlosmodus: Start with generous co-op budget ($200,000) so building costs money without fear of bankruptcy
       if hosp then
         hosp.balance = 200000
-      end
-      self.app.world.loseGame = function() end
-      if self.app.world.endconditions then
-        self.app.world.endconditions.checkEndGame = function() return false end
       end
     else
       -- Level-Modus: Campaign starting balance (Level 1: $40,000)
@@ -408,7 +426,7 @@ function Multiplayer:handleMessage(from, data)
       if hosp then
         local StaffProfile = _G["StaffProfile"] or corsixth.require("staff_profile")
         local profile = StaffProfile(self.app.world, class_name)
-        profile.name = tostring(name)
+        profile.name = clean_name(name)
         profile.wage = wage
         profile.skill = skill
         profile.layer5 = layer5
@@ -430,7 +448,13 @@ function Multiplayer:handleMessage(from, data)
         else
           entity:onPlaceInCorridor()
         end
-        self.web.call("ui.banner", string.format("oPartner eingestellt: %s (%s)", tostring(name), tostring(class_name)))
+        local role_title = "Personal"
+        if class_name == "Doctor" then role_title = "Arzt"
+        elseif class_name == "Nurse" then role_title = "Krankenschwester"
+        elseif class_name == "Handyman" then role_title = "Handwerker"
+        elseif class_name == "Receptionist" then role_title = "Rezeptionistin"
+        end
+        self.web.call("ui.banner", string.format("oPartner eingestellt: %s (%s)", clean_name(name), role_title))
         self.internal_action = false
       end
     end

@@ -613,7 +613,7 @@ function World:newRoom(x, y, w, h, room_info, ...)
   -- Note: Room IDs will be unique, but they may not form continuous values
   -- from 1, as IDs of deleted rooms may not be re-issued for a while
   local class = room_info.class and _G[room_info.class] or Room
-  local hospital = self:getHospital(x, y)
+  local hospital = self:getHospital(x, y) or self:getLocalPlayerHospital()
   local room = class(x, y, w, h, id, room_info, self, hospital, ...)
 
   self.rooms[id] = room

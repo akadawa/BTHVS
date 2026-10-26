@@ -84,7 +84,7 @@ footer { text-align: center; margin-top: 24px; }
   animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-#hud { position: absolute; top: 6px; right: 8px; display: flex; gap: 6px; z-index: 10; opacity: .85; }
+#hud { position: absolute; bottom: 8px; right: 8px; display: flex; gap: 6px; z-index: 10; opacity: .85; }
 #hud:hover { opacity: 1; }
 .chip { background: rgba(10,22,28,.82); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
   font-size: 12px; color: var(--txt); position: relative; }
@@ -99,8 +99,16 @@ footer { text-align: center; margin-top: 24px; }
   padding: 8px 16px; font-weight: 600; pointer-events: none; }
 #net-banner.err { border-color: var(--err); color: var(--err); }
 
-#chat { position: absolute; left: 8px; bottom: 8px; width: min(380px, 90vw); z-index: 10;
-  background: rgba(10,22,28,.88); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+#chat { position: absolute; left: 8px; bottom: 8px; width: min(380px, 90vw); z-index: 15;
+  background: rgba(10,22,28,.92); border: 1px solid var(--line); border-radius: 10px; padding: 8px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5); }
+#chat-header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px 4px;
+  margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); cursor: grab; color: var(--txt);
+  font-size: 12px; font-weight: 600; user-select: none; }
+#chat-header:active { cursor: grabbing; }
+#chat-title { display: flex; align-items: center; gap: 4px; }
+#chat-close { background: transparent; border: none; color: var(--muted); font-size: 13px; cursor: pointer; padding: 0 4px; }
+#chat-close:hover { color: var(--txt); }
 #chat-log { max-height: 160px; overflow-y: auto; font-size: 13px; margin-bottom: 6px; }
 #chat-log div { margin: 2px 0; word-break: break-word; }
 #chat-log .who { color: var(--accent); font-weight: 700; }
