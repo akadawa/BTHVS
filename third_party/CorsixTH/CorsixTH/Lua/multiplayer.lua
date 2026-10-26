@@ -257,6 +257,21 @@ function Multiplayer:start()
   local success = false
   local err_prefix = _S and _S.errors and _S.errors.load_level_prefix or "Error: "
 
+  -- Check if any player in the session has demo files
+  local session_has_demo = false
+  if self.players then
+    for _, p in ipairs(self.players) do
+      if p.demo then session_has_demo = true break end
+    end
+  end
+  if self.app.using_demo_files then session_has_demo = true end
+
+  -- If any participant uses demo, campaign maps from the full game cannot be used by anyone
+  if session_has_demo and self.level and self.level:match("^level%d+$") then
+    print("Multiplayer: Demo participant detected in session, overriding full campaign level to demo")
+    self.level = "demo"
+  end
+
   local is_custom = false
   local level_path, map_path
   if self.level and self.level ~= "" and self.level ~= "demo" and not self.level:match("^level%d+$") then

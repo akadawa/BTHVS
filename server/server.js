@@ -84,6 +84,10 @@ const server = http.createServer((req, res) => {
 /** @type {Map<string, Room>} */
 const rooms = new Map();
 
+function isFullOnlyLevel(lvl) {
+  return /^level\d+$/i.test(String(lvl || ""));
+}
+
 class Room {
   constructor(code, max) {
     this.code = code;
@@ -94,6 +98,9 @@ class Room {
     this.nextId = 0;
     this.hostId = null;
     this.emptySince = null;
+  }
+  hasDemoPlayer() {
+    return [...this.players.values()].some((p) => p.connected && p.demo);
   }
   playerList() {
     return [...this.players.values()].map((p) => ({
@@ -183,6 +190,9 @@ function handle(ws, msg) {
         p = { id: room.nextId++, name: String(msg.name || "Player").slice(0, 24), demo: !!msg.demo, token, ws };
         room.players.set(p.id, p);
       }
+      if (room.hasDemoPlayer() && isFullOnlyLevel(room.config.level)) {
+        room.config.level = "demo";
+      }
       room.emptySince = null;
       ws.room = room;
       ws.pid = p.id;
@@ -204,7 +214,11 @@ function handle(ws, msg) {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
       if (msg.mode) room.config.mode = String(msg.mode);
-      if (msg.level) room.config.level = String(msg.level);
+      if (msg.level) {
+        let lvl = String(msg.level);
+        if (room.hasDemoPlayer() && isFullOnlyLevel(lvl)) lvl = "demo";
+        room.config.level = lvl;
+      }
       room.broadcast({ t: "lobby_config", mode: room.config.mode, level: room.config.level });
       break;
     }
@@ -212,7 +226,12 @@ function handle(ws, msg) {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
       room.started = true;
+      let level = (msg.config && msg.config.level) || room.config.level || "demo";
+      if (room.hasDemoPlayer() && isFullOnlyLevel(level)) {
+        level = "demo";
+      }
       room.config = Object.assign({}, room.config, msg.config || {}, {
+        level,
         players: room.playerList().filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name, demo: p.demo })),
       });
       room.broadcast({ t: "start", config: room.config });

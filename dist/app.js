@@ -239,11 +239,15 @@
       sel.appendChild(o);
     }
 
+    const prev = cur;
     if (foundCurrent) {
       sel.value = cur;
     } else {
       const firstEnabled = Array.from(sel.options).find((o) => !o.disabled);
       if (firstEnabled) sel.value = firstEnabled.value;
+    }
+    if (L && L.host && sel.value !== prev) {
+      broadcastLobbyConfig();
     }
 
     const hintEl = $("#level-compat-hint");
@@ -431,7 +435,13 @@
 
   function hostStart() {
     const mode = $("#mp-mode").value;
-    const level = $("#mp-level").value;
+    let level = $("#mp-level").value;
+    const L = state.lobby;
+    const anyDemo = L && L.players && L.players.some((p) => p.demo);
+    const lObj = LEVELS.find((x) => x.id === level);
+    if (anyDemo && lObj && lObj.full) {
+      level = "demo";
+    }
     const seed = (Math.random() * 0x7fffffff) | 0;
     state.net.sendRaw({ t: "start", config: { mode, level, seed, language: $("#language").value } });
   }
