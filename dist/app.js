@@ -722,6 +722,9 @@
   function bridge(cmd, arg) {
     const net = state.net;
     switch (cmd) {
+      case "test.val":
+        window.__test_val = arg;
+        return null;
       case "mp.session":
         return state.session && state.session.mp ? "return " + luaLiteral(state.session.mp) : "";
       case "net.send": {

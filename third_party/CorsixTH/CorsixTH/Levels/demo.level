@@ -20,7 +20,7 @@ SOFTWARE.
 
 ---------------------- General Information -------------------------
 %Name = "Demo Town"
-%MapFile = "LEVEL.L1"
+%MapFile = "demo.map"
 
 %LevelBriefing = "This is the only map available as long as you use
  the Theme Hospital Demo files."
