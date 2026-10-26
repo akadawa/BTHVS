@@ -632,6 +632,9 @@
       }
       case "time.now":
         return String(Date.now());
+      case "hist.record":
+        handleHistoryRecord(arg, true);
+        return null;
       case "log":
         console.log("[lua]", arg);
         return null;
@@ -660,6 +663,8 @@
         const FS = state.game.mod.FS;
         FS.writeFile("/tmp/snapshot_in.sav", data);
         net.inbox.push({ from: m.from, d: "snapshot:" + meta });
+      } else if (typeof m.d === "string" && m.d.startsWith("hist:")) {
+        handleHistoryRecord(m.d.slice(5), false);
       } else {
         net.inbox.push({ from: m.from, d: m.d });
       }
@@ -669,6 +674,7 @@
     net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Verbindung zum Server verloren – Spiel angehalten."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
     net.on("chat", (m) => chatMsg(m.name, m.text, m.from !== net.id));
     setupChat();
+    setupHistory();
     $("#hud-fs-btn").onclick = toggleFullscreen;
   }
   function peersString(players) {
@@ -677,6 +683,56 @@
   function toggleFullscreen() {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  function makeDraggable(box, header, ignoreSelector) {
+    if (!box || !header) return;
+    let isDragging = false;
+    let dragStartX = 0, dragStartY = 0;
+    let initialLeft = 0, initialTop = 0;
+
+    const onDragStart = (clientX, clientY) => {
+      isDragging = true;
+      dragStartX = clientX;
+      dragStartY = clientY;
+      const rect = box.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      box.style.bottom = "auto";
+      box.style.right = "auto";
+      box.style.left = initialLeft + "px";
+      box.style.top = initialTop + "px";
+    };
+
+    const onDragMove = (clientX, clientY) => {
+      if (!isDragging) return;
+      const dx = clientX - dragStartX;
+      const dy = clientY - dragStartY;
+      const maxX = Math.max(0, window.innerWidth - box.offsetWidth);
+      const maxY = Math.max(0, window.innerHeight - box.offsetHeight);
+      const newX = Math.max(0, Math.min(maxX, initialLeft + dx));
+      const newY = Math.max(0, Math.min(maxY, initialTop + dy));
+      box.style.left = newX + "px";
+      box.style.top = newY + "px";
+    };
+
+    header.addEventListener("mousedown", (e) => {
+      if (ignoreSelector && e.target && (e.target.matches(ignoreSelector) || e.target.closest(ignoreSelector))) return;
+      onDragStart(e.clientX, e.clientY);
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => onDragMove(e.clientX, e.clientY));
+    window.addEventListener("mouseup", () => { isDragging = false; });
+
+    header.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      if (ignoreSelector && e.target && (e.target.matches(ignoreSelector) || e.target.closest(ignoreSelector))) return;
+      onDragStart(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener("touchmove", (e) => {
+      if (isDragging && e.touches.length === 1) onDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+    window.addEventListener("touchend", () => { isDragging = false; });
   }
 
   // ------------------------------------------------------------------ chat
@@ -698,6 +754,7 @@
     d.className = "sys";
     d.textContent = text;
     chatLog().appendChild(d);
+    chatLog().scrollTop = chatLog().scrollHeight;
   }
   function setupChat() {
     const box = $("#chat"), input = $("#chat-input"), header = $("#chat-header");
@@ -708,57 +765,7 @@
     $("#hud-chat-btn").onclick = () => toggle();
     if ($("#chat-close")) $("#chat-close").onclick = () => toggle(false);
 
-    // Draggable chat window handle
-    let isDragging = false;
-    let dragStartX = 0, dragStartY = 0;
-    let initialLeft = 0, initialTop = 0;
-
-    const onDragStart = (clientX, clientY) => {
-      isDragging = true;
-      dragStartX = clientX;
-      dragStartY = clientY;
-      const rect = box.getBoundingClientRect();
-      initialLeft = rect.left;
-      initialTop = rect.top;
-      // Switch from bottom/left to top/left coordinates
-      box.style.bottom = "auto";
-      box.style.right = "auto";
-      box.style.left = initialLeft + "px";
-      box.style.top = initialTop + "px";
-    };
-
-    const onDragMove = (clientX, clientY) => {
-      if (!isDragging) return;
-      const dx = clientX - dragStartX;
-      const dy = clientY - dragStartY;
-      const maxX = Math.max(0, window.innerWidth - box.offsetWidth);
-      const maxY = Math.max(0, window.innerHeight - box.offsetHeight);
-      const newX = Math.max(0, Math.min(maxX, initialLeft + dx));
-      const newY = Math.max(0, Math.min(maxY, initialTop + dy));
-      box.style.left = newX + "px";
-      box.style.top = newY + "px";
-    };
-
-    if (header) {
-      header.addEventListener("mousedown", (e) => {
-        if (e.target && (e.target.id === "chat-close" || e.target.closest("#chat-close"))) return;
-        onDragStart(e.clientX, e.clientY);
-        e.preventDefault();
-      });
-      window.addEventListener("mousemove", (e) => {
-        onDragMove(e.clientX, e.clientY);
-      });
-      window.addEventListener("mouseup", () => { isDragging = false; });
-
-      header.addEventListener("touchstart", (e) => {
-        if (e.touches.length !== 1 || (e.target && (e.target.id === "chat-close" || e.target.closest("#chat-close")))) return;
-        onDragStart(e.touches[0].clientX, e.touches[0].clientY);
-      }, { passive: true });
-      window.addEventListener("touchmove", (e) => {
-        if (isDragging && e.touches.length === 1) onDragMove(e.touches[0].clientX, e.touches[0].clientY);
-      }, { passive: true });
-      window.addEventListener("touchend", () => { isDragging = false; });
-    }
+    makeDraggable(box, header, "#chat-close");
 
     $("#chat-form").onsubmit = (e) => {
       e.preventDefault();
@@ -771,6 +778,200 @@
     $("#canvas").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.ctrlKey && !e.altKey) { /* game uses Enter rarely */ } });
     window.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && e.shiftKey && !state.game ? false : e.key === "Enter" && e.shiftKey) { e.preventDefault(); toggle(true); }
+    });
+  }
+
+  // ------------------------------------------------------------------ history
+  let unreadHist = 0;
+  const historyItems = [];
+  let histFilter = "all";
+
+  function handleHistoryRecord(raw, isLocal) {
+    if (!raw) return;
+    const parts = raw.split("|");
+    const kind = parts[0];
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, "0") + ":" +
+                    String(now.getMinutes()).padStart(2, "0") + ":" +
+                    String(now.getSeconds()).padStart(2, "0");
+
+    let item = null;
+    if (kind === "room") {
+      const [_, player, roomName, costStr] = parts;
+      const cost = parseInt(costStr, 10) || 0;
+      item = {
+        category: "room",
+        icon: "🏥",
+        player: player || "Spieler",
+        action: "baute",
+        target: roomName || "Raum",
+        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
+        isLocal,
+        time: timeStr,
+        summary: `baute ${roomName}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
+      };
+    } else if (kind === "obj") {
+      const [_, player, label, costStr] = parts;
+      const cost = parseInt(costStr, 10) || 0;
+      item = {
+        category: "obj",
+        icon: "🪑",
+        player: player || "Spieler",
+        action: "stellte im Flur auf:",
+        target: label || "Objekt",
+        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
+        isLocal,
+        time: timeStr,
+        summary: `stellte ${label} im Flur auf${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
+      };
+    } else if (kind === "hire") {
+      const [_, player, role, sname, wageStr] = parts;
+      const wage = parseInt(wageStr, 10) || 0;
+      item = {
+        category: "staff",
+        icon: "👥",
+        player: player || "Spieler",
+        action: `stellte ${role} ein:`,
+        target: sname || "Mitarbeiter",
+        cost: wage > 0 ? `-$${wage}/Mt` : "",
+        isLocal,
+        time: timeStr,
+        summary: `stellte ${role} (${sname}) ein${wage > 0 ? " ($" + wage + "/Mt)" : ""}`
+      };
+    } else if (kind === "fire") {
+      const [_, player, role, sname] = parts;
+      item = {
+        category: "staff",
+        icon: "🚪",
+        player: player || "Spieler",
+        action: `entließ ${role}:`,
+        target: sname || "Mitarbeiter",
+        cost: "",
+        isLocal,
+        time: timeStr,
+        summary: `entließ ${role} (${sname})`
+      };
+    }
+
+    if (item) {
+      historyItems.push(item);
+      renderHistoryItem(item);
+      updateHistoryStats();
+      chatSys(`📜 [Chronik] ${item.player} ${item.summary}`);
+      const win = $("#history-win");
+      if (win && win.hidden && !isLocal) {
+        unreadHist++;
+        if ($("#history-badge")) $("#history-badge").hidden = false;
+      }
+    }
+  }
+
+  function renderHistoryItem(item) {
+    const list = $("#history-log");
+    if (!list) return;
+    const emptyEl = list.querySelector(".history-empty");
+    if (emptyEl) emptyEl.remove();
+
+    const d = document.createElement("div");
+    d.className = "hist-item";
+    d.dataset.category = item.category;
+    if (histFilter !== "all" && item.category !== histFilter) {
+      d.hidden = true;
+    }
+
+    const t = document.createElement("span");
+    t.className = "hist-time";
+    t.textContent = item.time;
+
+    const ic = document.createElement("span");
+    ic.className = "hist-icon";
+    ic.textContent = item.icon;
+
+    const b = document.createElement("div");
+    b.className = "hist-body";
+
+    const p = document.createElement("span");
+    p.className = "hist-player" + (item.isLocal ? "" : " partner");
+    p.textContent = item.player + " ";
+
+    const act = document.createTextNode(item.action + " ");
+
+    const tgt = document.createElement("b");
+    tgt.textContent = item.target;
+
+    b.appendChild(p);
+    b.appendChild(act);
+    b.appendChild(tgt);
+
+    if (item.cost) {
+      const c = document.createElement("span");
+      c.className = "hist-cost";
+      c.textContent = item.cost;
+      b.appendChild(c);
+    }
+
+    d.appendChild(t);
+    d.appendChild(ic);
+    d.appendChild(b);
+
+    list.appendChild(d);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function updateHistoryStats() {
+    let rooms = 0, staff = 0, spent = 0;
+    for (const it of historyItems) {
+      if (it.category === "room") rooms++;
+      if (it.category === "staff" && it.icon === "👥") staff++;
+      if (it.cost) {
+        const num = parseInt(it.cost.replace(/[^0-9]/g, ""), 10) || 0;
+        spent += num;
+      }
+    }
+    if ($("#hist-stat-rooms")) $("#hist-stat-rooms").textContent = `${rooms} ${rooms === 1 ? "Raum" : "Räume"}`;
+    if ($("#hist-stat-staff")) $("#hist-stat-staff").textContent = `${staff} Personal`;
+    if ($("#hist-stat-cost")) $("#hist-stat-cost").textContent = `$${spent.toLocaleString()} verbaut`;
+  }
+
+  function setupHistory() {
+    const win = $("#history-win");
+    const toggle = (show) => {
+      win.hidden = show === undefined ? !win.hidden : !show;
+      if (!win.hidden) {
+        unreadHist = 0;
+        if ($("#history-badge")) $("#history-badge").hidden = true;
+      }
+    };
+
+    if ($("#hud-history-btn")) $("#hud-history-btn").onclick = () => toggle();
+    if ($("#history-close")) $("#history-close").onclick = () => toggle(false);
+    if ($("#history-clear")) $("#history-clear").onclick = () => {
+      historyItems.length = 0;
+      const list = $("#history-log");
+      if (list) list.innerHTML = '<div class="history-empty">Noch keine Bau-Aktionen verzeichnet.</div>';
+      updateHistoryStats();
+    };
+
+    const filterChips = document.querySelectorAll("#history-filters .filter-chip");
+    filterChips.forEach((btn) => {
+      btn.onclick = () => {
+        filterChips.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        histFilter = btn.dataset.filter || "all";
+        const items = document.querySelectorAll("#history-log .hist-item");
+        items.forEach((it) => {
+          it.hidden = histFilter !== "all" && it.dataset.category !== histFilter;
+        });
+      };
+    });
+
+    makeDraggable(win, $("#history-header"), "#history-close, #history-clear");
+
+    window.addEventListener("keydown", (e) => {
+      if ((e.key === "h" || e.key === "H") && state.game && !$("#chat:not([hidden])") && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        toggle();
+      }
     });
   }
 

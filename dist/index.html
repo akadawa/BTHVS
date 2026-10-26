@@ -140,10 +140,35 @@
       <span id="hud-room" class="chip"></span>
       <span id="hud-sync" class="chip ok">Sync</span>
       <span id="hud-ping" class="chip">– ms</span>
+      <button id="hud-history-btn" class="chip btn-chip" title="Bau-Chronik & Verlauf (H)">📜<span id="history-badge" hidden></span></button>
       <button id="hud-chat-btn" class="chip btn-chip" title="Chat (Enter)">💬<span id="chat-badge" hidden></span></button>
       <button id="hud-fs-btn" class="chip btn-chip" title="Vollbild (F11)">⛶</button>
     </div>
     <div id="net-banner" hidden></div>
+
+    <div id="history-win" hidden>
+      <div id="history-header">
+        <span id="history-title">📜 Bau-Chronik & Verlauf</span>
+        <div class="win-actions">
+          <button id="history-clear" type="button" class="btn-chip" title="Verlauf leeren">🗑</button>
+          <button id="history-close" type="button" class="btn-chip" title="Schließen">✕</button>
+        </div>
+      </div>
+      <div id="history-filters">
+        <button type="button" class="filter-chip active" data-filter="all">Alle</button>
+        <button type="button" class="filter-chip" data-filter="room">🏥 Räume</button>
+        <button type="button" class="filter-chip" data-filter="obj">🪑 Objekte</button>
+        <button type="button" class="filter-chip" data-filter="staff">👥 Personal</button>
+      </div>
+      <div id="history-log">
+        <div class="history-empty">Noch keine Bau-Aktionen verzeichnet.</div>
+      </div>
+      <div id="history-footer">
+        <span id="hist-stat-rooms">0 Räume</span>
+        <span id="hist-stat-staff">0 Personal</span>
+        <span id="hist-stat-cost">$0 verbaut</span>
+      </div>
+    </div>
 
     <div id="chat" hidden>
       <div id="chat-header">

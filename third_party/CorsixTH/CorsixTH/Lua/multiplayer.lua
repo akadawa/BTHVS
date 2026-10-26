@@ -138,6 +138,23 @@ function Multiplayer:installHooks()
           TheApp:save("/tmp/snapshot_out.sav")
           mp.web.call("snap.send", "all|/tmp/snapshot_out.sav|room")
           mp.web.call("ui.banner", "oNeuer Raum fertiggestellt & geteilt!")
+
+          local r_name = "Raum"
+          if edit_self.room and edit_self.room.room_info and edit_self.room.room_info.name then
+            r_name = clean_name(edit_self.room.room_info.name)
+          elseif edit_self.room_type and edit_self.room_type.name then
+            r_name = clean_name(edit_self.room_type.name)
+          elseif edit_self.title_text then
+            r_name = clean_name(edit_self.title_text)
+          end
+          local r_cost = 0
+          if edit_self.ui and edit_self.ui.hospital and edit_self.ui.hospital.research and edit_self.ui.hospital.research.research_progress and edit_self.room and edit_self.room.room_info then
+            r_cost = edit_self.ui.hospital.research.research_progress[edit_self.room.room_info].build_cost or 0
+          end
+          local p_name = clean_name(mp.name)
+          local payload = string.format("room|%s|%s|%d", p_name, r_name, r_cost)
+          mp.web.call("hist.record", payload)
+          mp.web.call("net.send", "all|hist:" .. payload)
         end
         return res
       end
@@ -171,6 +188,16 @@ function Multiplayer:installHooks()
 
       if mp.active and is_corridor and obj_id and ox and oy and not mp.internal_action then
         mp.web.call("net.send", string.format("all|obj:%s,%d,%d,%s", obj_id, ox, oy, orient))
+        local obj_name = obj_data and obj_data.object and clean_name(obj_data.object.name)
+        local cost = 0
+        if po_self.ui and po_self.ui.hospital and po_self.ui.hospital.getObjectBuildCost then
+          cost = po_self.ui.hospital:getObjectBuildCost(obj_id) or 0
+        end
+        local label = obj_name or obj_id
+        local p_name = clean_name(mp.name)
+        local payload = string.format("obj|%s|%s|%d|%d|%d", p_name, label, cost, ox, oy)
+        mp.web.call("hist.record", payload)
+        mp.web.call("net.send", "all|hist:" .. payload)
       end
       return res
     end
@@ -208,6 +235,17 @@ function Multiplayer:installHooks()
               prof.is_consultant and 1 or 0,
               tx, ty)
             mp.web.call("net.send", "all|" .. payload)
+            local role_de = prof.humanoid_class == "Doctor" and "Arzt"
+              or prof.humanoid_class == "Nurse" and "Krankenschwester"
+              or prof.humanoid_class == "Handyman" and "Hausmeister"
+              or prof.humanoid_class == "Receptionist" and "Rezeptionistin"
+              or prof.humanoid_class
+            local sname = clean_name(prof.name)
+            local wage = prof.wage or 100
+            local p_name = clean_name(mp.name)
+            local hist_payload = string.format("hire|%s|%s|%s|%d", p_name, role_de, sname, wage)
+            mp.web.call("hist.record", hist_payload)
+            mp.web.call("net.send", "all|hist:" .. hist_payload)
           elseif existing_staff and existing_staff.id then
             mp.web.call("net.send", string.format("all|movestaff:%d,%d,%d", existing_staff.id, tx, ty))
           end
@@ -227,6 +265,15 @@ function Multiplayer:installHooks()
       local res = orig_fire(staff_self)
       if mp.active and sid and not mp.internal_action then
         mp.web.call("net.send", string.format("all|fire:%d|%s", sid, sname))
+        local role_de = staff_self.humanoid_class == "Doctor" and "Arzt"
+          or staff_self.humanoid_class == "Nurse" and "Krankenschwester"
+          or staff_self.humanoid_class == "Handyman" and "Hausmeister"
+          or staff_self.humanoid_class == "Receptionist" and "Rezeptionistin"
+          or "Personal"
+        local p_name = clean_name(mp.name)
+        local hist_payload = string.format("fire|%s|%s|%s", p_name, role_de, sname)
+        mp.web.call("hist.record", hist_payload)
+        mp.web.call("net.send", "all|hist:" .. hist_payload)
       end
       return res
     end
