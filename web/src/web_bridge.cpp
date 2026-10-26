@@ -73,6 +73,12 @@ extern "C" void th_web_run_timers(void) {
   }
 }
 
+// Called from JS when the browser window changed size.
+extern "C" EMSCRIPTEN_KEEPALIVE void th_resize(int w, int h) {
+  SDL_Window* win = SDL_GetWindowFromID(1);
+  if (win != nullptr) SDL_SetWindowSize(win, w, h);
+}
+
 // ------------------------------------------------------------- JS bridge ----
 EM_JS(char*, th_js_call, (const char* cmd, const char* arg), {
   var c = UTF8ToString(cmd), a = UTF8ToString(arg);

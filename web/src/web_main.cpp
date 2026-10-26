@@ -72,6 +72,9 @@ void th_web_loop_finished(lua_State* caller, int nresults) {
 }
 
 int main(int argc, char** argv) {
+  // Keyboard events only from the game canvas, so that HTML inputs (chat)
+  // do not leak keystrokes into the game.
+  SDL_SetHint("SDL_EMSCRIPTEN_KEYBOARD_ELEMENT", "#canvas");
   g_L = luaL_newstate();
   if (g_L == nullptr) {
     th_web_fatal("Cannot open Lua state");
