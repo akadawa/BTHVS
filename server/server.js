@@ -248,6 +248,7 @@ function handle(ws, msg) {
         return send(ws, { t: "error", error: "not_all_ready" });
       }
       room.started = true;
+      for (const pl of room.players.values()) pl.gameReady = false;
       let level = (msg.config && msg.config.level) || room.config.level || "demo";
       if (room.hasDemoPlayer() && isFullOnlyLevel(level)) {
         level = "demo";
@@ -257,6 +258,17 @@ function handle(ws, msg) {
         players: connected.map((pl) => ({ id: pl.id, name: pl.name, demo: pl.demo })),
       });
       room.broadcast({ t: "start", config: room.config });
+      break;
+    }
+    case "game_ready": {
+      const room = ws.room;
+      if (!room || !room.started) return;
+      const p = room.players.get(ws.pid);
+      if (p) p.gameReady = true;
+      const connected = [...room.players.values()].filter((pl) => pl.ws);
+      if (connected.length >= 1 && connected.every((pl) => pl.gameReady)) {
+        room.broadcast({ t: "start_sim" });
+      }
       break;
     }
     case "msg": {

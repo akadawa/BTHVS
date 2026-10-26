@@ -35,6 +35,8 @@ function Multiplayer:Multiplayer(app)
   self.remote_cursors = {}
   self.last_cursor_send = 0
   self.last_balance_send = 0
+  self.last_hums_send = 0
+  self.sim_started = false
   self.internal_speed_change = false
   self.internal_action = false
   self.pending_snapshot = false
@@ -102,6 +104,128 @@ function Multiplayer:installHooks()
   local UIPlaceObjects = _G["UIPlaceObjects"] or corsixth.require("dialogs.place_objects")
   local UIPlaceStaff = _G["UIPlaceStaff"] or corsixth.require("dialogs.place_staff")
   local Staff = _G["Staff"] or corsixth.require("entities.humanoids.staff")
+  local Handyman = _G["Handyman"] or corsixth.require("entities.humanoids.staff.handyman")
+  local UIStaffRise = _G["UIStaffRise"] or corsixth.require("dialogs.staff_rise")
+  local UIFax = _G["UIFax"] or corsixth.require("dialogs.fullscreen.fax")
+
+  -- Ensure all entities created in the world have a unique integer ID
+  if World and World.newEntity then
+    local orig_newEntity = World.newEntity
+    World.newEntity = function(world_self, class_name, animation, mood_marker)
+      local entity = orig_newEntity(world_self, class_name, animation, mood_marker)
+      if entity and not entity.id then
+        world_self.next_entity_id = (world_self.next_entity_id or 1000) + 1
+        entity.id = world_self.next_entity_id
+      end
+      return entity
+    end
+  end
+
+  -- Prevent modal salary raise and fax dialogs from pausing multiplayer
+  if UIStaffRise then
+    UIStaffRise.mustPause = function(sr_self)
+      if mp.active then return false end
+      return true
+    end
+  end
+  if UIFax then
+    UIFax.mustPause = function(fax_self)
+      if mp.active then return false end
+      return true
+    end
+  end
+
+  -- Prevent system pause in multiplayer
+  if World and World.setSystemPause then
+    local orig_setSystemPause = World.setSystemPause
+    World.setSystemPause = function(world_self, state)
+      if mp.active then
+        world_self.system_pause = false
+        return
+      end
+      return orig_setSystemPause(world_self, state)
+    end
+  end
+
+  -- Prevent staff salary raise requests from triggering local strikes in co-op
+  if Staff and Staff.requestRaise then
+    local orig_requestRaise = Staff.requestRaise
+    Staff.requestRaise = function(staff_self)
+      if mp.active then
+        staff_self.timer_until_raise = nil
+        return
+      end
+      return orig_requestRaise(staff_self)
+    end
+  end
+
+  -- Host-authoritative patient generation
+  if World and World.spawnPatient then
+    local orig_spawnPatient = World.spawnPatient
+    World.spawnPatient = function(world_self, hospital)
+      if not mp.active then
+        return orig_spawnPatient(world_self, hospital)
+      end
+      if mp.is_host then
+        mp.internal_action = true
+        local patient = orig_spawnPatient(world_self, hospital)
+        mp.internal_action = false
+        if patient and patient.disease then
+          local d_id = tostring(patient.disease.id)
+          local sx = patient.tile_x
+          local sy = patient.tile_y
+          local act = patient.getNextAction and patient:getNextAction()
+          if (not sx or not sy) and act and act.point then
+            sx = act.point.x
+            sy = act.point.y
+          end
+          sx = sx or 1
+          sy = sy or 1
+          local p_id = patient.id
+          print(string.format("Multiplayer: Host spawned patient %d (disease=%s, sx=%d, sy=%d), broadcasting...", p_id, d_id, sx, sy))
+          mp.web.call("net.send", string.format("all|spawnp:%d,%s,%d,%d", p_id, d_id, sx, sy))
+        end
+        return patient
+      else
+        if mp.internal_action then
+          return orig_spawnPatient(world_self, hospital)
+        end
+        return nil
+      end
+    end
+  end
+
+  -- Host-authoritative VIP generation
+  if World and World.spawnVIP then
+    local orig_spawnVIP = World.spawnVIP
+    World.spawnVIP = function(world_self, name)
+      if not mp.active then return orig_spawnVIP(world_self, name) end
+      if mp.is_host then
+        local vip = orig_spawnVIP(world_self, name)
+        if vip then
+          mp.web.call("net.send", string.format("all|spawnvip:%d,%s", vip.id, name or "VIP"))
+        end
+        return vip
+      else
+        if mp.internal_action then return orig_spawnVIP(world_self, name) end
+        return nil
+      end
+    end
+  end
+
+  -- Host-authoritative handyman task assignment
+  if Handyman and Handyman.assignHandymanTask then
+    local orig_assignTask = Handyman.assignHandymanTask
+    Handyman.assignHandymanTask = function(hm_self, taskIndex, taskType)
+      local res = orig_assignTask(hm_self, taskIndex, taskType)
+      if mp.active and mp.is_host and not mp.internal_action and hm_self.task then
+        local ox = hm_self.task.tile_x or 0
+        local oy = hm_self.task.tile_y or 0
+        mp.web.call("net.send", string.format("all|hmtask:%d,%s,%d,%d", hm_self.id, taskType, ox, oy))
+      end
+      return res
+    end
+  end
 
   -- 1. Hook World:setSpeed to broadcast speed changes to peers
   if World and World.setSpeed then
@@ -219,10 +343,12 @@ function Multiplayer:installHooks()
 
         if mp.active and valid and not mp.internal_action then
           if is_new_hire and prof then
+            local hosp = ps_self.ui and ps_self.ui.hospital or (ps_self.world and ps_self.world:getLocalPlayerHospital())
+            local placed_entity_id = (hosp and hosp.staff and hosp.staff[#hosp.staff]) and hosp.staff[#hosp.staff].id or 0
             local is_psy = (type(prof.is_psychiatrist) == "number" and prof.is_psychiatrist >= 1.0 or prof.is_psychiatrist == true) and 1 or 0
             local is_sur = (type(prof.is_surgeon) == "number" and prof.is_surgeon >= 1.0 or prof.is_surgeon == true) and 1 or 0
             local is_res = (type(prof.is_researcher) == "number" and prof.is_researcher >= 1.0 or prof.is_researcher == true) and 1 or 0
-            local payload = string.format("hire:%s|%s|%d|%.2f|%d|%d|%d|%d|%d|%d|%d|%d",
+            local payload = string.format("hire:%s|%s|%d|%.2f|%d|%d|%d|%d|%d|%d|%d|%d|%d",
               prof.humanoid_class,
               clean_name(prof.name),
               prof.wage or 100,
@@ -233,7 +359,8 @@ function Multiplayer:installHooks()
               is_res,
               prof.is_junior and 1 or 0,
               prof.is_consultant and 1 or 0,
-              tx, ty)
+              tx, ty,
+              placed_entity_id)
             mp.web.call("net.send", "all|" .. payload)
             local role_de = prof.humanoid_class == "Doctor" and "Arzt"
               or prof.humanoid_class == "Nurse" and "Krankenschwester"
@@ -352,6 +479,7 @@ function Multiplayer:start()
   if success and self.app.world then
     -- Ensure prices and build costs remain active (not $0 cheat mode)
     self.app.world.free_build_mode = false
+    self.app.world.debug_disable_salary_raise = true
     local hosp = self.app.world:getLocalPlayerHospital()
     if self.mode == "freebuild" then
       -- Endlosmodus: Start with generous co-op budget ($200,000) so building costs money without fear of bankruptcy
@@ -361,7 +489,11 @@ function Multiplayer:start()
     else
       -- Level-Modus: Campaign starting balance (Level 1: $40,000)
     end
-    self.app.world:setSpeed("Normal")
+    -- In multiplayer, hold game paused until all players have loaded on tick 0
+    self.app.world:setSpeed("Pause")
+    self.app.world.user_actions_allowed = false
+    self.web.call("ui.banner", "wWarte auf Mitspieler …")
+    self.web.call("game.ready", "1")
   end
 
   return true
@@ -399,12 +531,34 @@ function Multiplayer:onTick()
     end
   end
 
-  -- 3. Host periodically syncs authoritative bank balance (~3s)
-  if self.is_host and (now - self.last_balance_send > 3000) then
+  -- 3. Host periodically syncs authoritative bank balance and in-game date (~2s)
+  if self.is_host and (now - self.last_balance_send > 2000) then
     self.last_balance_send = now
     if self.app.world and self.app.world.ui and self.app.world.ui.hospital then
       local bal = self.app.world.ui.hospital.balance
-      self.web.call("net.send", "all|balance:" .. tostring(bal))
+      local d = self.app.world.game_date
+      if d then
+        self.web.call("net.send", string.format("all|syncstate:%d,%d,%d,%d,%d", bal, d:year(), d:monthOfYear(), d:dayOfMonth(), d:hourOfDay()))
+      else
+        self.web.call("net.send", "all|balance:" .. tostring(bal))
+      end
+    end
+  end
+
+  -- 4. Host periodically sends humanoid positions (~1500ms)
+  if self.is_host and (now - self.last_hums_send > 1500) then
+    self.last_hums_send = now
+    if self.app.world and self.app.world.entities then
+      local parts = {}
+      local Humanoid = _G["Humanoid"] or corsixth.require("entities.humanoid")
+      for _, e in ipairs(self.app.world.entities) do
+        if class.is(e, Humanoid) and e.id and e.tile_x and e.tile_y then
+          table.insert(parts, string.format("%d:%d,%d", e.id, e.tile_x, e.tile_y))
+        end
+      end
+      if #parts > 0 then
+        self.web.call("net.send", "all|hums:" .. table.concat(parts, ";"))
+      end
     end
   end
 end
@@ -436,12 +590,27 @@ function Multiplayer:applySnapshot(from, meta)
   end
   if self.app.world then
     self.app.world.free_build_mode = false
+    self.app.world.debug_disable_salary_raise = true
   end
   self.web.call("ui.sync", "oSync")
   self.web.call("ui.banner", "oSpielstand synchronisiert")
 end
 
 function Multiplayer:handleMessage(from, data)
+  -- 0. Synchronized Start Barrier
+  if data == "start_sim" then
+    print("Multiplayer: Both engines ready on tick 0! Starting simulation now.")
+    self.sim_started = true
+    if self.app.world then
+      self.app.world.user_actions_allowed = true
+      self.internal_speed_change = true
+      self.app.world:setSpeed("Normal")
+      self.internal_speed_change = false
+    end
+    self.web.call("ui.banner", "oSpiel gestartet!")
+    return
+  end
+
   -- 1. Snapshot received
   if data:sub(1, 9) == "snapshot:" then
     local meta = data:sub(10)
@@ -527,10 +696,23 @@ function Multiplayer:handleMessage(from, data)
 
         self.internal_action = true
         local entity = self.app.world:newEntity(class_name, 2, 2)
+        local entity_id = tonumber(parts[13])
+        if entity_id and entity_id > 0 then
+          entity.id = entity_id
+        end
         entity:setProfile(profile)
         entity:setTile(tx, ty)
         hosp:addStaff(entity)
         entity:setHospital(hosp)
+        if self.app.world.available_staff and self.app.world.available_staff[class_name] then
+          local pool = self.app.world.available_staff[class_name]
+          for idx, cand in ipairs(pool) do
+            if clean_name(cand.name) == clean_name(name) then
+              table.remove(pool, idx)
+              break
+            end
+          end
+        end
         local entity_room = entity:getRoom()
         if entity_room then
           entity_room:onHumanoidEnter(entity)
@@ -540,11 +722,167 @@ function Multiplayer:handleMessage(from, data)
         local role_title = "Personal"
         if class_name == "Doctor" then role_title = "Arzt"
         elseif class_name == "Nurse" then role_title = "Krankenschwester"
-        elseif class_name == "Handyman" then role_title = "Handwerker"
+        elseif class_name == "Handyman" then role_title = "Hausmeister"
         elseif class_name == "Receptionist" then role_title = "Rezeptionistin"
         end
         self.web.call("ui.banner", string.format("oPartner eingestellt: %s (%s)", clean_name(name), role_title))
         self.internal_action = false
+      end
+    end
+    return
+  end
+
+  -- Authoritative patient spawn from host
+  if data:sub(1, 7) == "spawnp:" then
+    local pid, did, sx, sy = data:match("spawnp:(%d+),([^,]+),(%d+),(%d+)")
+    if pid and did and sx and sy and self.app.world then
+      pid, sx, sy = tonumber(pid), tonumber(sx), tonumber(sy)
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp then
+        local disease = nil
+        if self.app.diseases and self.app.diseases[did] then
+          disease = self.app.diseases[did]
+        elseif self.app.world.available_diseases then
+          disease = self.app.world.available_diseases[did]
+          if not disease then
+            for _, d in ipairs(self.app.world.available_diseases) do
+              if d.id == did then disease = d break end
+            end
+          end
+        end
+        if disease then
+          self.internal_action = true
+          local patient = self.app.world:newEntity("Patient", 2, 1)
+          patient.id = pid
+          patient:setDisease(disease)
+          local spawn_point = nil
+          if self.app.world.spawn_points then
+            for _, sp in ipairs(self.app.world.spawn_points) do
+              if sp.x == sx and sp.y == sy then
+                spawn_point = sp
+                break
+              end
+            end
+          end
+          if not spawn_point then
+            spawn_point = { x = sx, y = sy, direction = "north" }
+          end
+          local SpawnAction = _G["SpawnAction"] or corsixth.require("humanoid_actions.spawn")
+          patient:setNextAction(SpawnAction("spawn", spawn_point))
+          patient:setHospital(hosp)
+          print(string.format("Multiplayer: Guest spawned replicated patient %d (%s) at (%d,%d)", pid, did, sx, sy))
+          self.internal_action = false
+        else
+          print("Multiplayer: Warning - could not find disease " .. tostring(did) .. " on guest")
+        end
+      end
+    end
+    return
+  end
+
+  -- Authoritative VIP spawn from host
+  if data:sub(1, 9) == "spawnvip:" then
+    local vid, name = data:match("spawnvip:(%d+),(.+)")
+    if vid and self.app.world then
+      vid = tonumber(vid)
+      self.internal_action = true
+      local vip = self.app.world:spawnVIP(name)
+      if vip then vip.id = vid end
+      self.internal_action = false
+    end
+    return
+  end
+
+  -- Authoritative Handyman task assignment
+  if data:sub(1, 7) == "hmtask:" then
+    local hid, taskType, ox, oy = data:match("hmtask:(%d+),([^,]+),(%d+),(%d+)")
+    if hid and taskType and ox and oy and self.app.world and self.app.world.entities then
+      hid, ox, oy = tonumber(hid), tonumber(ox), tonumber(oy)
+      local handyman = nil
+      for _, e in ipairs(self.app.world.entities) do
+        if e.id == hid and e.humanoid_class == "Handyman" then
+          handyman = e
+          break
+        end
+      end
+      if handyman then
+        if taskType == "watering" then
+          local obj = self.app.world:getObject(ox, oy, "plant")
+          if obj and obj.createHandymanActions then
+            self.internal_action = true
+            obj:createHandymanActions(handyman)
+            self.internal_action = false
+          end
+        elseif taskType == "cleaning" then
+          local obj = self.app.world:getObject(ox, oy, "litter")
+          local WalkAction = _G["WalkAction"] or corsixth.require("humanoid_actions.walk")
+          local SweepFloorAction = _G["SweepFloorAction"] or corsixth.require("humanoid_actions.sweep_floor")
+          local AnswerCallAction = _G["AnswerCallAction"] or corsixth.require("humanoid_actions.answer_call")
+          self.internal_action = true
+          if handyman:getRoom() then
+            handyman:setNextAction(handyman:getRoom():createLeaveAction())
+            handyman:queueAction(WalkAction(ox, oy))
+          else
+            handyman:setNextAction(WalkAction(ox, oy))
+          end
+          if obj then
+            handyman:queueAction(SweepFloorAction(obj))
+          end
+          handyman:queueAction(AnswerCallAction())
+          self.internal_action = false
+        elseif taskType == "repairing" then
+          local obj = self.app.world:getObject(ox, oy, "machine")
+          if obj and obj.createHandymanActions then
+            self.internal_action = true
+            obj:createHandymanActions(handyman)
+            self.internal_action = false
+          end
+        end
+      end
+    end
+    return
+  end
+
+  -- Humanoid periodic reconciliation
+  if data:sub(1, 5) == "hums:" then
+    local entries = data:sub(6)
+    if self.app.world and self.app.world.entities then
+      local local_ents = {}
+      for _, e in ipairs(self.app.world.entities) do
+        if e.id then local_ents[e.id] = e end
+      end
+      for item in entries:gmatch("([^;]+)") do
+        local id, tx, ty = item:match("(%d+):(%d+),(%d+)")
+        if id and tx and ty then
+          id, tx, ty = tonumber(id), tonumber(tx), tonumber(ty)
+          local e = local_ents[id]
+          if e and e.tile_x and e.tile_y then
+            local dist = math.abs(e.tile_x - tx) + math.abs(e.tile_y - ty)
+            if dist > 2 then
+              e:setTile(tx, ty)
+            end
+          end
+        end
+      end
+    end
+    return
+  end
+
+  -- State synchronization (balance and calendar date)
+  if data:sub(1, 10) == "syncstate:" then
+    local bal, y, m, d, h = data:match("syncstate:(%-?%d+),(%d+),(%d+),(%d+),(%d+)")
+    if bal and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp then hosp.balance = tonumber(bal) end
+      if y and m and d and h and self.app.world.game_date then
+        y, m, d, h = tonumber(y), tonumber(m), tonumber(d), tonumber(h)
+        local cur = self.app.world.game_date
+        if cur:year() ~= y or cur:monthOfYear() ~= m or cur:dayOfMonth() ~= d then
+          local Date = _G["Date"] or corsixth.require("date")
+          if Date then
+            self.app.world.game_date = Date(y, m, d, h)
+          end
+        end
       end
     end
     return

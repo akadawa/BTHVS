@@ -725,6 +725,9 @@
       case "test.val":
         window.__test_val = arg;
         return null;
+      case "game.ready":
+        if (net) net.sendRaw({ t: "game_ready" });
+        return null;
       case "mp.session":
         return state.session && state.session.mp ? "return " + luaLiteral(state.session.mp) : "";
       case "net.send": {
@@ -812,6 +815,15 @@
     });
     net.on("players", (m) => { state.lobby.players = m.players; net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) }); });
     net.on("left", (m) => { state.lobby.players = m.players; net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") }); chatSys(`${(state.lobby.players.find(p=>p.id===m.id)||{name:"Ein Spieler"}).name} hat die Verbindung verloren.`); });
+    net.on("start_sim", () => {
+      net.inbox.push({ from: -1, d: "start_sim" });
+      const banner = $("#net-banner");
+      if (banner) {
+        banner.className = "";
+        banner.textContent = "Spiel gestartet!";
+        setTimeout(() => { banner.hidden = true; }, 3000);
+      }
+    });
     net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Verbindung zum Server verloren – Spiel angehalten."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
     net.on("chat", (m) => chatMsg(m.name, m.text, m.from !== net.id));
     setupChat();
@@ -1135,6 +1147,15 @@
     state.net.off("joined");
     state.net.off("start");
     state.net.off("chat");
+    state.net.on("start_sim", () => {
+      if (state.net) state.net.inbox.push({ from: -1, d: "start_sim" });
+      const banner = $("#net-banner");
+      if (banner) {
+        banner.className = "";
+        banner.textContent = "Spiel gestartet!";
+        setTimeout(() => { banner.hidden = true; }, 3000);
+      }
+    });
     startGame({ mp, language: config.language, name: me.name });
   }
 
