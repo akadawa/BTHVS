@@ -403,12 +403,12 @@ function GameUI:makeDebugFax()
 end
 
 function GameUI:ScreenToWorld(x, y)
-  local zoom = self.zoom_factor
+  local zoom = self.zoom_factor or 1
   return self.app.map:ScreenToWorld(self.screen_offset_x + x / zoom, self.screen_offset_y + y / zoom)
 end
 
 function GameUI:WorldToScreen(x, y)
-  local zoom = self.zoom_factor
+  local zoom = self.zoom_factor or 1
   x, y = self.app.map:WorldToScreen(x, y)
   x = x - self.screen_offset_x
   y = y - self.screen_offset_y

@@ -1857,6 +1857,11 @@ function App:checkCompatibility(save_version, gfx_set)
   local app_version = self.savegame_version
   local err
 
+  -- In multiplayer coop, allow cross-loading between demo and full game files on compatible maps
+  if (self.multiplayer and self.multiplayer.active) or (self.config and self.config.multiplayer) then
+    return true
+  end
+
   -- First check the graphics set matches with the game files
   if (gfx_set == "demo" and not self.using_demo_files) then
     err = _S.errors.compatibility_error.demo_in_full

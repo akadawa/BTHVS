@@ -289,6 +289,10 @@ function LoadGame(data)
   if not state.world.gfx_set then
     state.world.gfx_set = gfxSetHeuristic(state.map, state.world)
   end
+  -- In multiplayer coop, adapt loaded world gfx_set to local installation files
+  if TheApp.multiplayer and TheApp.multiplayer.active then
+    state.world.gfx_set = TheApp.using_demo_files and "demo" or "full"
+  end
   -- Check the game we're loading is compatible with program
   if not TheApp:checkCompatibility(state.world.savegame_version, state.world.gfx_set) then return end
   state.ui:resync(TheApp.ui)

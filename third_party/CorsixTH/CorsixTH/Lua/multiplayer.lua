@@ -357,13 +357,23 @@ function Multiplayer:applySnapshot(from, meta)
   if self.app.ui then
     cam_x = self.app.ui.screen_offset_x
     cam_y = self.app.ui.screen_offset_y
-    cam_z = self.app.ui.zoom_factor
+    cam_z = self.app.ui.zoom_factor or 1
   end
-  self.app:load("/tmp/snapshot_in.sav")
-  if self.app.ui and cam_x then
-    self.app.ui.screen_offset_x = cam_x
-    self.app.ui.screen_offset_y = cam_y
-    self.app.ui.zoom_factor = cam_z
+  local ok, err = pcall(function()
+    self.app:load("/tmp/snapshot_in.sav")
+  end)
+  if not ok then
+    print("Multiplayer: Error loading snapshot: " .. tostring(err))
+    self.web.call("ui.banner", "eFehler beim Synchronisieren")
+    return
+  end
+  if self.app.ui then
+    if cam_x then self.app.ui.screen_offset_x = cam_x end
+    if cam_y then self.app.ui.screen_offset_y = cam_y end
+    self.app.ui.zoom_factor = cam_z or self.app.ui.zoom_factor or 1
+  end
+  if self.app.world then
+    self.app.world.free_build_mode = false
   end
   self.web.call("ui.sync", "oSync")
   self.web.call("ui.banner", "oSpielstand synchronisiert")
