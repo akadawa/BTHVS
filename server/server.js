@@ -20,7 +20,7 @@ function arg(name, def) {
 const PORT = parseInt(process.env.PORT || arg("port", "8085"), 10);
 const HOST = process.env.HOST || arg("host", "0.0.0.0");
 const ROOT = path.resolve(__dirname, "..", "dist");
-const MAX_PLAYERS = 4;
+const MAX_PLAYERS = 2;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const MIME = {
@@ -32,6 +32,9 @@ const MIME = {
   ".data": "application/octet-stream",
   ".json": "application/json",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
 };

@@ -13,7 +13,7 @@
       <div class="logo">✚</div>
       <div>
         <h1>Browser Theme Hospital</h1>
-        <p class="sub">CorsixTH im Browser – mit Online-Koop</p>
+        <p class="sub">CorsixTH v0.69.2 im Browser – mit 2-Spieler Koop</p>
       </div>
     </header>
 
@@ -59,8 +59,8 @@
         <div class="mode">
           <h3>Koop – Raum erstellen</h3>
           <p class="muted small">Du bekommst einen Code, den du an deine Mitspieler schickst.</p>
-          <label class="field inline">Max. Spieler
-            <select id="max-players"><option>2</option><option>3</option><option>4</option></select>
+          <label class="field inline">Koop-Modus
+            <select id="max-players"><option value="2">2 Spieler (Koop-Duo)</option></select>
           </label>
           <button id="btn-create" class="btn primary" disabled>Raum erstellen</button>
         </div>
@@ -86,7 +86,7 @@
           </div>
         </div>
         <div class="players-box">
-          <div class="muted small">Spieler im Raum</div>
+          <div class="muted small" id="players-header">Spieler im Raum (max. 2)</div>
           <ul id="player-list"></ul>
         </div>
       </div>
@@ -114,7 +114,7 @@
     </section>
 
     <footer class="muted small">
-      Basiert auf <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH</a> (MIT-Lizenz). Theme Hospital © Bullfrog / EA.
+      Basiert auf <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT-Lizenz). Theme Hospital © Bullfrog / EA.
     </footer>
   </main>
 
@@ -127,6 +127,7 @@
     </div>
 
     <div id="hud" hidden>
+      <span id="hud-version" class="chip">CorsixTH v0.69.2</span>
       <span id="hud-room" class="chip"></span>
       <span id="hud-sync" class="chip ok">Sync</span>
       <span id="hud-ping" class="chip">– ms</span>

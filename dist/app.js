@@ -298,6 +298,8 @@
       ul.appendChild(li);
     }
     const connected = L.players.filter((p) => p.connected).length;
+    const max = L.max || 2;
+    if ($("#players-header")) $("#players-header").textContent = `Spieler im Raum (${connected}/${max})`;
     $("#host-options").hidden = !L.host;
     $("#guest-wait").hidden = L.host;
     $("#btn-start").hidden = !L.host;
