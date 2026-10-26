@@ -76,18 +76,32 @@
 
     <section class="card" id="card-lobby" hidden>
       <h2>Koop-Lobby</h2>
-      <div class="lobby-top">
-        <div>
+      <div class="lobby-grid">
+        <div class="lobby-col-left">
           <div class="muted small">Raum-Code (weitergeben!)</div>
           <div class="room-code" id="room-code">-----</div>
           <div class="row">
             <button id="btn-copy-code" class="btn secondary small">Code kopieren</button>
             <button id="btn-copy-link" class="btn secondary small">Einladungslink kopieren</button>
           </div>
+
+          <div class="players-box">
+            <div class="muted small" id="players-header">Spieler im Raum (max. 2)</div>
+            <ul id="player-list"></ul>
+          </div>
         </div>
-        <div class="players-box">
-          <div class="muted small" id="players-header">Spieler im Raum (max. 2)</div>
-          <ul id="player-list"></ul>
+
+        <div class="lobby-col-right">
+          <div id="lobby-chat-box">
+            <div class="lobby-chat-header">💬 Lobby-Chat</div>
+            <div id="lobby-chat-log">
+              <div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>
+            </div>
+            <form id="lobby-chat-form">
+              <input id="lobby-chat-input" maxlength="200" autocomplete="off" placeholder="Nachricht an Mitspieler … (Enter)">
+              <button type="submit" class="btn small primary">Senden</button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -115,7 +129,8 @@
         <p id="guest-wait" class="muted">Warte darauf, dass der Host das Spiel startet …</p>
       </div>
 
-      <div class="row">
+      <div class="row lobby-actions-row">
+        <button id="btn-ready" class="btn secondary">✓ Bereit melden</button>
         <button id="btn-start" class="btn primary" disabled>Spiel starten</button>
         <button id="btn-leave-lobby" class="btn ghost">Raum verlassen</button>
       </div>

@@ -107,7 +107,10 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   }
   console.log("PASS: Guest view correctly shows compatible map:", guestLobbyLevel);
 
-  // 5. Host starts game
+  // 5. Both ready up and Host starts game
+  await pDemoGuest.click("#btn-ready");
+  await pFullHost.click("#btn-ready");
+  await pFullHost.waitForFunction(() => !document.querySelector("#btn-start").disabled);
   await pFullHost.click("#btn-start");
   await Promise.all([
     pFullHost.waitForSelector("#hud:not([hidden])", { timeout: 35000 }),

@@ -324,24 +324,66 @@
     for (const p of L.players) {
       const li = document.createElement("li");
       if (!p.connected) li.className = "off";
-      li.innerHTML = `<span></span><span class="tag"></span>`;
-      li.firstChild.textContent = p.name + (p.id === L.id ? " (du)" : "");
+
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = p.name + (p.id === L.id ? " (du)" : "");
+
+      const badges = document.createElement("div");
+      badges.className = "player-badges";
+
+      const tag = document.createElement("span");
+      tag.className = "tag";
       const contentTag = p.demo ? "Demo" : "Vollversion";
-      li.lastChild.textContent = (p.host ? "HOST · " : "") + contentTag;
+      tag.textContent = (p.host ? "HOST · " : "") + contentTag;
+
+      const readyBadge = document.createElement("span");
+      readyBadge.className = "badge-ready " + (p.ready ? "ready" : "waiting");
+      readyBadge.textContent = p.ready ? "✓ Bereit" : "⏳ Wartet";
+
+      badges.appendChild(tag);
+      badges.appendChild(readyBadge);
+      li.appendChild(nameSpan);
+      li.appendChild(badges);
       ul.appendChild(li);
     }
-    const connected = L.players.filter((p) => p.connected).length;
+
+    const connectedPlayers = L.players.filter((p) => p.connected);
+    const connectedCount = connectedPlayers.length;
+    const allReady = connectedCount >= 2 && connectedPlayers.every((p) => p.ready);
+    const myPlayer = L.players.find((p) => p.id === L.id);
+    const amReady = !!(myPlayer && myPlayer.ready);
+
+    const btnReady = $("#btn-ready");
+    if (btnReady) {
+      if (amReady) {
+        btnReady.textContent = "✓ Du bist bereit (Klicken zum Abbrechen)";
+        btnReady.className = "btn ready-active";
+      } else {
+        btnReady.textContent = "✓ Bereit melden";
+        btnReady.className = "btn secondary";
+      }
+    }
+
     const max = L.max || 2;
-    if ($("#players-header")) $("#players-header").textContent = `Spieler im Raum (${connected}/${max})`;
+    if ($("#players-header")) $("#players-header").textContent = `Spieler im Raum (${connectedCount}/${max})`;
     $("#host-options").hidden = !L.host;
     $("#guest-options").hidden = !!L.host;
     $("#btn-start").hidden = !L.host;
-    $("#btn-start").disabled = connected < 2;
-    $("#lobby-hint").textContent = L.host
-      ? connected < 2 ? "Warte auf Mitspieler … Teile den Code oder den Einladungslink." : "Alle da? Dann kann es losgehen."
-      : "";
+    $("#btn-start").disabled = !allReady;
+    if (allReady) {
+      $("#btn-start").classList.add("all-ready");
+    } else {
+      $("#btn-start").classList.remove("all-ready");
+    }
 
     if (L.host) {
+      if (connectedCount < 2) {
+        $("#lobby-hint").textContent = "Warte auf Mitspieler … Teile den Code oder den Einladungslink.";
+      } else if (!allReady) {
+        $("#lobby-hint").textContent = "Beide Spieler müssen auf 'Bereit melden' klicken, bevor gestartet werden kann.";
+      } else {
+        $("#lobby-hint").textContent = "Beide Spieler sind bereit! Klicke auf 'Spiel starten'.";
+      }
       refreshLevelOptions();
     } else {
       const modeName = L.mode === "level" ? "Gemeinsames Level (Kampagne)" : "Endlos-Krankenhaus (Freies Spiel)";
@@ -349,7 +391,70 @@
       const levelName = levelObj ? levelObj.label : (L.level || "Demo-Level");
       if ($("#guest-mode-val")) $("#guest-mode-val").textContent = modeName;
       if ($("#guest-level-val")) $("#guest-level-val").textContent = levelName;
+      const guestWait = $("#guest-wait");
+      if (guestWait) {
+        if (!amReady) {
+          guestWait.textContent = "Bitte klicke auf 'Bereit melden', wenn du startklar bist.";
+        } else if (!allReady) {
+          guestWait.textContent = "Du bist bereit! Warte darauf, dass der Host sich bereit meldet …";
+        } else {
+          guestWait.textContent = "Beide bereit! Warte darauf, dass der Host das Spiel startet …";
+        }
+      }
     }
+  }
+
+  function lobbyChatMsg(name, text, isMe) {
+    const logEl = $("#lobby-chat-log");
+    if (!logEl) return;
+    const placeholder = logEl.querySelector(".chat-placeholder");
+    if (placeholder) placeholder.remove();
+
+    const line = document.createElement("div");
+    line.className = "chat-line";
+
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, "0") + ":" +
+                    String(now.getMinutes()).padStart(2, "0");
+
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "chat-time";
+    timeSpan.textContent = `[${timeStr}]`;
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "chat-name" + (isMe ? "" : " partner");
+    nameSpan.textContent = name + ": ";
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = text;
+
+    line.appendChild(timeSpan);
+    line.appendChild(nameSpan);
+    line.appendChild(textSpan);
+
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function lobbyChatSys(text) {
+    const logEl = $("#lobby-chat-log");
+    if (!logEl) return;
+    const placeholder = logEl.querySelector(".chat-placeholder");
+    if (placeholder) placeholder.remove();
+
+    const line = document.createElement("div");
+    line.className = "chat-line chat-sys";
+    line.textContent = `ℹ ${text}`;
+
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function toggleReady() {
+    if (!state.lobby || !state.net) return;
+    const myPlayer = state.lobby.players.find((p) => p.id === state.lobby.id);
+    const nextReady = !(myPlayer && myPlayer.ready);
+    state.net.sendRaw({ t: "ready", ready: nextReady });
   }
 
   function broadcastLobbyConfig() {
@@ -362,6 +467,8 @@
 
   async function enterLobby(kind, code) {
     showMenuError("");
+    const chatLog = $("#lobby-chat-log");
+    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
     const net = new Net();
     state.net = net;
     try { await net.connect(); } catch (e) { showMenuError("Verbindung zum Server fehlgeschlagen. Läuft der Server?"); return; }
@@ -381,6 +488,7 @@
       if (m.started && m.config) { startMultiplayer(m.config, true); return; }
       history.replaceState(null, "", "?join=" + m.code);
       renderLobby();
+      lobbyChatSys(`Raum ${m.code} betreten als "${name}".`);
     });
     net.on("players", (m) => {
       if (state.lobby && !state.game) {
@@ -389,6 +497,13 @@
           if (m.config.mode) state.lobby.mode = m.config.mode;
           if (m.config.level) state.lobby.level = m.config.level;
         }
+        if (m.readyChange) {
+          const statusTxt = m.readyChange.ready ? "BEREIT ✓" : "nicht mehr bereit ⏳";
+          lobbyChatSys(`${m.readyChange.name} ist jetzt ${statusTxt}`);
+        } else if (m.joined !== undefined && m.joined !== net.id) {
+          const joinedP = m.players.find((p) => p.id === m.joined);
+          if (joinedP) lobbyChatSys(`${joinedP.name} ist dem Raum beigetreten.`);
+        }
         renderLobby();
       }
     });
@@ -396,16 +511,27 @@
       if (state.lobby && !state.game) {
         state.lobby.mode = m.mode;
         state.lobby.level = m.level;
+        lobbyChatSys("Einstellungen geändert – Bereitschaft zurückgesetzt.");
         if (!state.lobby.host) renderLobby();
       }
     });
+    net.on("chat", (m) => {
+      lobbyChatMsg(m.name, m.text, m.from === net.id);
+    });
     net.on("left", (m) => {
       if (!state.lobby) return;
+      const leftPlayer = state.lobby.players.find((p) => p.id === m.id);
+      if (leftPlayer) lobbyChatSys(`${leftPlayer.name} hat den Raum verlassen.`);
       state.lobby.players = m.players;
       if (m.host !== undefined && m.host !== null) state.lobby.host = m.host === state.lobby.id;
       if (!state.game) renderLobby();
     });
     net.on("error", (m) => {
+      if (m.error === "not_all_ready") {
+        lobbyChatSys("Start abgebrochen: Beide Spieler müssen bereit sein!");
+        if ($("#lobby-hint")) $("#lobby-hint").textContent = "Beide Spieler müssen auf 'Bereit melden' klicken!";
+        return;
+      }
       const t = { no_such_room: "Diesen Raum gibt es nicht.", room_full: "Der Raum ist voll.", already_started: "Das Spiel läuft bereits." }[m.error] || m.error;
       showMenuError(t);
       net.close();
@@ -430,14 +556,26 @@
     state.net = null;
     state.lobby = null;
     $("#card-lobby").hidden = true;
+    const chatLog = $("#lobby-chat-log");
+    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
     history.replaceState(null, "", location.pathname);
   }
 
   function hostStart() {
+    const L = state.lobby;
+    if (!L || !L.host || !state.net) return;
+    const connectedPlayers = L.players.filter((p) => p.connected);
+    if (connectedPlayers.length < 2) {
+      lobbyChatSys("Es werden mindestens 2 Spieler benötigt, um zu starten.");
+      return;
+    }
+    if (!connectedPlayers.every((p) => p.ready)) {
+      lobbyChatSys("Alle Spieler müssen bereit sein, bevor das Spiel gestartet werden kann!");
+      return;
+    }
     const mode = $("#mp-mode").value;
     let level = $("#mp-level").value;
-    const L = state.lobby;
-    const anyDemo = L && L.players && L.players.some((p) => p.demo);
+    const anyDemo = L.players.some((p) => p.demo);
     const lObj = LEVELS.find((x) => x.id === level);
     if (anyDemo && lObj && lObj.full) {
       level = "demo";
@@ -993,6 +1131,7 @@
     };
     state.net.off("joined");
     state.net.off("start");
+    state.net.off("chat");
     startGame({ mp, language: config.language, name: me.name });
   }
 
@@ -1030,6 +1169,7 @@
     };
     $("#join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
     $("#join-code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#btn-join").click(); });
+    $("#btn-ready").onclick = toggleReady;
     $("#btn-leave-lobby").onclick = leaveLobby;
     $("#btn-start").onclick = hostStart;
     $("#mp-mode").onchange = () => { refreshLevelOptions(); broadcastLobbyConfig(); };
@@ -1038,12 +1178,25 @@
     $("#btn-copy-link").onclick = () => navigator.clipboard.writeText(location.origin + location.pathname + "?join=" + state.lobby.code).catch(() => {});
     $("#fatal-reload").onclick = () => (location.href = location.pathname);
 
+    const lobbyChatForm = $("#lobby-chat-form");
+    const lobbyChatInput = $("#lobby-chat-input");
+    if (lobbyChatForm && lobbyChatInput) {
+      lobbyChatForm.onsubmit = (e) => {
+        e.preventDefault();
+        const text = lobbyChatInput.value.trim();
+        if (text && state.net) {
+          state.net.sendRaw({ t: "chat", text });
+          lobbyChatInput.value = "";
+        }
+      };
+    }
+
     refreshLevelOptions();
     const join = new URLSearchParams(location.search).get("join");
     if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady };
   }
 
   init();

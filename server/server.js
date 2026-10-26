@@ -100,13 +100,14 @@ class Room {
     this.emptySince = null;
   }
   hasDemoPlayer() {
-    return [...this.players.values()].some((p) => p.connected && p.demo);
+    return [...this.players.values()].some((p) => p.ws && p.demo);
   }
   playerList() {
     return [...this.players.values()].map((p) => ({
       id: p.id,
       name: p.name,
       demo: !!p.demo,
+      ready: !!p.ready,
       host: p.id === this.hostId,
       connected: !!p.ws,
     }));
@@ -164,7 +165,7 @@ function handle(ws, msg) {
       const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 2));
       const room = new Room(newCode(), max);
       rooms.set(room.code, room);
-      const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), demo: !!msg.demo, token: String(msg.token || ""), ws };
+      const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), demo: !!msg.demo, ready: false, token: String(msg.token || ""), ws };
       room.players.set(p.id, p);
       room.hostId = p.id;
       ws.room = room;
@@ -187,7 +188,7 @@ function handle(ws, msg) {
       } else {
         if (room.started) return send(ws, { t: "error", error: "already_started" });
         if (room.connectedCount() >= room.max) return send(ws, { t: "error", error: "room_full" });
-        p = { id: room.nextId++, name: String(msg.name || "Player").slice(0, 24), demo: !!msg.demo, token, ws };
+        p = { id: room.nextId++, name: String(msg.name || "Player").slice(0, 24), demo: !!msg.demo, ready: false, token, ws };
         room.players.set(p.id, p);
       }
       if (room.hasDemoPlayer() && isFullOnlyLevel(room.config.level)) {
@@ -210,6 +211,20 @@ function handle(ws, msg) {
       room.broadcast({ t: "players", players: room.playerList(), joined: p.id, rejoin, config: room.config }, p.id);
       break;
     }
+    case "ready": {
+      const room = ws.room;
+      if (!room || room.started) return;
+      const p = room.players.get(ws.pid);
+      if (!p) return;
+      p.ready = !!msg.ready;
+      room.broadcast({
+        t: "players",
+        players: room.playerList(),
+        config: room.config,
+        readyChange: { id: p.id, name: p.name, ready: p.ready },
+      });
+      break;
+    }
     case "lobby_config": {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
@@ -219,12 +234,19 @@ function handle(ws, msg) {
         if (room.hasDemoPlayer() && isFullOnlyLevel(lvl)) lvl = "demo";
         room.config.level = lvl;
       }
+      // Unready players on settings change so everyone re-confirms
+      for (const pl of room.players.values()) pl.ready = false;
       room.broadcast({ t: "lobby_config", mode: room.config.mode, level: room.config.level });
+      room.broadcast({ t: "players", players: room.playerList(), config: room.config });
       break;
     }
     case "start": {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
+      const connected = [...room.players.values()].filter((pl) => pl.ws);
+      if (connected.length < 2 || !connected.every((pl) => pl.ready)) {
+        return send(ws, { t: "error", error: "not_all_ready" });
+      }
       room.started = true;
       let level = (msg.config && msg.config.level) || room.config.level || "demo";
       if (room.hasDemoPlayer() && isFullOnlyLevel(level)) {
@@ -232,7 +254,7 @@ function handle(ws, msg) {
       }
       room.config = Object.assign({}, room.config, msg.config || {}, {
         level,
-        players: room.playerList().filter((p) => p.connected).map((p) => ({ id: p.id, name: p.name, demo: p.demo })),
+        players: connected.map((pl) => ({ id: pl.id, name: pl.name, demo: pl.demo })),
       });
       room.broadcast({ t: "start", config: room.config });
       break;
@@ -277,6 +299,9 @@ function leave(ws, explicit) {
   p.ws = null;
   // Before the game starts, a leaving player simply disappears.
   if (!room.started || explicit) room.players.delete(p.id);
+  if (!room.started) {
+    for (const pl of room.players.values()) pl.ready = false;
+  }
   if (room.hostId === p.id) {
     const next = [...room.players.values()].find((q) => q.ws);
     room.hostId = next ? next.id : null;
