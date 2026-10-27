@@ -1208,12 +1208,14 @@
     const name = playerName();
     const isDemo = false;
     net.on("joined", (m) => {
+      const isPublic = $("#create-public") ? $("#create-public").checked : true;
       state.lobby = {
         code: m.code,
         id: m.id,
         host: m.host,
         players: m.players,
         max: m.max || 5,
+        isPublic,
         mode: "versus",
         goals: (m.config && m.config.goals) ? m.config.goals : { cured: 25, money: 100000, timeLimit: 30 },
         level: (m.config && m.config.level) ? m.config.level : "demo",
@@ -1223,6 +1225,15 @@
       history.replaceState(null, "", "?join=" + m.code);
       if (m.host) {
         state.lobby.goals = getGoalsFromUI();
+        if (isPublic) {
+          registerPublicLobby(state.lobby);
+          if (_lobbyHeartbeatTimer) clearInterval(_lobbyHeartbeatTimer);
+          _lobbyHeartbeatTimer = setInterval(() => {
+            if (state.lobby && state.lobby.host && state.lobby.isPublic && !state.game) {
+              registerPublicLobby(state.lobby);
+            }
+          }, 25000);
+        }
       } else {
         setGoalsInUI(state.lobby.goals);
       }
@@ -1235,6 +1246,9 @@
         if (m.config) {
           if (m.config.goals) state.lobby.goals = m.config.goals;
           if (m.config.level) state.lobby.level = m.config.level;
+        }
+        if (state.lobby.host && state.lobby.isPublic) {
+          registerPublicLobby(state.lobby);
         }
         if (m.readyChange) {
           const statusTxt = m.readyChange.ready ? "READY" : "NOT READY";
@@ -1260,6 +1274,7 @@
         }
         updateGoalSummaryUI(state.lobby.goals);
         lobbyChatSys("Settings updated – Ready status reset.");
+        if (state.lobby.host && state.lobby.isPublic) registerPublicLobby(state.lobby);
         if (!state.lobby.host) renderLobby();
       }
     });
@@ -1272,6 +1287,7 @@
       if (leftPlayer) lobbyChatSys(`${leftPlayer.name} left the room.`);
       state.lobby.players = m.players;
       if (m.host !== undefined && m.host !== null) state.lobby.host = m.host === state.lobby.id;
+      if (state.lobby.host && state.lobby.isPublic) registerPublicLobby(state.lobby);
       if (!state.game) renderLobby();
     });
     net.on("error", (m) => {
@@ -1322,6 +1338,7 @@
   }
 
   function leaveLobby() {
+    if (state.lobby) unregisterPublicLobby(state.lobby.code);
     if (state.net) { state.net.sendRaw({ t: "leave" }); state.net.close(); }
     state.net = null;
     state.lobby = null;
@@ -1348,19 +1365,72 @@
     const goals = getGoalsFromUI();
     let level = $("#mp-level") ? $("#mp-level").value : (L.level || "demo");
     const seed = (Math.random() * 0x7fffffff) | 0;
+    unregisterPublicLobby(L.code);
     state.net.sendRaw({ t: "start", config: { mode: "versus", level, goals, seed, language: $("#language").value } });
+  }
+
+  let _lobbyHeartbeatTimer = null;
+  function getLobbiesApiUrl() {
+    const mode = getNetworkMode();
+    const relayWs = getRelayUrl();
+    if (relayWs && (mode === "ws" || localStorage.getItem("bth-relay-url"))) {
+      try {
+        const u = new URL(relayWs);
+        const proto = u.protocol === "wss:" ? "https:" : "http:";
+        return `${proto}//${u.host}/api/lobbies`;
+      } catch (e) {}
+    }
+    return "/api/lobbies";
+  }
+
+  async function registerPublicLobby(room) {
+    if (!room || !room.isPublic) return;
+    const apiUrl = getLobbiesApiUrl();
+    const payload = {
+      code: room.code,
+      hostName: playerName(),
+      players: room.players ? room.players.filter((p) => p.connected !== false).length : 1,
+      max: room.max || 5,
+      level: room.config ? room.config.level : (room.level || "demo"),
+      goals: room.config ? room.config.goals : room.goals,
+      netMode: getNetworkMode(),
+    };
+    try {
+      await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {}
+  }
+
+  async function unregisterPublicLobby(code) {
+    if (!code) return;
+    if (_lobbyHeartbeatTimer) {
+      clearInterval(_lobbyHeartbeatTimer);
+      _lobbyHeartbeatTimer = null;
+    }
+    const apiUrl = getLobbiesApiUrl();
+    try {
+      await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, action: "close" }),
+      });
+    } catch (e) {}
   }
 
   async function refreshPublicLobbies() {
     const container = $("#lobbies-container");
     if (!container) return;
+    const apiUrl = getLobbiesApiUrl();
     try {
-      const res = await fetch("/api/lobbies");
+      const res = await fetch(apiUrl);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
       const lobbies = data.lobbies || [];
       if (lobbies.length === 0) {
-        container.innerHTML = '<div class="lobbies-empty">No active public lobbies found. Create one above!</div>';
+        container.innerHTML = '<div class="lobbies-empty">No active public lobbies found right now. Check "List in Public Lobby Browser" when creating a room above!</div>';
         return;
       }
       let html = `
@@ -1381,11 +1451,13 @@
         const goalsDesc = lob.goals ? formatGoalsList(lob.goals).join(", ") : "Standard";
         const lObj = LEVELS.find((x) => x.id === lob.level);
         const mapName = lObj ? lObj.label.split(" (")[0].split(" –")[0] : (lob.level || "Town 1");
+        const count = lob.players || lob.playerCount || 1;
+        const max = lob.max || 5;
         html += `
           <tr>
             <td><span class="room-code-badge">${escapeHtml(lob.code)}</span></td>
             <td><b>${escapeHtml(lob.hostName || "Host")}</b></td>
-            <td>${lob.playerCount} / ${lob.max}</td>
+            <td>${count} / ${max}</td>
             <td>${escapeHtml(mapName)}</td>
             <td style="font-size: 0.82rem; color: var(--muted);">${escapeHtml(goalsDesc)}</td>
             <td>
@@ -1404,7 +1476,7 @@
         };
       });
     } catch (e) {
-      container.innerHTML = '<div class="lobbies-empty">Public lobby list not available on standalone / static host. Join using a Room Code directly above.</div>';
+      container.innerHTML = '<div class="lobbies-empty">No active public lobbies found right now. Check "List in Public Lobby Browser" when creating a room above!</div>';
     }
   }
 

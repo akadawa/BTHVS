@@ -39,35 +39,113 @@ const MIME = {
   ".ico": "image/x-icon",
 };
 
+const externalLobbies = new Map();
+const LOBBY_TTL = 60000;
+
+function pruneExternal() {
+  const now = Date.now();
+  for (const [code, lob] of externalLobbies.entries()) {
+    if (now - lob.updatedAt > LOBBY_TTL) externalLobbies.delete(code);
+  }
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
+  if (req.method === "OPTIONS") {
+    res.writeHead(200, {
+      "access-control-allow-origin": "*",
+      "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
+      "access-control-allow-headers": "Content-Type",
+    });
+    res.end();
+    return;
+  }
   if (url.pathname === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
     return;
   }
   if (url.pathname === "/api/lobbies") {
-    const list = [];
-    for (const r of rooms.values()) {
-      if (r.isPublic && !r.started && r.connectedCount() < r.max && r.connectedCount() > 0) {
-        const host = r.players.get(r.hostId);
-        list.push({
-          code: r.code,
-          hostName: host ? host.name : "Host",
-          players: r.connectedCount(),
-          max: r.max,
-          level: r.config.level,
-          goals: r.config.goals,
-        });
+    pruneExternal();
+    if (req.method === "GET") {
+      const list = [];
+      const seen = new Set();
+      for (const r of rooms.values()) {
+        if (r.isPublic && !r.started && r.connectedCount() < r.max && r.connectedCount() > 0) {
+          const host = r.players.get(r.hostId);
+          list.push({
+            code: r.code,
+            hostName: host ? host.name : "Host",
+            players: r.connectedCount(),
+            max: r.max,
+            level: r.config.level,
+            goals: r.config.goals,
+            netMode: "ws",
+          });
+          seen.add(r.code);
+        }
       }
+      for (const lob of externalLobbies.values()) {
+        if (!seen.has(lob.code)) {
+          list.push({
+            code: lob.code,
+            hostName: lob.hostName,
+            players: lob.players || 1,
+            max: lob.max || 5,
+            level: lob.level || "demo",
+            goals: lob.goals,
+            netMode: lob.netMode || "p2p",
+          });
+        }
+      }
+      res.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "access-control-allow-origin": "*",
+        "cache-control": "no-cache",
+      });
+      res.end(JSON.stringify({ ok: true, lobbies: list }));
+      return;
     }
-    res.writeHead(200, {
-      "content-type": "application/json; charset=utf-8",
-      "access-control-allow-origin": "*",
-      "cache-control": "no-cache",
-    });
-    res.end(JSON.stringify({ ok: true, lobbies: list }));
-    return;
+    if (req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk) => { body += chunk; });
+      req.on("end", () => {
+        let data = {};
+        try { data = JSON.parse(body || "{}"); } catch (e) {}
+        const code = String(data.code || "").trim().toUpperCase();
+        if (!code) {
+          res.writeHead(400, { "content-type": "application/json", "access-control-allow-origin": "*" });
+          res.end(JSON.stringify({ ok: false, error: "Missing room code" }));
+          return;
+        }
+        if (data.action === "close") {
+          externalLobbies.delete(code);
+          res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
+          res.end(JSON.stringify({ ok: true, closed: code }));
+          return;
+        }
+        externalLobbies.set(code, {
+          code,
+          hostName: String(data.hostName || "Host").slice(0, 24),
+          players: Math.max(1, parseInt(data.players, 10) || 1),
+          max: Math.max(2, Math.min(5, parseInt(data.max, 10) || 5)),
+          level: String(data.level || "demo"),
+          goals: data.goals || { cured: 25, money: 100000, timeLimit: 30 },
+          netMode: data.netMode || "p2p",
+          updatedAt: Date.now(),
+        });
+        res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
+        res.end(JSON.stringify({ ok: true, registered: code }));
+      });
+      return;
+    }
+    if (req.method === "DELETE") {
+      const code = String(url.searchParams.get("code") || "").trim().toUpperCase();
+      if (code) externalLobbies.delete(code);
+      res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
+      res.end(JSON.stringify({ ok: true, deleted: code }));
+      return;
+    }
   }
   const m = url.pathname.match(/^\/api\/room\/([A-Za-z0-9]+)$/);
   if (m) {
