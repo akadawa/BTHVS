@@ -5,7 +5,8 @@
   "description": "CorsixTH (Theme Hospital engine) in the browser with co-op multiplayer",
   "scripts": {
     "start": "node server/server.js",
-    "build": "powershell -ExecutionPolicy Bypass -File web/build.ps1",
+    "build": "echo Prebuilt dist ready",
+    "build:wasm": "powershell -ExecutionPolicy Bypass -File web/build.ps1",
     "test": "node tests/run.js"
   },
   "dependencies": {
