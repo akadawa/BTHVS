@@ -1,9 +1,20 @@
+# Game archives & original proprietary files (Bullfrog / EA Theme Hospital)
+# Ensures NO copyrighted game assets can ever be committed to the repository
+*.zip
+*.rar
+*.7z
+*.iso
+*.bin
+*.cue
+HOSP/
+hosp/
+
+# Compiler tools and build caches
 tools/
 build/
 node_modules/
 tests/node_modules/
 tests/out/
-HOSP.zip
 *.log
-dist/game/
-
+.DS_Store
+Thumbs.db

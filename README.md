@@ -1,73 +1,95 @@
-# Browser Theme Hospital (CorsixTH Web + Koop-Multiplayer)
+# Browser Theme Hospital – Versus (1v1 Wettkampf)
 
-Vollwertige Portierung der Open-Source-Engine **[CorsixTH](https://corsixth.com)** für den Webbrowser (WebAssembly / SDL2 / Lua) mit integriertem **Online-Koop-Multiplayer**, Raum-Codes, Live-Teammate-Cursor, geteiltem Krankenhaus und In-Game-Chat.
-
----
-
-## Highlights
-
-1. **Voll im Browser spielbar**:
-   - CorsixTH v0.69.2 kompiliert nach WebAssembly mittels Emscripten.
-   - Läuft in jedem modernen Browser (Chrome, Firefox, Safari, Edge) ohne Plugins oder Installation.
-   - Flüssige Skalierung auf Fenstergröße und Vollbildmodus (`F11`).
-
-2. **Lokaler Spieldaten-Import**:
-   - Theme Hospital benötigt Spieldaten (z. B. aus der Demo oder der Vollversion).
-   - Spieler wählen einfach die `HOSP.zip` oder einen Theme-Hospital-Ordner per Drag & Drop oder Dateiauswahl.
-   - Daten werden sicher in der browserinternen **IndexedDB** gespeichert und verlassen niemals den eigenen Rechner.
-
-3. **Koop-Multiplayer mit Raum-Codes**:
-   - Host klickt auf **"Raum erstellen"** und erhält einen 5-stelligen Code (z. B. `D53UZ`) oder einen 1-Klick-Einladungslink (`?join=D53UZ`).
-   - Mitspieler geben den Code ein und landen in der gemeinsamen Lobby.
-   - Der Host startet das Spiel, sobald alle beigetreten sind.
-   - **Gemeinsames Krankenhaus**: Beide Spieler bauen und verwalten dasselbe Hospital.
-   - **Live Teammate Cursor & Nameplates**: Man sieht in Echtzeit, wo der Partner gerade hinschaut (`[Dr. Alice]`, `[Dr. Bob]`).
-   - **Click-Pings**: Klicks auf Kacheln erzeugen animierte Zielkreise zur Absprache ("Hier bauen!").
-   - **Gemeinsame Spielgeschwindigkeit**: Pause / Tempo gilt synchron für alle.
-   - **In-Game Chat**: Bequemer Chat (`Enter` / Chat-Button oben rechts).
-   - **Snapshot-Synchronisation**: Räume und Spielzustand werden bei Fertigstellung automatisch abgeglichen.
-
-4. **Wählbare Spielmodi**:
-   - **Endlosmodus (Freies Spiel)**: Kein Druck durch Pleiten oder Fristen – ideal für entspanntes gemeinsames Bauen.
-   - **Level-Modus (Kampagne / Ziele)**: Echtes Theme Hospital mit Notfällen, VIP-Besuchen, Forschungsfortschritt und gemeinsamen Erfolgen.
+Portierung der Open-Source-Engine **[CorsixTH](https://corsixth.com)** für den Webbrowser (WebAssembly / SDL2 / Lua) mit integriertem **1v1-Versus-Multiplayer**, Quest-Chooser, Echtzeit-Statistik-Dashboard, Chat und Live-Timer.
 
 ---
 
-## Schnellstart
+## ⚖️ Copyright & Rechtliches (Wichtig)
 
-### 1. Server starten
+- Dieses Repository enthält **keinerlei urheberrechtlich geschützte Daten von Theme Hospital (Bullfrog / Electronic Arts)**.
+- Es werden weder originale Spieldateien, Grafiken, Animationen, Level noch Audio- oder Musikdateien bereitgestellt oder gespeichert.
+- Enthalten ist ausschließlich die quelloffene, unter der **MIT-Lizenz** stehende CorsixTH-Engine, kompiliert nach WebAssembly.
+- Spieler laden ihre eigenen Spieldaten (z. B. aus der Theme-Hospital-Demo oder der Vollversion von GOG/EA) lokal im Browser per Drag & Drop (`.zip` oder entpackter Ordner). Die Spieldaten verbleiben vollständig im Browser (IndexedDB) und verlassen niemals den eigenen Rechner.
+
+---
+
+## 🎮 Features
+
+1. **1v1 Versus-Wettkampf**:
+   - Beide Spieler treten auf derselben Karte in Echtzeit gegeneinander an.
+   - **Modularer Quest-Chooser**: Der Host kann beliebige Zielbedingungen kombinieren (z. B. *25 Patienten heilen* AND *$100.000 Barvermögen* AND *30 Minuten Zeitlimit*).
+   - Wer zuerst alle gesetzten Ziele erreicht, gewinnt! Bei Ablauf des Zeitlimits gewinnt das höchste Barvermögen.
+2. **Rivalen-Dashboard & Quests-Block**:
+   - Live-Vergleich von Barvermögen, geheilten Patienten, Räumen, Mitarbeitern und Krankenhaus-Gesamtwert.
+   - Freie Größenanpassung (Resizable) und Verschiebbarkeit von Quest- und Chat-Fenstern.
+3. **Plattformunabhängig**:
+   - Läuft in jedem modernen Browser ohne Plugins oder lokale Installation.
+
+---
+
+## 🚀 Deployment-Anleitung
+
+### 1. Auf GitHub hochladen
+
+```bash
+# Falls noch kein GitHub-Remote hinterlegt ist:
+git remote add github https://github.com/DEIN-BENUTZERNAME/browser-theme-hospital.git
+
+# Änderungen stagen und committen
+git add .
+git commit -m "feat: Versus mode with Quest-Chooser, resizable HUD and Vercel support"
+
+# Auf GitHub pushen
+git push -u github main
+```
+
+*(Hinweis: Durch die `.gitignore` ist sichergestellt, dass keine ZIP-Dateien oder Spieldaten hochgeladen werden!)*
+
+---
+
+### 2. Frontend auf Vercel deployen
+
+1. Melde dich bei [vercel.com](https://vercel.com) an.
+2. Klicke auf **"Add New Project"** und importiere dein GitHub-Repository.
+3. Vercel erkennt automatisch die beiliegende `vercel.json` (Output Directory: `dist`).
+4. Klicke auf **"Deploy"**.
+
+> [!NOTE]
+> **Wichtig für Multiplayer auf Vercel:**
+> Vercel ist eine Serverless-Plattform und unterstützt keine dauerhaften WebSocket-Server (`node server/server.js`).
+> Um mit einem Freund online über das Internet zu spielen, muss der kleine WebSocket-Relay-Server auf einer Plattform mit dauerhafter WebSocket-Unterstützung (z. B. kostenlos auf **Render.com** oder **Railway.app**) laufen.
+
+---
+
+### 3. WebSocket-Relay kostenlos hosten (z. B. auf Render.com)
+
+1. Melde dich bei [render.com](https://render.com) an (kostenloser Account).
+2. Klicke auf **New +** -> **Web Service**.
+3. Wähle dasselbe GitHub-Repository aus:
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+4. Nach dem Deployment erhältst du eine URL, z. B.: `https://mein-hospital-relay.onrender.com`.
+5. Die WebSocket-URL lautet dann: `wss://mein-hospital-relay.onrender.com/ws`.
+
+#### Verbindung in der Web-App:
+- Klicke auf der Webseite unten auf **⚙️ Relay-Server** und trage die Render-URL ein.
+- **Oder noch einfacher**: Teile deinem Freund einfach den Einladungslink aus der Lobby – dieser enthält den Server-Parameter automatisch (z. B. `https://deine-app.vercel.app/?join=ABCDE&server=wss://mein-hospital-relay.onrender.com/ws`).
+
+*(Alternativ: Du kannst auf Render.com auch direkt das gesamte Spiel inkl. Frontend hosten, da `server.js` sowohl die Webseite als auch die WebSockets auf einem einzigen Port bereitstellt!)*
+
+---
+
+## 💻 Lokaler Start
+
 ```bash
 npm install
 npm start
 ```
-Der Server läuft standardmäßig auf `http://localhost:8085` (konfigurierbar per `PORT=...` oder `--port`).
-
-### 2. Im Browser öffnen
-1. Öffne `http://localhost:8085`.
-2. Ziehe die beiliegende `HOSP.zip` in den Spieldaten-Bereich.
-3. Wähle **Einzelspieler** oder erstelle einen **Koop-Raum**.
+Öffne danach `http://localhost:8085` im Browser.
 
 ---
 
-## Entwicklung & Tests
-
-### WebAssembly bauen
-Voraussetzung: Python, CMake, Ninja, Emscripten SDK (`tools/emsdk`).
-```powershell
-powershell -ExecutionPolicy Bypass -File web/build.ps1
-```
-
-### Automatisierte End-to-End-Tests (Playwright)
-```bash
-# E2E Multiplayer-Test mit zwei parallelen Browser-Clients
-node tests/test_multiplayer.js
-
-# Einzelspieler-Smoke-Test
-node tests/smoke.js
-```
-
----
-
-## Lizenz
-- CorsixTH-Engine: MIT-Lizenz
+## 📜 Lizenz
+- CorsixTH-Engine & Web-Code: [MIT-Lizenz](third_party/CorsixTH/LICENSE.txt)
 - Theme Hospital Spiel-Assets: © Bullfrog / Electronic Arts

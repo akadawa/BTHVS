@@ -85,7 +85,10 @@ const server = http.createServer((req, res) => {
 const rooms = new Map();
 
 function isFullOnlyLevel(lvl) {
-  return String(lvl || "").toLowerCase() !== "demo";
+  const s = String(lvl || "").toLowerCase();
+  // All included custom maps and level 1 are fully supported with HOSP.zip demo files
+  if (["demo", "avatar", "confined_v5", "finisham", "st.peter's", "level1"].includes(s)) return false;
+  return /^level\d+$/i.test(s);
 }
 
 class Room {
@@ -93,7 +96,12 @@ class Room {
     this.code = code;
     this.max = max;
     this.started = false;
-    this.config = { mode: "freebuild", level: "demo" };
+    this.config = {
+      mode: "versus",
+      goal: "cured_10",
+      goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+      level: "demo"
+    };
     this.players = new Map(); // id -> {id, name, demo, token, ws|null}
     this.nextId = 0;
     this.hostId = null;
@@ -228,6 +236,15 @@ function handle(ws, msg) {
     case "lobby_config": {
       const room = ws.room;
       if (!room || ws.pid !== room.hostId || room.started) return;
+      if (msg.goal) room.config.goal = String(msg.goal);
+      if (msg.goals && typeof msg.goals === "object") {
+        room.config.goals = {
+          cured: Number(msg.goals.cured) || 0,
+          money: Number(msg.goals.money) || 0,
+          rooms: Number(msg.goals.rooms) || 0,
+          timeLimit: Number(msg.goals.timeLimit) || 0,
+        };
+      }
       if (msg.mode) room.config.mode = String(msg.mode);
       if (msg.level) {
         let lvl = String(msg.level);
@@ -236,7 +253,13 @@ function handle(ws, msg) {
       }
       // Unready players on settings change so everyone re-confirms
       for (const pl of room.players.values()) pl.ready = false;
-      room.broadcast({ t: "lobby_config", mode: room.config.mode, level: room.config.level });
+      room.broadcast({
+        t: "lobby_config",
+        goal: room.config.goal,
+        goals: room.config.goals,
+        mode: room.config.mode,
+        level: room.config.level,
+      });
       room.broadcast({ t: "players", players: room.playerList(), config: room.config });
       break;
     }
@@ -255,7 +278,10 @@ function handle(ws, msg) {
       }
       room.config = Object.assign({}, room.config, msg.config || {}, {
         level,
-        players: connected.map((pl) => ({ id: pl.id, name: pl.name, demo: pl.demo })),
+        hostId: room.hostId,
+        goal: (msg.config && msg.config.goal) || room.config.goal || "cured_10",
+        goals: (msg.config && msg.config.goals) || room.config.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+        players: connected.map((pl) => ({ id: pl.id, name: pl.name, demo: pl.demo, host: pl.id === room.hostId })),
       });
       room.broadcast({ t: "start", config: room.config });
       break;

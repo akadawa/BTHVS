@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Browser Theme Hospital – CorsixTH + Co-op</title>
+  <title>Browser Theme Hospital – Versus</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,70 +12,67 @@
     <header>
       <div class="logo">✚</div>
       <div>
-        <h1>Browser Theme Hospital</h1>
-        <p class="sub">CorsixTH v0.69.2 im Browser – mit 2-Spieler Koop</p>
+        <h1>Browser Theme Hospital – Versus</h1>
+        <p class="sub">CorsixTH im Browser – 1v1 Versus-Wettkampf</p>
       </div>
     </header>
 
-    <section class="card" id="card-data">
-      <h2><span class="step">1</span> Spieldaten</h2>
-      <p class="muted">
-        Theme Hospital selbst liegt nicht bei. Wähle die <b>Demo-ZIP</b> (z.&nbsp;B. <code>HOSP.zip</code>) oder den
-        entpackten Spielordner. Die Dateien werden einmalig in deinem Browser gespeichert und verlassen deinen Rechner nicht.
-      </p>
-      <div id="dropzone" tabindex="0">
-        <div id="data-status" class="status warn">Keine Spieldaten gefunden</div>
+    <div id="view-setup">
+      <section class="card" id="card-data">
+        <h2><span class="step">1</span> Spieldaten</h2>
+        <p class="muted">
+          Theme Hospital selbst liegt nicht bei. Wähle die <b>Demo-ZIP</b> (z.&nbsp;B. <code>HOSP.zip</code>) oder den
+          entpackten Spielordner. Die Dateien werden einmalig in deinem Browser gespeichert und verlassen deinen Rechner nicht.
+        </p>
+        <div id="dropzone" tabindex="0">
+          <div id="data-status" class="status warn">Keine Spieldaten gefunden</div>
+          <div class="row">
+            <button id="btn-zip" class="btn">ZIP-Datei wählen …</button>
+            <button id="btn-folder" class="btn secondary">Ordner wählen …</button>
+            <button id="btn-forget" class="btn ghost" hidden>Daten entfernen</button>
+          </div>
+          <p class="muted small">… oder ZIP/Ordner einfach hierher ziehen.</p>
+        </div>
+        <input type="file" id="file-zip" accept=".zip" hidden>
+        <input type="file" id="file-folder" webkitdirectory directory multiple hidden>
+      </section>
+
+      <section class="card" id="card-mode" aria-disabled="true">
+        <h2><span class="step">2</span> Spielen</h2>
         <div class="row">
-          <button id="btn-zip" class="btn">ZIP-Datei wählen …</button>
-          <button id="btn-folder" class="btn secondary">Ordner wählen …</button>
-          <button id="btn-forget" class="btn ghost" hidden>Daten entfernen</button>
-        </div>
-        <p class="muted small">… oder ZIP/Ordner einfach hierher ziehen.</p>
-      </div>
-      <input type="file" id="file-zip" accept=".zip" hidden>
-      <input type="file" id="file-folder" webkitdirectory directory multiple hidden>
-    </section>
-
-    <section class="card" id="card-mode" aria-disabled="true">
-      <h2><span class="step">2</span> Spielen</h2>
-      <div class="row">
-        <label class="field">Dein Name
-          <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
-        </label>
-        <label class="field">Sprache
-          <select id="language">
-            <option value="German">Deutsch</option>
-            <option value="English">English</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="modes">
-        <div class="mode">
-          <h3>Einzelspieler</h3>
-          <p class="muted small">Normales CorsixTH mit allen Menüs (Kampagne, Freies Spiel, Laden …).</p>
-          <button id="btn-single" class="btn primary" disabled>Starten</button>
-        </div>
-        <div class="mode">
-          <h3>Koop – Raum erstellen</h3>
-          <p class="muted small">Du bekommst einen Code, den du an deine Mitspieler schickst.</p>
-          <label class="field inline">Koop-Modus
-            <select id="max-players"><option value="2">2 Spieler (Koop-Duo)</option></select>
+          <label class="field">Dein Name
+            <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
           </label>
-          <button id="btn-create" class="btn primary" disabled>Raum erstellen</button>
+          <label class="field">Sprache
+            <select id="language">
+              <option value="German">Deutsch</option>
+              <option value="English">English</option>
+            </select>
+          </label>
         </div>
-        <div class="mode">
-          <h3>Koop – Beitreten</h3>
-          <p class="muted small">Code vom Host eingeben.</p>
-          <input id="join-code" class="code-input" maxlength="5" placeholder="ABCDE" autocomplete="off" spellcheck="false">
-          <button id="btn-join" class="btn primary" disabled>Beitreten</button>
+
+        <div class="modes">
+          <div class="mode">
+            <h3>Versus – Raum erstellen</h3>
+            <p class="muted small">Tritt im 1v1-Wettkampf gegen einen Mitspieler an!</p>
+            <label class="field inline">Modus
+              <select id="max-players"><option value="2">1 vs 1 Wettkampf</option></select>
+            </label>
+            <button id="btn-create" class="btn primary" disabled>Raum erstellen</button>
+          </div>
+          <div class="mode">
+            <h3>Versus – Beitreten</h3>
+            <p class="muted small">Code vom Host eingeben.</p>
+            <input id="join-code" class="code-input" maxlength="5" placeholder="ABCDE" autocomplete="off" spellcheck="false">
+            <button id="btn-join" class="btn primary" disabled>Beitreten</button>
+          </div>
         </div>
-      </div>
-      <p id="menu-error" class="status err" hidden></p>
-    </section>
+        <p id="menu-error" class="status err" hidden></p>
+      </section>
+    </div>
 
     <section class="card" id="card-lobby" hidden>
-      <h2>Koop-Lobby</h2>
+      <h2>Versus-Lobby (Wettkampf)</h2>
       <div class="lobby-grid">
         <div class="lobby-col-left">
           <div class="muted small">Raum-Code (weitergeben!)</div>
@@ -86,7 +83,7 @@
           </div>
 
           <div class="players-box">
-            <div class="muted small" id="players-header">Spieler im Raum (max. 2)</div>
+            <div class="muted small" id="players-header">Spieler im Raum (1v1 Duell)</div>
             <ul id="player-list"></ul>
           </div>
         </div>
@@ -106,25 +103,80 @@
       </div>
 
       <div id="host-options">
-        <h3>Spielmodus (nur Host)</h3>
-        <label class="field">Modus
-          <select id="mp-mode">
-            <option value="freebuild">Endlos-Krankenhaus – gemeinsam aufbauen (Freies Spiel, ohne Geldsorgen)</option>
-            <option value="level">Gemeinsames Level mit Budget und Zielen</option>
-          </select>
-        </label>
+        <h3>🎯 Wettkampf-Ziele (Quest-Chooser)</h3>
+        <p class="muted small">Stelle als Host die gewünschten Siegbedingungen ein. Alle aktiven Ziele müssen erreicht werden!</p>
+
+        <div class="quest-preset-bar">
+          <span class="muted small">Schnellwahl:</span>
+          <button type="button" class="btn-chip" data-preset="sprint">⚡ 10 Heilungen</button>
+          <button type="button" class="btn-chip" data-preset="duel">⚔️ 25 Heilungen + 30 Min.</button>
+          <button type="button" class="btn-chip" data-preset="cashrace">💰 $100k + 20 Min.</button>
+          <button type="button" class="btn-chip" data-preset="tycoon">💎 50 Heilungen + $150k</button>
+          <button type="button" class="btn-chip" data-preset="builder">🏥 5 Räume & Personal</button>
+        </div>
+
+        <div class="quest-chooser-grid">
+          <label class="field">❤️ Geheilte Patienten
+            <select id="goal-cured">
+              <option value="0">Kein Ziel (Beliebig)</option>
+              <option value="10">10 Patienten heilen</option>
+              <option value="25" selected>25 Patienten heilen</option>
+              <option value="50">50 Patienten heilen</option>
+              <option value="100">100 Patienten heilen</option>
+              <option value="200">200 Patienten heilen</option>
+              <option value="400">400 Patienten heilen</option>
+            </select>
+          </label>
+
+          <label class="field">💰 Barvermögen
+            <select id="goal-money">
+              <option value="0">Kein Ziel (Beliebig)</option>
+              <option value="50000">$50.000 Guthaben</option>
+              <option value="100000" selected>$100.000 Guthaben</option>
+              <option value="150000">$150.000 Guthaben</option>
+              <option value="250000">$250.000 Guthaben</option>
+            </select>
+          </label>
+
+          <label class="field">🏥 Räume & Personal
+            <select id="goal-rooms">
+              <option value="0" selected>Kein Ziel (Beliebig)</option>
+              <option value="3">3 Räume & 3 Mitarbeiter</option>
+              <option value="5">5 Räume & 5 Mitarbeiter</option>
+              <option value="8">8 Räume & 8 Mitarbeiter</option>
+            </select>
+          </label>
+
+          <label class="field">⏱️ Zeitlimit
+            <select id="goal-time">
+              <option value="0">Kein Zeitlimit</option>
+              <option value="15">15 Minuten</option>
+              <option value="20">20 Minuten</option>
+              <option value="30" selected>30 Minuten</option>
+              <option value="60">60 Minuten</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="goal-summary-box" class="goal-summary-card">
+          <div class="goal-summary-title">📋 Aktive Match-Bedingungen:</div>
+          <div id="goal-summary-text" class="goal-summary-content">...</div>
+          <div class="goal-summary-rule muted small">💡 Wer zuerst <b>alle</b> gesetzten Ziele erreicht, gewinnt! Bei Zeitablauf entscheidet das höchste Barvermögen.</div>
+        </div>
+
         <label class="field" id="mp-level-wrap">Karte / Level
           <select id="mp-level"></select>
         </label>
         <p id="level-compat-hint" class="status warn small" hidden></p>
-        <p class="muted small" id="mp-mode-help"></p>
       </div>
 
       <div id="guest-options" hidden>
         <h3>Spieleinstellungen (vom Host festgelegt)</h3>
         <div class="guest-info-box">
-          <div><b>Modus:</b> <span id="guest-mode-val">Endlos-Krankenhaus</span></div>
-          <div><b>Karte:</b> <span id="guest-level-val">Demo-Level (Originalkrankenhaus)</span></div>
+          <div><b>Wettkampf-Ziele:</b></div>
+          <div id="guest-goal-summary" class="guest-goals-list">...</div>
+          <div class="muted small" style="margin-top: 4px;">💡 Wer zuerst alle gesetzten Ziele erreicht, gewinnt! Bei Zeitablauf entscheidet das Barvermögen.</div>
+          <div style="margin-top: 8px;"><b>Karte:</b> <span id="guest-level-val">Demo-Level</span></div>
         </div>
         <p id="guest-wait" class="muted">Warte darauf, dass der Host das Spiel startet …</p>
       </div>
@@ -132,13 +184,18 @@
       <div class="row lobby-actions-row">
         <button id="btn-ready" class="btn secondary">✓ Bereit melden</button>
         <button id="btn-start" class="btn primary" disabled>Spiel starten</button>
-        <button id="btn-leave-lobby" class="btn ghost">Raum verlassen</button>
+        <button id="btn-leave-lobby" class="btn ghost">← Zurück (Raum verlassen)</button>
       </div>
       <p id="lobby-hint" class="muted small"></p>
     </section>
 
     <footer class="muted small">
-      Basiert auf <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT-Lizenz). Theme Hospital © Bullfrog / EA.
+      <div>Basiert auf <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT-Lizenz). Theme Hospital © Bullfrog / EA.</div>
+      <div style="margin-top: 6px;">
+        <button id="btn-server-settings" class="btn ghost small" type="button" title="Relay-Server konfigurieren">
+          ⚙️ Relay-Server: <span id="current-relay-host">Automatisch</span>
+        </button>
+      </div>
     </footer>
   </main>
 
@@ -151,38 +208,65 @@
     </div>
 
     <div id="hud" hidden>
-      <span id="hud-version" class="chip">CorsixTH v0.69.2</span>
       <span id="hud-room" class="chip"></span>
+      <span id="hud-players" class="chip"></span>
+      <span id="hud-timer" class="chip warn" hidden>⏱️ 00:00</span>
       <span id="hud-sync" class="chip ok">Sync</span>
       <span id="hud-ping" class="chip">– ms</span>
-      <button id="hud-history-btn" class="chip btn-chip" title="Bau-Chronik & Verlauf (H)">📜<span id="history-badge" hidden></span></button>
+      <button id="hud-quest-btn" class="chip btn-chip" title="Wettkampf & Quests (Q)">🎯 Quests<span id="quest-badge" hidden></span></button>
       <button id="hud-chat-btn" class="chip btn-chip" title="Chat (Enter)">💬<span id="chat-badge" hidden></span></button>
       <button id="hud-fs-btn" class="chip btn-chip" title="Vollbild (F11)">⛶</button>
     </div>
     <div id="net-banner" hidden></div>
 
-    <div id="history-win" hidden>
-      <div id="history-header">
-        <span id="history-title">📜 Bau-Chronik & Verlauf</span>
+    <div id="quest-win" hidden>
+      <div id="quest-header">
+        <span id="quest-title">🎯 Wettkampf-Ziele & Quests</span>
         <div class="win-actions">
-          <button id="history-clear" type="button" class="btn-chip" title="Verlauf leeren">🗑</button>
-          <button id="history-close" type="button" class="btn-chip" title="Schließen">✕</button>
+          <button id="quest-close" type="button" class="btn-chip" title="Schließen">✕</button>
         </div>
       </div>
-      <div id="history-filters">
-        <button type="button" class="filter-chip active" data-filter="all">Alle</button>
-        <button type="button" class="filter-chip" data-filter="room">🏥 Räume</button>
-        <button type="button" class="filter-chip" data-filter="obj">🪑 Objekte</button>
-        <button type="button" class="filter-chip" data-filter="staff">👥 Personal</button>
-        <button type="button" class="filter-chip" data-filter="finance">💰 Finanzen</button>
+      <div id="quest-lead-banner">
+        <span id="quest-lead-text">Match läuft – Erreiche als Erster das Ziel!</span>
       </div>
-      <div id="history-log">
-        <div class="history-empty">Noch keine Bau-Aktionen verzeichnet.</div>
+      <div id="quest-tabs">
+        <button type="button" class="quest-tab-btn active" data-tab="goals">📋 Aktive Quests</button>
+        <button type="button" class="quest-tab-btn" data-tab="dashboard">📊 Rivalen-Dashboard</button>
       </div>
-      <div id="history-footer">
-        <span id="hist-stat-rooms">0 Räume</span>
-        <span id="hist-stat-staff">0 Personal</span>
-        <span id="hist-stat-cost">$0 verbaut</span>
+      <div id="quest-view-goals" class="quest-view">
+        <div id="quest-list"></div>
+      </div>
+      <div id="quest-view-dashboard" class="quest-view" hidden>
+        <div class="rival-table-wrap">
+          <table class="rival-table">
+            <thead>
+              <tr>
+                <th>Kategorie</th>
+                <th id="th-you">Du</th>
+                <th id="th-opp">Gegner</th>
+              </tr>
+            </thead>
+            <tbody id="rival-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="quest-footer">
+        <span id="quest-match-goal">Ziel: $50.000 Guthaben</span>
+        <span id="quest-hotkey-hint" class="muted small">Taste <b>Q</b> öffnet/schließt diesen Block</span>
+      </div>
+      <div class="win-resize-handle" title="Größe anpassen"></div>
+    </div>
+
+    <div id="victory-modal" hidden>
+      <div class="box victory-box">
+        <div class="victory-icon" id="vic-icon">🏆</div>
+        <h2 id="vic-title">Match beendet!</h2>
+        <p id="vic-desc" class="vic-desc"></p>
+        <div id="vic-stats-summary" class="vic-summary"></div>
+        <div class="row victory-actions">
+          <button id="vic-continue" class="btn secondary">Weiterspielen</button>
+          <button id="vic-exit" class="btn primary">Zurück zum Menü</button>
+        </div>
       </div>
     </div>
 
@@ -193,6 +277,7 @@
       </div>
       <div id="chat-log"></div>
       <form id="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="Nachricht … (Enter)"></form>
+      <div class="win-resize-handle" title="Größe anpassen"></div>
     </div>
 
     <div id="fatal" hidden>

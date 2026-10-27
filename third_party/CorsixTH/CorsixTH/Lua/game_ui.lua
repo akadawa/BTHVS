@@ -653,7 +653,7 @@ function GameUI:onMouseMove(x, y, dx, dy)
 end
 
 function GameUI:onMouseUp(code, x, y)
-  if self.app.multiplayer then self.app.multiplayer:onClick() end
+  -- Multiplayer input hook handled in Multiplayer class
   if self.app.moviePlayer.playing then
     return UI.onMouseUp(self, code, x, y)
   end
@@ -1304,6 +1304,7 @@ function GameUI:afterLoad(old, new)
 end
 
 function GameUI:showBriefing()
+  if self.app.multiplayer and self.app.multiplayer.active then return end
   local level = self.app.world.map.level_number
   local text = {_S.information.custom_game}
   if type(level) == "number" then

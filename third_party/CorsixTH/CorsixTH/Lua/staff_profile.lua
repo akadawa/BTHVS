@@ -33,6 +33,10 @@ function StaffProfile:StaffProfile(world, humanoid_class, local_string)
   self.wage = 0
   self.skill = 0 -- [0.0, 1.0]
   self.layer5 = 2
+  self.hair_index = 0
+  self.face_index = 0
+  self.chin_index = 0
+  self.desc = ""
   self.attention_to_detail = math.random()
   self.profession = local_string
 end

@@ -77,12 +77,245 @@
   // ------------------------------------------------------------ game data
   /** Directories of an original installation the engine can use. */
   const KEEP_RE = /^(data|datam|qdata|qdatam|levels|anims|intro|sound\/data|sound\/midi)\//i;
+  const GOAL_PRESETS = {
+    cured_10: {
+      id: "cured_10",
+      title: "❤️ Rettungsrennen: 10 Patienten heilen",
+      shortTitle: "10 Heilungen",
+      desc: "10 Patienten heilen",
+      quests: [
+        { id: "cured", name: "Geheilte Patienten", target: 10, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    cured_25: {
+      id: "cured_25",
+      title: "❤️ Meisterschaft: 25 Patienten heilen",
+      shortTitle: "25 Heilungen",
+      desc: "25 Patienten heilen",
+      quests: [
+        { id: "cured", name: "Geheilte Patienten", target: 25, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    cured_100: {
+      id: "cured_100",
+      title: "❤️ Großhospital: 100 Patienten heilen",
+      shortTitle: "100 Heilungen",
+      desc: "100 Patienten heilen",
+      quests: [
+        { id: "cured", name: "Geheilte Patienten", target: 100, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    cured_200: {
+      id: "cured_200",
+      title: "❤️ Metropole: 200 Patienten heilen",
+      shortTitle: "200 Heilungen",
+      desc: "200 Patienten heilen",
+      quests: [
+        { id: "cured", name: "Geheilte Patienten", target: 200, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    cured_400: {
+      id: "cured_400",
+      title: "❤️ Legende: 400 Patienten heilen",
+      shortTitle: "400 Heilungen",
+      desc: "400 Patienten heilen",
+      quests: [
+        { id: "cured", name: "Geheilte Patienten", target: 400, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    time_20m: {
+      id: "time_20m",
+      title: "⏱️ 20-Minuten-Sprint: Meistes Geld nach 20 Min.",
+      shortTitle: "20 Min. Cash-Race",
+      desc: "Wer nach 20 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      durationSec: 20 * 60,
+      isTimed: true,
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+      ],
+    },
+    time_30m: {
+      id: "time_30m",
+      title: "⏱️ 30-Minuten-Duell: Meistes Geld nach 30 Min.",
+      shortTitle: "30 Min. Cash-Race",
+      desc: "Wer nach 30 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      durationSec: 30 * 60,
+      isTimed: true,
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+      ],
+    },
+    time_60m: {
+      id: "time_60m",
+      title: "⏱️ 60-Minuten-Marathon: Meistes Geld nach 60 Min.",
+      shortTitle: "60 Min. Cash-Race",
+      desc: "Wer nach 60 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      durationSec: 60 * 60,
+      isTimed: true,
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+      ],
+    },
+    money_100k: {
+      id: "money_100k",
+      title: "💰 Wirtschaftsrennen: $100.000 Barvermögen",
+      shortTitle: "$100.000 Guthaben",
+      desc: "Krankenhaus mit $100.000 Barvermögen",
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 100000, unit: "$", getVal: (s) => s.bal },
+      ],
+    },
+    money_150k: {
+      id: "money_150k",
+      title: "💎 Tycoon: $150.000 Barvermögen",
+      shortTitle: "$150.000 Guthaben",
+      desc: "Großes Wirtschaftsrennen: $150.000 Barvermögen",
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 150000, unit: "$", getVal: (s) => s.bal },
+      ],
+    },
+    expand_5: {
+      id: "expand_5",
+      title: "🏥 Bau-Duell: 5 verschiedene Räume & 5 Mitarbeiter",
+      shortTitle: "5 Räume & 5 Mitarbeiter",
+      desc: "5 funktionierende Räume & 5 Mitarbeiter anstellen",
+      quests: [
+        { id: "rooms", name: "Funktionierende Räume", target: 5, unit: "", getVal: (s) => s.rooms },
+        { id: "staff", name: "Mitarbeiter angestellt", target: 5, unit: "", getVal: (s) => s.staff },
+      ],
+    },
+    allround: {
+      id: "allround",
+      title: "⭐ Allrounder: $75.000, 4 Räume, 4 Mitarbeiter & 5 Heilungen",
+      shortTitle: "Allrounder-Klinik",
+      desc: "$75.000 Guthaben, 4 Räume, 4 Mitarbeiter und 5 Heilungen",
+      quests: [
+        { id: "bal", name: "Barvermögen", target: 75000, unit: "$", getVal: (s) => s.bal },
+        { id: "rooms", name: "Räume gebaut", target: 4, unit: "", getVal: (s) => s.rooms },
+        { id: "staff", name: "Mitarbeiter angestellt", target: 4, unit: "", getVal: (s) => s.staff },
+        { id: "cured", name: "Geheilte Patienten", target: 5, unit: "", getVal: (s) => s.cured },
+      ],
+    },
+    val_150k: {
+      id: "val_150k",
+      title: "🏷️ Gesamtbewertung: Krankenhauswert $150.000",
+      shortTitle: "Krankenhauswert $150.000",
+      desc: "Krankenhaus-Gesamtwert von mindestens $150.000 erreichen",
+      quests: [
+        { id: "val", name: "Krankenhauswert", target: 150000, unit: "$", getVal: (s) => s.val },
+      ],
+    },
+    endless: {
+      id: "endless",
+      title: "♾️ Freies Duell (Punkte- & Statistikvergleich)",
+      shortTitle: "Endlos-Duell",
+      desc: "Kein festes Sieg-Ziel – Vergleicht live eure Kennzahlen und Statistiken!",
+      quests: [],
+    },
+  };
+
+  const PRESETS = {
+    sprint: { cured: 10, money: 0, rooms: 0, timeLimit: 0 },
+    duel: { cured: 25, money: 0, rooms: 0, timeLimit: 30 },
+    cashrace: { cured: 0, money: 100000, rooms: 0, timeLimit: 20 },
+    tycoon: { cured: 50, money: 150000, rooms: 0, timeLimit: 0 },
+    builder: { cured: 0, money: 0, rooms: 5, timeLimit: 0 },
+  };
+
+  function getGoalsFromUI() {
+    const cured = parseInt($("#goal-cured") ? $("#goal-cured").value : "25", 10) || 0;
+    const money = parseInt($("#goal-money") ? $("#goal-money").value : "100000", 10) || 0;
+    const rooms = parseInt($("#goal-rooms") ? $("#goal-rooms").value : "0", 10) || 0;
+    const timeLimit = parseInt($("#goal-time") ? $("#goal-time").value : "30", 10) || 0;
+    return { cured, money, rooms, timeLimit };
+  }
+
+  function setGoalsInUI(g) {
+    if (!g) return;
+    if ($("#goal-cured")) $("#goal-cured").value = String(g.cured ?? 0);
+    if ($("#goal-money")) $("#goal-money").value = String(g.money ?? 0);
+    if ($("#goal-rooms")) $("#goal-rooms").value = String(g.rooms ?? 0);
+    if ($("#goal-time")) $("#goal-time").value = String(g.timeLimit ?? 0);
+  }
+
+  function formatGoalsList(g) {
+    if (!g) return ["10 Patienten heilen"];
+    const items = [];
+    if (g.cured > 0) items.push(`❤️ ${g.cured} Patienten heilen`);
+    if (g.money > 0) items.push(`💰 $${g.money.toLocaleString()} Guthaben`);
+    if (g.rooms > 0) items.push(`🏥 ${g.rooms} Räume & Mitarbeiter`);
+    if (g.timeLimit > 0) items.push(`⏱️ ${g.timeLimit} Min. Zeitlimit`);
+    if (items.length === 0) items.push("♾️ Freies Duell (Punkte- & Statistikvergleich)");
+    return items;
+  }
+
+  function updateGoalSummaryUI(g) {
+    const items = formatGoalsList(g);
+    const textEl = $("#goal-summary-text");
+    if (textEl) {
+      textEl.innerHTML = items.map((it) => `<span>• ${escapeHtml(it)}</span>`).join("<br>");
+    }
+    const guestSummaryEl = $("#guest-goal-summary");
+    if (guestSummaryEl) {
+      guestSummaryEl.innerHTML = items.map((it) => `<span class="guest-goal-badge">${escapeHtml(it)}</span>`).join("");
+    }
+  }
+
+  function buildQuestsFromConfig(g) {
+    const quests = [];
+    if (!g) return quests;
+    if (g.cured > 0) {
+      quests.push({
+        id: "cured",
+        name: "Geheilte Patienten",
+        target: g.cured,
+        unit: "",
+        getVal: (s) => s.cured || 0,
+      });
+    }
+    if (g.money > 0) {
+      quests.push({
+        id: "bal",
+        name: "Barvermögen",
+        target: g.money,
+        unit: "$",
+        getVal: (s) => s.bal || 0,
+      });
+    }
+    if (g.rooms > 0) {
+      quests.push({
+        id: "rooms",
+        name: "Funktionierende Räume",
+        target: g.rooms,
+        unit: "",
+        getVal: (s) => s.rooms || 0,
+      });
+      quests.push({
+        id: "staff",
+        name: "Mitarbeiter angestellt",
+        target: g.rooms,
+        unit: "",
+        getVal: (s) => s.staff || 0,
+      });
+    }
+    return quests;
+  }
+
   const state = {
     data: null, // {files: [[path, Uint8Array]], demo: bool, name: string, bytes: number}
     net: null,
     lobby: null,
     session: null,
     game: null,
+    vs: {
+      goal: "custom",
+      goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+      startTime: 0,
+      myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
+      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: "Gegner" },
+      winner: null,
+      tab: "goals",
+    },
   };
   window.__bth = state;
 
@@ -168,7 +401,7 @@
     }
     $("#btn-forget").hidden = !d;
     $("#card-mode").setAttribute("aria-disabled", d ? "false" : "true");
-    for (const id of ["#btn-single", "#btn-create", "#btn-join"]) $(id).disabled = !d;
+    for (const id of ["#btn-create", "#btn-join"]) if ($(id)) $(id).disabled = !d;
     refreshLevelOptions();
   }
 
@@ -205,17 +438,16 @@
   // ----------------------------------------------------------- level list
   /** What the host can pick. `full: true` = requires all players to have full game files. */
   const LEVELS = [
-    { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false, modes: ["freebuild", "level"] },
-    { id: "avatar", label: "Avatar (Große Stadt)", full: true, modes: ["freebuild", "level"] },
-    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: true, modes: ["freebuild", "level"] },
-    { id: "finisham", label: "Finisham (Flusslandschaft)", full: true, modes: ["freebuild", "level"] },
-    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: true, modes: ["freebuild", "level"] },
-    { id: "level1", label: "Level 1 – Originalkampagne", full: true, modes: ["freebuild", "level"] },
+    { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false },
+    { id: "avatar", label: "Avatar (Große Stadt)", full: false },
+    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: false },
+    { id: "finisham", label: "Finisham (Flusslandschaft)", full: false },
+    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: false },
+    { id: "level1", label: "Level 1 – Originalkampagne", full: false },
   ];
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
-    const mode = $("#mp-mode").value;
     const L = state.lobby;
     const anyDemo = L && L.players && L.players.length > 0
       ? L.players.some((p) => p.demo)
@@ -226,47 +458,53 @@
     let foundCurrent = false;
 
     for (const l of LEVELS) {
-      if (!l.modes.includes(mode)) continue;
       const o = document.createElement("option");
       o.value = l.id;
-      if (anyDemo && l.full) {
-        o.disabled = true;
-        o.textContent = l.label + " (ausgegraut – benötigt Vollversion bei allen)";
-      } else {
-        o.textContent = l.label;
-        if (l.id === cur) foundCurrent = true;
-      }
+      o.textContent = l.label;
+      if (l.id === cur) foundCurrent = true;
       sel.appendChild(o);
     }
 
-    const prev = cur;
     if (foundCurrent) {
       sel.value = cur;
     } else {
-      const firstEnabled = Array.from(sel.options).find((o) => !o.disabled);
-      if (firstEnabled) sel.value = firstEnabled.value;
+      sel.value = "demo";
     }
-    if (L && L.host && sel.value !== prev) {
+    if (L && L.host && sel.value !== cur) {
       broadcastLobbyConfig();
     }
 
     const hintEl = $("#level-compat-hint");
     if (hintEl) {
-      if (anyDemo) {
-        hintEl.hidden = false;
-        hintEl.textContent = "ℹ Mindestens ein Spieler nutzt die Demo-Version. Kampagnen-Karten der Vollversion sind ausgegraut, damit beide dieselbe kompatible Karte spielen können.";
-      } else {
-        hintEl.hidden = true;
-      }
+      hintEl.hidden = true;
+      hintEl.textContent = "";
     }
 
-    $("#mp-mode-help").textContent =
-      mode === "freebuild"
-        ? "Ihr baut zusammen ein Krankenhaus ohne Geld-, Sieg- oder Niederlagen-Druck. Ideal zum entspannten Aufbauen und Aufteilen der Aufgaben."
-        : "Klassisches Spiel mit gemeinsamem Konto und Zielen: ihr teilt euch Bauen, Personal, Forschung und Finanzen – und gewinnt oder verliert zusammen.";
+    const helpEl = $("#mp-mode-help");
+    if (helpEl) {
+      helpEl.textContent = "Beide Spieler leiten auf derselben Karte ihr eigenes Hospital. Wer das gewählte Ziel als Erster erreicht, gewinnt das Match!";
+    }
   }
 
   // ------------------------------------------------------------ networking
+  function getRelayUrl() {
+    const urlParams = new URLSearchParams(location.search);
+    const fromParam = urlParams.get("server") || urlParams.get("relay");
+    if (fromParam) {
+      let u = fromParam.trim();
+      if (!u.startsWith("ws://") && !u.startsWith("wss://")) {
+        u = (location.protocol === "https:" ? "wss://" : "ws://") + u;
+      }
+      if (!u.includes("/ws") && !u.endsWith("/")) u += "/ws";
+      return u;
+    }
+    const saved = localStorage.getItem("bth-relay-url");
+    if (saved) return saved.trim();
+    if (window.BTH_RELAY_URL) return window.BTH_RELAY_URL;
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${location.host}/ws`;
+  }
+
   class Net {
     constructor() {
       this.ws = null;
@@ -281,8 +519,8 @@
     emit(t, m) { for (const fn of this.listeners.get(t) || []) fn(m); }
     connect() {
       return new Promise((resolve, reject) => {
-        const proto = location.protocol === "https:" ? "wss:" : "ws:";
-        const ws = new WebSocket(`${proto}//${location.host}/ws`);
+        const wsUrl = getRelayUrl();
+        const ws = new WebSocket(wsUrl);
         this.ws = ws;
         ws.onopen = () => {
           this.open = true;
@@ -317,6 +555,7 @@
   function renderLobby() {
     const L = state.lobby;
     if (!L) return;
+    if ($("#view-setup")) $("#view-setup").hidden = true;
     $("#card-lobby").hidden = false;
     $("#room-code").textContent = L.code;
     const ul = $("#player-list");
@@ -384,13 +623,14 @@
       } else {
         $("#lobby-hint").textContent = "Beide Spieler sind bereit! Klicke auf 'Spiel starten'.";
       }
+      if (L.goals) setGoalsInUI(L.goals);
+      updateGoalSummaryUI(L.goals || getGoalsFromUI());
       refreshLevelOptions();
     } else {
-      const modeName = L.mode === "level" ? "Gemeinsames Level (Kampagne)" : "Endlos-Krankenhaus (Freies Spiel)";
       const levelObj = LEVELS.find((x) => x.id === L.level);
       const levelName = levelObj ? levelObj.label : (L.level || "Demo-Level");
-      if ($("#guest-mode-val")) $("#guest-mode-val").textContent = modeName;
       if ($("#guest-level-val")) $("#guest-level-val").textContent = levelName;
+      updateGoalSummaryUI(L.goals);
       const guestWait = $("#guest-wait");
       if (guestWait) {
         if (!amReady) {
@@ -459,9 +699,13 @@
 
   function broadcastLobbyConfig() {
     if (state.lobby && state.lobby.host && state.net) {
-      state.lobby.mode = $("#mp-mode").value;
-      state.lobby.level = $("#mp-level").value;
-      state.net.sendRaw({ t: "lobby_config", mode: $("#mp-mode").value, level: $("#mp-level").value });
+      const goals = getGoalsFromUI();
+      const level = $("#mp-level") ? $("#mp-level").value : (state.lobby.level || "demo");
+      state.lobby.mode = "versus";
+      state.lobby.goals = goals;
+      state.lobby.level = level;
+      updateGoalSummaryUI(goals);
+      state.net.sendRaw({ t: "lobby_config", mode: "versus", level, goals, goal: "custom" });
     }
   }
 
@@ -471,7 +715,17 @@
     if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
     const net = new Net();
     state.net = net;
-    try { await net.connect(); } catch (e) { showMenuError("Verbindung zum Server fehlgeschlagen. Läuft der Server?"); return; }
+    try {
+      await net.connect();
+    } catch (e) {
+      const isVercel = location.hostname.endsWith(".vercel.app") || location.hostname.includes("vercel");
+      if (isVercel) {
+        showMenuError("Verbindung zum WebSocket-Server fehlgeschlagen. Vercel unterstützt keine dauerhaften WebSockets. Bitte trage deinen Relay-Server (z. B. auf Render.com) unten bei '⚙️ Relay-Server' ein oder hänge '?server=wss://...' an.");
+      } else {
+        showMenuError("Verbindung zum Server fehlgeschlagen. Läuft der Server? (" + getRelayUrl() + ")");
+      }
+      return;
+    }
     const name = playerName();
     const isDemo = state.data ? !!state.data.demo : true;
     net.on("joined", (m) => {
@@ -481,12 +735,18 @@
         host: m.host,
         players: m.players,
         max: m.max,
-        mode: m.config && m.config.mode ? m.config.mode : "freebuild",
-        level: m.config && m.config.level ? m.config.level : "demo",
+        mode: "versus",
+        goals: (m.config && m.config.goals) ? m.config.goals : { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+        level: (m.config && m.config.level) ? m.config.level : "demo",
       };
       net.id = m.id;
       if (m.started && m.config) { startMultiplayer(m.config, true); return; }
       history.replaceState(null, "", "?join=" + m.code);
+      if (m.host) {
+        state.lobby.goals = getGoalsFromUI();
+      } else {
+        setGoalsInUI(state.lobby.goals);
+      }
       renderLobby();
       lobbyChatSys(`Raum ${m.code} betreten als "${name}".`);
     });
@@ -494,7 +754,7 @@
       if (state.lobby && !state.game) {
         state.lobby.players = m.players;
         if (m.config) {
-          if (m.config.mode) state.lobby.mode = m.config.mode;
+          if (m.config.goals) state.lobby.goals = m.config.goals;
           if (m.config.level) state.lobby.level = m.config.level;
         }
         if (m.readyChange) {
@@ -509,8 +769,13 @@
     });
     net.on("lobby_config", (m) => {
       if (state.lobby && !state.game) {
-        state.lobby.mode = m.mode;
+        state.lobby.mode = "versus";
         state.lobby.level = m.level;
+        if (m.goals) {
+          state.lobby.goals = m.goals;
+          setGoalsInUI(m.goals);
+        }
+        updateGoalSummaryUI(state.lobby.goals);
         lobbyChatSys("Einstellungen geändert – Bereitschaft zurückgesetzt.");
         if (!state.lobby.host) renderLobby();
       }
@@ -532,14 +797,21 @@
         if ($("#lobby-hint")) $("#lobby-hint").textContent = "Beide Spieler müssen auf 'Bereit melden' klicken!";
         return;
       }
-      const t = { no_such_room: "Diesen Raum gibt es nicht.", room_full: "Der Raum ist voll.", already_started: "Das Spiel läuft bereits." }[m.error] || m.error;
+      const t = { no_such_room: "Diesen Raum gibt es nicht.", room_full: "Der Raum ist voll.", alreadyを開始: "Das Spiel läuft bereits." }[m.error] || m.error;
       showMenuError(t);
+      $("#card-lobby").hidden = true;
+      if ($("#view-setup")) $("#view-setup").hidden = false;
       net.close();
       state.net = null;
     });
     net.on("start", (m) => startMultiplayer(m.config, false));
     net.on("close", () => {
-      if (!state.game) { state.lobby = null; $("#card-lobby").hidden = true; if (state.net === net) state.net = null; }
+      if (!state.game) {
+        state.lobby = null;
+        $("#card-lobby").hidden = true;
+        if ($("#view-setup")) $("#view-setup").hidden = false;
+        if (state.net === net) state.net = null;
+      }
     });
     if (kind === "create") net.sendRaw({ t: "create", name, demo: isDemo, max: parseInt($("#max-players").value, 10), token: token() });
     else net.sendRaw({ t: "join", code, name, demo: isDemo, token: token() });
@@ -556,6 +828,7 @@
     state.net = null;
     state.lobby = null;
     $("#card-lobby").hidden = true;
+    if ($("#view-setup")) $("#view-setup").hidden = false;
     const chatLog = $("#lobby-chat-log");
     if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
     history.replaceState(null, "", location.pathname);
@@ -573,15 +846,15 @@
       lobbyChatSys("Alle Spieler müssen bereit sein, bevor das Spiel gestartet werden kann!");
       return;
     }
-    const mode = $("#mp-mode").value;
-    let level = $("#mp-level").value;
+    const goals = getGoalsFromUI();
+    let level = $("#mp-level") ? $("#mp-level").value : (L.level || "demo");
     const anyDemo = L.players.some((p) => p.demo);
     const lObj = LEVELS.find((x) => x.id === level);
     if (anyDemo && lObj && lObj.full) {
       level = "demo";
     }
     const seed = (Math.random() * 0x7fffffff) | 0;
-    state.net.sendRaw({ t: "start", config: { mode, level, seed, language: $("#language").value } });
+    state.net.sendRaw({ t: "start", config: { mode: "versus", level, goals, seed, language: $("#language").value } });
   }
 
   // ----------------------------------------------------------- game launch
@@ -605,6 +878,7 @@
       "check_for_updates = false",
       "capture_mouse = false",
       "debug = false",
+      "allow_user_actions_while_paused = true",
       `theme_hospital_install = ${q("/thdata")}`,
       `player_name = ${q(name)}`,
       "",
@@ -718,7 +992,22 @@
   }
 
   // ------------------------------------------------------------ Lua bridge
-  const snapIn = { chunks: new Map() };
+  function parseStats(str) {
+    if (!str) return null;
+    const parts = str.split(",").map((x) => parseInt(x, 10));
+    if (parts.length < 7 || parts.some(isNaN)) return null;
+    return {
+      bal: parts[0],
+      rep: parts[1],
+      rooms: parts[2],
+      staff: parts[3],
+      cured: parts[4],
+      deaths: parts[5],
+      val: parts[6],
+      started: true,
+    };
+  }
+
   function bridge(cmd, arg) {
     const net = state.net;
     switch (cmd) {
@@ -745,14 +1034,21 @@
       }
       case "net.ping":
         return net && net.pingMs != null ? String(net.pingMs) : "";
-      case "snap.send": {
-        // arg: "<to>|<path>|<metaJson>"
-        const [to, path, meta] = arg.split("|");
-        const data = state.game.mod.FS.readFile(path);
-        const z = fflate.zlibSync(data, { level: 3 });
-        const payload = "SNAP|" + meta + "|" + b64FromBytes(z);
-        net.sendRaw({ t: "msg", to: to === "all" ? "all" : parseInt(to, 10), d: payload });
-        return String(z.length);
+      case "vs.mystats": {
+        const s = parseStats(arg);
+        if (s) {
+          Object.assign(state.vs.myStats, s);
+          updateQuestUI();
+          checkWinConditions();
+        }
+        return null;
+      }
+      case "vs.win": {
+        const parts = (arg || "").split("|");
+        const winId = parseInt(parts[0], 10);
+        const winName = parts[1] || "Ein Spieler";
+        showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
+        return null;
       }
       case "fs.sync": {
         try { state.game.mod.FS.syncfs(false, () => {}); } catch (e) {}
@@ -776,58 +1072,136 @@
       }
       case "time.now":
         return String(Date.now());
-      case "hist.record":
-        handleHistoryRecord(arg, true);
-        return null;
       case "log":
         console.log("[lua]", arg);
         return null;
+      }
+      return null;
     }
-    return null;
+
+  function escapeHtml(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function updateHudPlayers() {
+    const el = $("#hud-players");
+    if (!el) return;
+    const mp = state.session && state.session.mp;
+    if (!mp) { el.hidden = true; return; }
+    const players = (state.lobby && state.lobby.players && state.lobby.players.length) ? state.lobby.players : (mp.players || []);
+    const hostId = (state.lobby && state.lobby.hostId !== undefined) ? state.lobby.hostId : (mp.host !== undefined ? mp.host : 0);
+    const myId = mp.id;
+
+    const hostP = players.find((p) => p.id === hostId || p.host) || players[0];
+    const guestPs = players.filter((p) => p && p !== hostP);
+
+    const parts = [];
+    if (hostP) {
+      const isMe = hostP.id === myId;
+      const offline = hostP.connected === false ? " (offline)" : "";
+      parts.push(`<span class="hud-role-host" title="Host des Spiels">👑 Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (Du)" : ""}${offline}</span>`);
+    }
+    if (guestPs.length > 0) {
+      for (const gp of guestPs) {
+        const isMe = gp.id === myId;
+        const offline = gp.connected === false ? " (offline)" : "";
+        parts.push(`<span class="hud-role-guest" title="Beigetretener Spieler">🎮 Gast: <b>${escapeHtml(gp.name)}</b>${isMe ? " (Du)" : ""}${offline}</span>`);
+      }
+    } else {
+      parts.push(`<span class="hud-role-guest muted">🎮 Gast: (wartet …)</span>`);
+    }
+    el.innerHTML = parts.join(' <span class="hud-sep">·</span> ');
+    el.hidden = false;
   }
 
   // -------------------------------------------------------- multiplayer HUD
   function setupHud() {
     const net = state.net;
     $("#hud").hidden = false;
-    const lObj = LEVELS.find((x) => x.id === (state.session.mp && state.session.mp.level));
-    const mapLabel = lObj ? lObj.label.split(" (")[0] : (state.session.mp && state.session.mp.level || "");
-    $("#hud-room").textContent = "Raum " + state.lobby.code + (mapLabel ? " · " + mapLabel : "") + " · " + state.session.mp.players.length + " Spieler";
-    net.on("ping", (ms) => {
-      const el = $("#hud-ping");
-      el.textContent = ms + " ms";
-      el.className = "chip " + (ms < 120 ? "ok" : ms < 300 ? "warn" : "err");
-    });
-    net.on("msg", (m) => {
-      if (typeof m.d === "string" && m.d.startsWith("SNAP|")) {
-        const i1 = m.d.indexOf("|", 5);
-        const meta = m.d.slice(5, i1);
-        const z = bytesFromB64(m.d.slice(i1 + 1));
-        const data = fflate.unzlibSync(z);
-        const FS = state.game.mod.FS;
-        FS.writeFile("/tmp/snapshot_in.sav", data);
-        net.inbox.push({ from: m.from, d: "snapshot:" + meta });
-      } else if (typeof m.d === "string" && m.d.startsWith("hist:")) {
-        handleHistoryRecord(m.d.slice(5), false);
+    const mp = state.session && state.session.mp;
+    const lObj = LEVELS.find((x) => x.id === (mp && mp.level));
+    const mapLabel = lObj ? lObj.label.split(" (")[0] : (mp && mp.level || "");
+    const roomCode = (state.lobby && state.lobby.code) || (mp && mp.code) || "";
+    $("#hud-room").textContent = "Raum " + roomCode + (mapLabel ? " · " + mapLabel : "");
+    updateHudPlayers();
+    if (net) {
+      net.on("ping", (ms) => {
+        const el = $("#hud-ping");
+        el.textContent = ms + " ms";
+        el.className = "chip " + (ms < 120 ? "ok" : ms < 300 ? "warn" : "err");
+      });
+      net.on("msg", (m) => {
+        if (typeof m.d === "string" && m.d.startsWith("vstats:")) {
+          const s = parseStats(m.d.slice(7));
+          if (s) {
+            Object.assign(state.vs.oppStats, s);
+            updateQuestUI();
+            checkWinConditions();
+          }
+        } else if (typeof m.d === "string" && m.d.startsWith("win:")) {
+          const parts = m.d.slice(4).split("|");
+          const winId = parseInt(parts[0], 10);
+          const winName = parts[1] || "Ein Spieler";
+          showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
+        } else {
+          net.inbox.push({ from: m.from, d: m.d });
+        }
+      });
+      net.on("players", (m) => {
+        if (state.lobby) state.lobby.players = m.players;
+        net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) });
+        updateHudPlayers();
+      });
+      net.on("left", (m) => {
+        if (state.lobby) {
+          state.lobby.players = m.players;
+          if (m.host !== null && m.host !== undefined) {
+            state.lobby.hostId = m.host;
+            if (state.session && state.session.mp) state.session.mp.host = m.host;
+          }
+        }
+        net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") });
+        chatSys(`${((state.lobby && state.lobby.players || []).find(p=>p.id===m.id)||{name:"Ein Spieler"}).name} hat die Verbindung verloren.`);
+        updateHudPlayers();
+      });
+      net.on("start_sim", () => {
+        net.inbox.push({ from: -1, d: "start_sim" });
+        const banner = $("#net-banner");
+        if (banner) {
+          banner.className = "";
+          banner.textContent = "Spiel gestartet!";
+          setTimeout(() => { banner.hidden = true; }, 3000);
+        }
+      });
+      net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Verbindung zum Server verloren – Spiel angehalten."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
+      net.on("chat", (m) => chatMsg(m.name, m.text, m.from !== net.id));
+    }
+    const tickTimer = () => {
+      const g = state.vs && state.vs.goals;
+      const timerEl = $("#hud-timer");
+      if (g && g.timeLimit > 0 && state.vs.startTime) {
+        const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
+        const rem = Math.max(0, g.timeLimit * 60 - elapsed);
+        const remMin = Math.floor(rem / 60);
+        const remSec = rem % 60;
+        if (timerEl) {
+          timerEl.hidden = false;
+          timerEl.textContent = `⏱️ ${remMin}:${String(remSec).padStart(2, "0")}`;
+          timerEl.className = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
+        }
+        if (!$("#quest-win").hidden && state.vs.tab === "goals") {
+          updateQuestUI();
+        }
+        checkWinConditions();
       } else {
-        net.inbox.push({ from: m.from, d: m.d });
+        if (timerEl) timerEl.hidden = true;
       }
-    });
-    net.on("players", (m) => { state.lobby.players = m.players; net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) }); });
-    net.on("left", (m) => { state.lobby.players = m.players; net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") }); chatSys(`${(state.lobby.players.find(p=>p.id===m.id)||{name:"Ein Spieler"}).name} hat die Verbindung verloren.`); });
-    net.on("start_sim", () => {
-      net.inbox.push({ from: -1, d: "start_sim" });
-      const banner = $("#net-banner");
-      if (banner) {
-        banner.className = "";
-        banner.textContent = "Spiel gestartet!";
-        setTimeout(() => { banner.hidden = true; }, 3000);
-      }
-    });
-    net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Verbindung zum Server verloren – Spiel angehalten."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
-    net.on("chat", (m) => chatMsg(m.name, m.text, m.from !== net.id));
+    };
+    if (state._timerInterval) clearInterval(state._timerInterval);
+    tickTimer();
+    state._timerInterval = setInterval(tickTimer, 1000);
     setupChat();
-    setupHistory();
+    setupQuests();
     $("#hud-fs-btn").onclick = toggleFullscreen;
   }
   function peersString(players) {
@@ -888,6 +1262,59 @@
     window.addEventListener("touchend", () => { isDragging = false; });
   }
 
+  function makeResizable(box, handle) {
+    if (!box || !handle) return;
+    let isResizing = false;
+    let startX = 0, startY = 0;
+    let startW = 0, startH = 0;
+
+    const onPointerDown = (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startW = box.offsetWidth;
+      startH = box.offsetHeight;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onPointerMove = (e) => {
+      if (!isResizing) return;
+      const newW = Math.max(280, startW + (e.clientX - startX));
+      const newH = Math.max(160, startH + (e.clientY - startY));
+      box.style.width = newW + "px";
+      box.style.height = newH + "px";
+    };
+
+    const onPointerUp = () => {
+      isResizing = false;
+    };
+
+    handle.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+
+    handle.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        isResizing = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startW = box.offsetWidth;
+        startH = box.offsetHeight;
+        e.stopPropagation();
+      }
+    }, { passive: false });
+    window.addEventListener("touchmove", (e) => {
+      if (isResizing && e.touches.length === 1) {
+        const newW = Math.max(280, startW + (e.touches[0].clientX - startX));
+        const newH = Math.max(160, startH + (e.touches[0].clientY - startY));
+        box.style.width = newW + "px";
+        box.style.height = newH + "px";
+      }
+    }, { passive: true });
+    window.addEventListener("touchend", () => { isResizing = false; });
+  }
+
   // ------------------------------------------------------------------ chat
   let unread = 0;
   function chatLog() { return $("#chat-log"); }
@@ -919,6 +1346,7 @@
     if ($("#chat-close")) $("#chat-close").onclick = () => toggle(false);
 
     makeDraggable(box, header, "#chat-close");
+    makeResizable(box, box.querySelector(".win-resize-handle"));
 
     $("#chat-form").onsubmit = (e) => {
       e.preventDefault();
@@ -934,284 +1362,446 @@
     });
   }
 
-  // ------------------------------------------------------------------ history
-  let unreadHist = 0;
-  const historyItems = [];
-  let histFilter = "all";
+  // ------------------------------------------------------------------ quests & versus
+  function formatVal(val, unit) {
+    if (unit === "$") return "$" + (val || 0).toLocaleString();
+    return (val || 0).toLocaleString() + (unit ? " " + unit : "");
+  }
 
-  function handleHistoryRecord(raw, isLocal) {
-    if (!raw) return;
-    const parts = raw.split("|");
-    const kind = parts[0];
-    const now = new Date();
-    const timeStr = String(now.getHours()).padStart(2, "0") + ":" +
-                    String(now.getMinutes()).padStart(2, "0") + ":" +
-                    String(now.getSeconds()).padStart(2, "0");
+  function checkWinConditions() {
+    if (state.vs.winner) return; // match already concluded
+    if (!state.vs.startTime || Date.now() - state.vs.startTime < 4000) return;
+    const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+    const my = state.vs.myStats;
+    const opp = state.vs.oppStats;
+    const quests = buildQuestsFromConfig(g);
 
-    let item = null;
-    if (kind === "room") {
-      const [_, player, roomName, costStr] = parts;
-      const cost = parseInt(costStr, 10) || 0;
-      item = {
-        category: "room",
-        icon: "🏥",
-        player: player || "Spieler",
-        action: "baute",
-        target: roomName || "Raum",
-        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
-        isLocal,
-        time: timeStr,
-        summary: `baute ${roomName}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
-      };
-    } else if (kind === "obj") {
-      const [_, player, label, costStr] = parts;
-      const cost = parseInt(costStr, 10) || 0;
-      item = {
-        category: "obj",
-        icon: "🪑",
-        player: player || "Spieler",
-        action: "stellte im Flur auf:",
-        target: label || "Objekt",
-        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
-        isLocal,
-        time: timeStr,
-        summary: `stellte ${label} im Flur auf${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
-      };
-    } else if (kind === "hire") {
-      const [_, player, role, sname, wageStr] = parts;
-      const wage = parseInt(wageStr, 10) || 0;
-      item = {
-        category: "staff",
-        icon: "👥",
-        player: player || "Spieler",
-        action: `stellte ${role} ein:`,
-        target: sname || "Mitarbeiter",
-        cost: wage > 0 ? `-$${wage}/Mt` : "",
-        isLocal,
-        time: timeStr,
-        summary: `stellte ${role} (${sname}) ein${wage > 0 ? " ($" + wage + "/Mt)" : ""}`
-      };
-    } else if (kind === "fire") {
-      const [_, player, role, sname] = parts;
-      item = {
-        category: "staff",
-        icon: "🚪",
-        player: player || "Spieler",
-        action: `entließ ${role}:`,
-        target: sname || "Mitarbeiter",
-        cost: "",
-        isLocal,
-        time: timeStr,
-        summary: `entließ ${role} (${sname})`
-      };
-    } else if (kind === "demolish") {
-      const [_, player, roomName] = parts;
-      item = {
-        category: "room",
-        icon: "💥",
-        player: player || "Spieler",
-        action: "riss ab:",
-        target: roomName || "Raum",
-        cost: "",
-        isLocal,
-        time: timeStr,
-        summary: `riss ${roomName || "Raum"} ab`
-      };
-    } else if (kind === "land") {
-      const [_, player, plotNo, costStr] = parts;
-      const cost = parseInt(costStr, 10) || 0;
-      item = {
-        category: "room",
-        icon: "🗺️",
-        player: player || "Spieler",
-        action: "kaufte:",
-        target: `Grundstück #${plotNo}`,
-        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
-        isLocal,
-        time: timeStr,
-        summary: `kaufte Grundstück #${plotNo}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
-      };
-    } else if (kind === "loan") {
-      const [_, player, amountStr] = parts;
-      const amount = parseInt(amountStr, 10) || 0;
-      item = {
-        category: "finance",
-        icon: "💰",
-        player: player || "Spieler",
-        action: "nahm Kredit auf:",
-        target: `+$${amount.toLocaleString()}`,
-        cost: `+$${amount.toLocaleString()}`,
-        isLocal,
-        time: timeStr,
-        summary: `nahm Kredit über $${amount.toLocaleString()} auf`
-      };
-    } else if (kind === "repayloan") {
-      const [_, player, amountStr] = parts;
-      const amount = parseInt(amountStr, 10) || 0;
-      item = {
-        category: "finance",
-        icon: "💳",
-        player: player || "Spieler",
-        action: "tilgte Kredit:",
-        target: `-$${amount.toLocaleString()}`,
-        cost: `-$${amount.toLocaleString()}`,
-        isLocal,
-        time: timeStr,
-        summary: `tilgte Kredit über $${amount.toLocaleString()}`
-      };
-    } else if (kind === "replace") {
-      const [_, player, mName, costStr] = parts;
-      const cost = parseInt(costStr, 10) || 0;
-      item = {
-        category: "obj",
-        icon: "⚙️",
-        player: player || "Spieler",
-        action: "ersetzte Maschine:",
-        target: mName || "Maschine",
-        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
-        isLocal,
-        time: timeStr,
-        summary: `ersetzte ${mName || "Maschine"}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
-      };
+    // 1. Time limit expired check
+    if (g.timeLimit > 0) {
+      const elapsedSec = (Date.now() - state.vs.startTime) / 1000;
+      const totalSec = g.timeLimit * 60;
+      if (elapsedSec >= totalSec) {
+        let winnerId = null;
+        let winnerName = null;
+        let isMe = false;
+
+        const myQuestsDone = quests.length > 0 && my.started && quests.every((q) => q.getVal(my) >= q.target);
+        const oppQuestsDone = quests.length > 0 && opp.started && quests.every((q) => q.getVal(opp) >= q.target);
+
+        if (myQuestsDone && !oppQuestsDone) {
+          winnerId = state.lobby ? state.lobby.id : 0;
+          winnerName = playerName();
+          isMe = true;
+        } else if (oppQuestsDone && !myQuestsDone) {
+          winnerId = -999;
+          winnerName = opp.name || "Gegner";
+          isMe = false;
+        } else {
+          // Compare cash balance
+          if (my.bal > opp.bal) {
+            winnerId = state.lobby ? state.lobby.id : 0;
+            winnerName = playerName();
+            isMe = true;
+          } else if (opp.bal > my.bal) {
+            winnerId = -999;
+            winnerName = opp.name || "Gegner";
+            isMe = false;
+          } else {
+            // Tie breaker: hospital overall value
+            if (my.val >= opp.val) {
+              winnerId = state.lobby ? state.lobby.id : 0;
+              winnerName = playerName();
+              isMe = true;
+            } else {
+              winnerId = -999;
+              winnerName = opp.name || "Gegner";
+              isMe = false;
+            }
+          }
+        }
+        state.vs.winner = winnerId;
+        if (isMe && state.net) {
+          state.net.sendRaw({ t: "msg", to: "all", d: `win:${winnerId}|${winnerName}` });
+        }
+        showVictoryModal(winnerName, isMe);
+        return;
+      }
     }
 
-    if (item) {
-      historyItems.push(item);
-      renderHistoryItem(item);
-      updateHistoryStats();
-      chatSys(`📜 [Chronik] ${item.player} ${item.summary}`);
-      const win = $("#history-win");
-      if (win && win.hidden && !isLocal) {
-        unreadHist++;
-        if ($("#history-badge")) $("#history-badge").hidden = false;
+    // 2. All active non-timed quests check (if any quests are set)
+    if (quests.length > 0) {
+      const myMet = my.started && quests.every((q) => q.getVal(my) >= q.target);
+      const oppMet = opp.started && quests.every((q) => q.getVal(opp) >= q.target);
+
+      if (myMet) {
+        state.vs.winner = state.lobby ? state.lobby.id : 1;
+        const myName = playerName();
+        if (state.net) {
+          state.net.sendRaw({ t: "msg", to: "all", d: `win:${state.vs.winner}|${myName}` });
+        }
+        showVictoryModal(myName, true);
+      } else if (oppMet) {
+        state.vs.winner = -999;
+        showVictoryModal(opp.name || "Gegner", false);
       }
     }
   }
 
-  function renderHistoryItem(item) {
-    const list = $("#history-log");
-    if (!list) return;
-    const emptyEl = list.querySelector(".history-empty");
-    if (emptyEl) emptyEl.remove();
+  function updateQuestUI() {
+    const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+    const my = state.vs.myStats;
+    const opp = state.vs.oppStats;
+    const quests = buildQuestsFromConfig(g);
 
-    const d = document.createElement("div");
-    d.className = "hist-item";
-    d.dataset.category = item.category;
-    if (histFilter !== "all" && item.category !== histFilter) {
-      d.hidden = true;
-    }
+    // Header names
+    const thYou = $("#th-you");
+    if (thYou) thYou.textContent = "Du (" + playerName() + ")";
+    const thOpp = $("#th-opp");
+    if (thOpp) thOpp.textContent = opp.name || "Gegner";
 
-    const t = document.createElement("span");
-    t.className = "hist-time";
-    t.textContent = item.time;
+    // Match Goal footer
+    const goalFooter = $("#quest-match-goal");
+    if (goalFooter) goalFooter.textContent = "Ziele: " + formatGoalsList(g).join(" + ");
 
-    const ic = document.createElement("span");
-    ic.className = "hist-icon";
-    ic.textContent = item.icon;
+    // Lead Banner
+    const leadText = $("#quest-lead-text");
+    if (leadText) {
+      if (g.timeLimit > 0) {
+        const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
+        const rem = Math.max(0, g.timeLimit * 60 - elapsed);
+        const remMin = Math.floor(rem / 60);
+        const remSec = rem % 60;
+        const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
+        const diff = (my.bal || 0) - (opp.bal || 0);
 
-    const b = document.createElement("div");
-    b.className = "hist-body";
+        if (diff > 500) {
+          leadText.innerHTML = `🟢 <b>Du liegst in Führung! (+$${diff.toLocaleString()})</b> · Restzeit: <b>${timeStr}</b>`;
+        } else if (diff < -500) {
+          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Gegner")} liegt vorn! (+$${Math.abs(diff).toLocaleString()})</b> · Restzeit: <b>${timeStr}</b>`;
+        } else {
+          leadText.innerHTML = `⚔️ <b>Gleichstand beim Barvermögen!</b> · Restzeit: <b>${timeStr}</b>`;
+        }
+      } else if (quests.length === 0) {
+        leadText.innerHTML = "♾️ <b>Freies Duell</b> – Vergleicht eure Statistiken live!";
+      } else {
+        let myPctSum = 0, oppPctSum = 0;
+        for (const q of quests) {
+          myPctSum += Math.min(100, Math.max(0, (q.getVal(my) / q.target) * 100));
+          oppPctSum += Math.min(100, Math.max(0, (q.getVal(opp) / q.target) * 100));
+        }
+        const myAvg = Math.round(myPctSum / quests.length);
+        const oppAvg = Math.round(oppPctSum / quests.length);
 
-    const p = document.createElement("span");
-    p.className = "hist-player" + (item.isLocal ? "" : " partner");
-    p.textContent = item.player + " ";
-
-    const act = document.createTextNode(item.action + " ");
-
-    const tgt = document.createElement("b");
-    tgt.textContent = item.target;
-
-    b.appendChild(p);
-    b.appendChild(act);
-    b.appendChild(tgt);
-
-    if (item.cost) {
-      const c = document.createElement("span");
-      c.className = "hist-cost";
-      c.textContent = item.cost;
-      b.appendChild(c);
-    }
-
-    d.appendChild(t);
-    d.appendChild(ic);
-    d.appendChild(b);
-
-    list.appendChild(d);
-    list.scrollTop = list.scrollHeight;
-  }
-
-  function updateHistoryStats() {
-    let rooms = 0, staff = 0, spent = 0;
-    for (const it of historyItems) {
-      if (it.category === "room") rooms++;
-      if (it.category === "staff" && it.icon === "👥") staff++;
-      if (it.cost) {
-        const num = parseInt(it.cost.replace(/[^0-9]/g, ""), 10) || 0;
-        spent += num;
+        if (myAvg > oppAvg + 5) {
+          leadText.innerHTML = `🟢 <b>Du führst das Rennen an!</b> (${myAvg}% vs. ${oppAvg}%)`;
+        } else if (oppAvg > myAvg + 5) {
+          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Gegner")} liegt vorn!</b> (${oppAvg}% vs. ${myAvg}%)`;
+        } else {
+          leadText.innerHTML = `⚔️ <b>Kopf-an-Kopf-Rennen!</b> (${myAvg}% vs. ${oppAvg}%)`;
+        }
       }
     }
-    if ($("#hist-stat-rooms")) $("#hist-stat-rooms").textContent = `${rooms} ${rooms === 1 ? "Raum" : "Räume"}`;
-    if ($("#hist-stat-staff")) $("#hist-stat-staff").textContent = `${staff} Personal`;
-    if ($("#hist-stat-cost")) $("#hist-stat-cost").textContent = `$${spent.toLocaleString()} verbaut`;
+
+    // Quest Cards list
+    const list = $("#quest-list");
+    if (list) {
+      const cardsHtml = [];
+
+      // If time limit is set, show a timer countdown card
+      if (g.timeLimit > 0) {
+        const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
+        const rem = Math.max(0, g.timeLimit * 60 - elapsed);
+        const remMin = Math.floor(rem / 60);
+        const remSec = rem % 60;
+        const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
+        const totalCash = Math.max(1, Math.max(0, my.bal || 0) + Math.max(0, opp.bal || 0));
+        const myPct = Math.min(100, Math.max(0, Math.round(((my.bal || 0) / totalCash) * 100)));
+        const oppPct = Math.min(100, Math.max(0, Math.round(((opp.bal || 0) / totalCash) * 100)));
+        const diff = (my.bal || 0) - (opp.bal || 0);
+
+        cardsHtml.push(`
+          <div class="quest-card">
+            <div class="quest-card-header">
+              <span class="quest-card-title">⏱️ Zeit-Wettkampf (${g.timeLimit} Min.)</span>
+              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">⏱️ ${timeStr} verbleibend</span>
+            </div>
+            <p class="muted small" style="margin: 4px 0 8px;">
+              Wer nach Ablauf der Zeit die Ziele bzw. das meiste Barvermögen hat, gewinnt!
+            </p>
+            <div class="prog-row">
+              <div class="prog-label">
+                <span>Du: $${(my.bal || 0).toLocaleString()}</span>
+                <span>${diff >= 0 ? '+' : ''}$${diff.toLocaleString()} (${myPct}%)</span>
+              </div>
+              <div class="prog-bar-wrap">
+                <div class="prog-bar-fill you" style="width: ${myPct}%"></div>
+              </div>
+            </div>
+            <div class="prog-row">
+              <div class="prog-label">
+                <span>${escapeHtml(opp.name || "Gegner")}: $${(opp.bal || 0).toLocaleString()}</span>
+                <span>${oppPct}%</span>
+              </div>
+              <div class="prog-bar-wrap">
+                <div class="prog-bar-fill opp" style="width: ${oppPct}%"></div>
+              </div>
+            </div>
+          </div>
+        `);
+      }
+
+      for (const q of quests) {
+        const myVal = q.getVal(my);
+        const oppVal = q.getVal(opp);
+        const myPct = Math.min(100, Math.max(0, Math.round((myVal / q.target) * 100)));
+        const oppPct = Math.min(100, Math.max(0, Math.round((oppVal / q.target) * 100)));
+        const myDone = myVal >= q.target;
+        const oppDone = oppVal >= q.target;
+
+        cardsHtml.push(`
+          <div class="quest-card">
+            <div class="quest-card-header">
+              <span class="quest-card-title">${escapeHtml(q.name)}</span>
+              <span class="quest-badge ${myDone ? "done" : "pending"}">Ziel: ${formatVal(q.target, q.unit)}</span>
+            </div>
+            <div class="prog-row">
+              <div class="prog-label">
+                <span>Du: ${formatVal(myVal, q.unit)}</span>
+                <span>${myPct}%${myDone ? " ✓" : ""}</span>
+              </div>
+              <div class="prog-bar-wrap">
+                <div class="prog-bar-fill you" style="width: ${myPct}%"></div>
+              </div>
+            </div>
+            <div class="prog-row">
+              <div class="prog-label">
+                <span>${escapeHtml(opp.name || "Gegner")}: ${formatVal(oppVal, q.unit)}</span>
+                <span>${oppPct}%${oppDone ? " ✓" : ""}</span>
+              </div>
+              <div class="prog-bar-wrap">
+                <div class="prog-bar-fill opp" style="width: ${oppPct}%"></div>
+              </div>
+            </div>
+          </div>
+        `);
+      }
+
+      if (cardsHtml.length === 0) {
+        cardsHtml.push(`
+          <div class="quest-card">
+            <div class="quest-card-header">
+              <span class="quest-card-title">♾️ Freies Endlos-Duell</span>
+            </div>
+            <p class="muted small" style="margin: 6px 0 0;">In diesem Modus gibt es kein festes Sieg-Kriterium. Vergleicht eure Kennzahlen live im Tab <b>Rivalen-Dashboard</b>!</p>
+          </div>
+        `);
+      }
+
+      list.innerHTML = cardsHtml.join("");
+    }
+
+    // Rivalen-Dashboard table
+    const tbody = $("#rival-tbody");
+    if (tbody) {
+      const myStarted = my.started;
+      const oppStarted = opp.started;
+
+      const myStatus = myStarted ? '<span class="status-pill active">🟢 Gestartet</span>' : '<span class="status-pill wait">⏳ Wartet</span>';
+      const oppStatus = oppStarted ? '<span class="status-pill active">🟢 Gestartet</span>' : '<span class="status-pill wait">⏳ Wartet</span>';
+
+      const cmp = (v1, v2, higherIsBetter = true) => {
+        if (v1 === v2) return ["", ""];
+        if ((v1 > v2) === higherIsBetter) return ['val-leader', ''];
+        return ['', 'val-leader'];
+      };
+
+      const [cBal1, cBal2] = cmp(my.bal, opp.bal);
+      const [cRooms1, cRooms2] = cmp(my.rooms, opp.rooms);
+      const [cStaff1, cStaff2] = cmp(my.staff, opp.staff);
+      const [cCured1, cCured2] = cmp(my.cured, opp.cured);
+      const [cDeaths1, cDeaths2] = cmp(my.deaths, opp.deaths, false);
+      const [cRep1, cRep2] = cmp(my.rep, opp.rep);
+      const [cVal1, cVal2] = cmp(my.val, opp.val);
+
+      tbody.innerHTML = `
+        <tr>
+          <td>Status Unternehmen</td>
+          <td class="val-you">${myStatus}</td>
+          <td class="val-opp">${oppStatus}</td>
+        </tr>
+        <tr>
+          <td>💰 Barvermögen</td>
+          <td class="val-you ${cBal1}">$${my.bal.toLocaleString()}</td>
+          <td class="val-opp ${cBal2}">$${opp.bal.toLocaleString()}</td>
+        </tr>
+        <tr>
+          <td>🏥 Räume / Gebäude</td>
+          <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Raum" : "Räume"}</td>
+          <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Raum" : "Räume"}</td>
+        </tr>
+        <tr>
+          <td>👥 Mitarbeiter</td>
+          <td class="val-you ${cStaff1}">${my.staff} Personal</td>
+          <td class="val-opp ${cStaff2}">${opp.staff} Personal</td>
+        </tr>
+        <tr>
+          <td>💉 Geheilte Patienten</td>
+          <td class="val-you ${cCured1}">${my.cured}</td>
+          <td class="val-opp ${cCured2}">${opp.cured}</td>
+        </tr>
+        <tr>
+          <td>💀 Todesfälle</td>
+          <td class="val-you ${cDeaths1}">${my.deaths}</td>
+          <td class="val-opp ${cDeaths2}">${opp.deaths}</td>
+        </tr>
+        <tr>
+          <td>⭐ Ruf des Hauses</td>
+          <td class="val-you ${cRep1}">${my.rep} / 1000</td>
+          <td class="val-opp ${cRep2}">${opp.rep} / 1000</td>
+        </tr>
+        <tr>
+          <td>📈 Gesamtwert</td>
+          <td class="val-you ${cVal1}">$${my.val.toLocaleString()}</td>
+          <td class="val-opp ${cVal2}">$${opp.val.toLocaleString()}</td>
+        </tr>
+      `;
+    }
   }
 
-  function setupHistory() {
-    const win = $("#history-win");
+  function setupQuests() {
+    const win = $("#quest-win");
     const toggle = (show) => {
       win.hidden = show === undefined ? !win.hidden : !show;
       if (!win.hidden) {
-        unreadHist = 0;
-        if ($("#history-badge")) $("#history-badge").hidden = true;
+        if ($("#quest-badge")) $("#quest-badge").hidden = true;
+        updateQuestUI();
       }
     };
 
-    if ($("#hud-history-btn")) $("#hud-history-btn").onclick = () => toggle();
-    if ($("#history-close")) $("#history-close").onclick = () => toggle(false);
-    if ($("#history-clear")) $("#history-clear").onclick = () => {
-      historyItems.length = 0;
-      const list = $("#history-log");
-      if (list) list.innerHTML = '<div class="history-empty">Noch keine Bau-Aktionen verzeichnet.</div>';
-      updateHistoryStats();
-    };
+    if ($("#hud-quest-btn")) $("#hud-quest-btn").onclick = () => toggle();
+    if ($("#quest-close")) $("#quest-close").onclick = () => toggle(false);
 
-    const filterChips = document.querySelectorAll("#history-filters .filter-chip");
-    filterChips.forEach((btn) => {
+    const tabBtns = document.querySelectorAll("#quest-tabs .quest-tab-btn");
+    tabBtns.forEach((btn) => {
       btn.onclick = () => {
-        filterChips.forEach((b) => b.classList.remove("active"));
+        tabBtns.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        histFilter = btn.dataset.filter || "all";
-        const items = document.querySelectorAll("#history-log .hist-item");
-        items.forEach((it) => {
-          it.hidden = histFilter !== "all" && it.dataset.category !== histFilter;
-        });
+        const tab = btn.dataset.tab;
+        state.vs.tab = tab;
+        $("#quest-view-goals").hidden = tab !== "goals";
+        $("#quest-view-dashboard").hidden = tab !== "dashboard";
       };
     });
 
-    makeDraggable(win, $("#history-header"), "#history-close, #history-clear");
+    makeDraggable(win, $("#quest-header"), "#quest-close");
+    makeResizable(win, win.querySelector(".win-resize-handle"));
+
+    if ($("#vic-continue")) {
+      $("#vic-continue").onclick = () => {
+        $("#victory-modal").hidden = true;
+      };
+    }
+    if ($("#vic-exit")) {
+      $("#vic-exit").onclick = () => gameExit(false);
+    }
 
     window.addEventListener("keydown", (e) => {
-      if ((e.key === "h" || e.key === "H") && state.game && !$("#chat:not([hidden])") && document.activeElement?.tagName !== "INPUT") {
+      if ((e.key === "q" || e.key === "Q" || e.key === "h" || e.key === "H") && state.game && !$("#chat:not([hidden])") && document.activeElement?.tagName !== "INPUT") {
         e.preventDefault();
         toggle();
       }
     });
+
+    updateQuestUI();
+  }
+
+  function showVictoryModal(winnerName, isMe) {
+    const modal = $("#victory-modal");
+    if (!modal) return;
+    const iconEl = $("#vic-icon");
+    const titleEl = $("#vic-title");
+    const descEl = $("#vic-desc");
+    const summaryEl = $("#vic-stats-summary");
+
+    if (iconEl) iconEl.textContent = isMe ? "🏆" : "🥈";
+    if (titleEl) {
+      titleEl.textContent = isMe ? "🎉 Sieg! Du hast gewonnen!" : `Match beendet – ${winnerName} gewinnt!`;
+      titleEl.className = isMe ? "vic-won" : "vic-lost";
+    }
+    if (descEl) {
+      const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+      const goalsDesc = formatGoalsList(g).join(" und ");
+      if (g.timeLimit > 0) {
+        const my = state.vs.myStats;
+        const opp = state.vs.oppStats;
+        descEl.textContent = isMe
+          ? `Glückwunsch! Nach Ablauf der ${g.timeLimit} Minuten hast du mit einem Barvermögen von $${(my.bal || 0).toLocaleString()} gegenüber $${(opp.bal || 0).toLocaleString()} gesiegt! (Ziele: ${goalsDesc})`
+          : `Die ${g.timeLimit} Minuten sind um! ${winnerName} gewinnt mit einem Barvermögen von $${(opp.bal || 0).toLocaleString()} gegenüber $${(my.bal || 0).toLocaleString()}. (Ziele: ${goalsDesc})`;
+      } else {
+        descEl.textContent = isMe
+          ? `Glückwunsch! Du hast die Ziele (${goalsDesc}) vor deinem Kontrahenten erreicht!`
+          : `${winnerName} hat die Ziele (${goalsDesc}) als Erster abgeschlossen.`;
+      }
+    }
+
+    if (summaryEl) {
+      const my = state.vs.myStats;
+      const opp = state.vs.oppStats;
+      summaryEl.innerHTML = `
+        <table class="rival-table">
+          <thead>
+            <tr>
+              <th>Statistik</th>
+              <th id="th-you">Du (${escapeHtml(playerName())})</th>
+              <th id="th-opp">${escapeHtml(opp.name || "Gegner")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>💰 Barvermögen</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
+            <tr><td>🏥 Räume</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
+            <tr><td>👥 Mitarbeiter</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
+            <tr><td>💉 Geheilte Patienten</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
+            <tr><td>💀 Todesfälle</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
+            <tr><td>⭐ Ruf des Hauses</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
+            <tr><td>📈 Gesamtwert</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+      `;
+    }
+
+    modal.hidden = false;
   }
 
   // ------------------------------------------------------------ MP startup
   function startMultiplayer(config, rejoin) {
     const L = state.lobby;
-    const players = config.players;
+    const players = config.players || (L && L.players) || [];
     const me = players.find((p) => p.id === L.id) || { id: L.id, name: playerName() };
+    const opp = players.find((p) => p.id !== L.id);
+    const hostId = config.hostId !== undefined ? config.hostId : (players.find((p) => p.host) ? players.find((p) => p.host).id : (players.length ? Math.min(...players.map((p) => p.id)) : 0));
+    const goals = config.goals || (L && L.goals) || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+
+    state.vs = {
+      goal: config.goal || "custom",
+      goals,
+      startTime: Date.now(),
+      myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
+      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: opp ? opp.name : "Gegner" },
+      winner: null,
+      tab: "goals",
+    };
+
     const mp = {
       id: L.id,
       code: L.code,
       name: me.name,
       players,
-      mode: config.mode,
+      mode: "versus",
+      goals,
       level: config.level,
       seed: config.seed,
       rejoin: !!rejoin,
-      host: players.length ? Math.min(...players.map((p) => p.id)) : 0,
+      host: hostId,
     };
     state.net.off("joined");
     state.net.off("start");
@@ -1253,7 +1843,7 @@
     document.addEventListener("dragover", (e) => e.preventDefault());
     document.addEventListener("drop", (e) => e.preventDefault());
 
-    $("#btn-single").onclick = () => startGame({ language: $("#language").value, name: playerName() });
+    if ($("#btn-single")) $("#btn-single").onclick = () => startGame({ language: $("#language").value, name: playerName() });
     $("#btn-create").onclick = () => enterLobby("create");
     $("#btn-join").onclick = () => {
       const code = $("#join-code").value.trim().toUpperCase();
@@ -1265,11 +1855,75 @@
     $("#btn-ready").onclick = toggleReady;
     $("#btn-leave-lobby").onclick = leaveLobby;
     $("#btn-start").onclick = hostStart;
-    $("#mp-mode").onchange = () => { refreshLevelOptions(); broadcastLobbyConfig(); };
+    for (const gid of ["#goal-cured", "#goal-money", "#goal-rooms", "#goal-time"]) {
+      const el = $(gid);
+      if (el) el.onchange = () => broadcastLobbyConfig();
+    }
+    document.querySelectorAll(".quest-preset-bar .btn-chip").forEach((btn) => {
+      btn.onclick = () => {
+        const p = PRESETS[btn.dataset.preset];
+        if (p) {
+          setGoalsInUI(p);
+          broadcastLobbyConfig();
+        }
+      };
+    });
     $("#mp-level").onchange = () => { broadcastLobbyConfig(); };
-    $("#btn-copy-code").onclick = () => navigator.clipboard.writeText(state.lobby.code).catch(() => {});
-    $("#btn-copy-link").onclick = () => navigator.clipboard.writeText(location.origin + location.pathname + "?join=" + state.lobby.code).catch(() => {});
+    $("#btn-copy-code").onclick = () => {
+      if (state.lobby) navigator.clipboard.writeText(state.lobby.code).catch(() => {});
+      const btn = $("#btn-copy-code");
+      const oldTxt = btn.textContent;
+      btn.textContent = "✓ Code kopiert!";
+      setTimeout(() => { btn.textContent = oldTxt; }, 1800);
+    };
+    $("#btn-copy-link").onclick = () => {
+      const u = new URL(location.origin + location.pathname);
+      if (state.lobby) u.searchParams.set("join", state.lobby.code);
+      const relayParam = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay") || localStorage.getItem("bth-relay-url");
+      if (relayParam) u.searchParams.set("server", relayParam);
+      navigator.clipboard.writeText(u.toString()).catch(() => {});
+      const btn = $("#btn-copy-link");
+      const oldTxt = btn.textContent;
+      btn.textContent = "✓ Link kopiert!";
+      setTimeout(() => { btn.textContent = oldTxt; }, 1800);
+    };
     $("#fatal-reload").onclick = () => (location.href = location.pathname);
+
+    const updateRelayDisplay = () => {
+      const el = $("#current-relay-host");
+      if (!el) return;
+      const saved = localStorage.getItem("bth-relay-url");
+      const param = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay");
+      if (param) el.textContent = param;
+      else if (saved) el.textContent = saved;
+      else el.textContent = "Automatisch (" + location.host + ")";
+    };
+    updateRelayDisplay();
+
+    const btnServer = $("#btn-server-settings");
+    if (btnServer) {
+      btnServer.onclick = () => {
+        const current = localStorage.getItem("bth-relay-url") || "";
+        const input = prompt(
+          "WebSocket Relay-Server URL eingeben (z. B. wss://mein-hospital.onrender.com/ws):\n\nLeer lassen für Standard (gleicher Host wie Webseite):",
+          current
+        );
+        if (input !== null) {
+          const trimmed = input.trim();
+          if (trimmed) {
+            let u = trimmed;
+            if (!u.startsWith("ws://") && !u.startsWith("wss://")) {
+              u = (location.protocol === "https:" ? "wss://" : "ws://") + u;
+            }
+            if (!u.includes("/ws") && !u.endsWith("/")) u += "/ws";
+            localStorage.setItem("bth-relay-url", u);
+          } else {
+            localStorage.removeItem("bth-relay-url");
+          }
+          updateRelayDisplay();
+        }
+      };
+    }
 
     const lobbyChatForm = $("#lobby-chat-form");
     const lobbyChatInput = $("#lobby-chat-input");
@@ -1289,7 +1943,7 @@
     if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI };
   }
 
   init();

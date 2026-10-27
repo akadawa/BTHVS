@@ -141,8 +141,9 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   console.log("Both ready & button enabled verified!");
 
   // 8. Test settings change resets ready state
-  console.log("Host changes mode to test ready-reset...");
-  await p1.selectOption("#mp-mode", "level");
+  console.log("Host changes goal to test ready-reset...");
+  await p1.selectOption("#vs-goal", "cured_10");
+  await p1.evaluate(() => document.querySelector("#vs-goal").dispatchEvent(new Event("change")));
   await sleep(600);
 
   const p1AfterModeChange = await p1.evaluate(() => {
