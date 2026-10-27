@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,193 +7,214 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- ======================= Landing / lobby ======================= -->
+  <!-- ======================= Landing / Lobby ======================= -->
   <main id="menu">
     <header>
       <div class="logo">✚</div>
       <div>
         <h1>Browser Theme Hospital – Versus</h1>
-        <p class="sub">CorsixTH im Browser – 1v1 Versus-Wettkampf</p>
+        <p class="sub">CorsixTH in Browser – Real-Time Multiplayer Versus Competition</p>
       </div>
     </header>
 
     <div id="view-setup">
       <section class="card" id="card-data">
-        <h2><span class="step">1</span> Spieldaten</h2>
+        <h2><span class="step">1</span> Game Data</h2>
         <p class="muted">
-          Theme Hospital selbst liegt nicht bei. Wähle die <b>Demo-ZIP</b> (z.&nbsp;B. <code>HOSP.zip</code>) oder den
-          entpackten Spielordner. Die Dateien werden einmalig in deinem Browser gespeichert und verlassen deinen Rechner nicht.
+          Theme Hospital itself is not included. Select your Theme Hospital <b>full version ZIP</b> or extracted game folder (available from GOG.com or EA). The demo version is not supported. Files are stored locally in your browser and never leave your machine.
         </p>
         <div id="dropzone" tabindex="0">
-          <div id="data-status" class="status warn">Keine Spieldaten gefunden</div>
+          <div id="data-status" class="status warn">No game data found</div>
           <div class="row">
-            <button id="btn-zip" class="btn">ZIP-Datei wählen …</button>
-            <button id="btn-folder" class="btn secondary">Ordner wählen …</button>
-            <button id="btn-forget" class="btn ghost" hidden>Daten entfernen</button>
+            <button id="btn-zip" class="btn">Select ZIP File …</button>
+            <button id="btn-folder" class="btn secondary">Select Folder …</button>
+            <button id="btn-forget" class="btn ghost" hidden>Remove Data</button>
           </div>
-          <p class="muted small">… oder ZIP/Ordner einfach hierher ziehen.</p>
+          <p class="muted small">… or drag & drop your game folder or ZIP file here.</p>
         </div>
         <input type="file" id="file-zip" accept=".zip" hidden>
         <input type="file" id="file-folder" webkitdirectory directory multiple hidden>
       </section>
 
       <section class="card" id="card-mode" aria-disabled="true">
-        <h2><span class="step">2</span> Spielen</h2>
+        <h2><span class="step">2</span> Play</h2>
         <div class="row">
-          <label class="field">Dein Name
+          <label class="field">Your Name
             <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
           </label>
-          <label class="field">Sprache
+          <label class="field">Language
             <select id="language">
-              <option value="German">Deutsch</option>
-              <option value="English">English</option>
+              <option value="English" selected>English</option>
+              <option value="German">German</option>
+              <option value="French">French</option>
+              <option value="Spanish">Spanish</option>
+              <option value="Italian">Italian</option>
             </select>
           </label>
         </div>
 
         <div class="modes">
           <div class="mode">
-            <h3>Versus – Raum erstellen</h3>
-            <p class="muted small">Tritt im 1v1-Wettkampf gegen einen Mitspieler an!</p>
-            <label class="field inline">Modus
-              <select id="max-players"><option value="2">1 vs 1 Wettkampf</option></select>
+            <h3>Create Versus Room</h3>
+            <p class="muted small">Compete against other players in real-time!</p>
+            <label class="field inline">Max Players
+              <select id="max-players">
+                <option value="2">2 Players (1v1)</option>
+                <option value="3">3 Players</option>
+                <option value="4">4 Players</option>
+                <option value="5" selected>5 Players (Free-for-All)</option>
+              </select>
             </label>
-            <button id="btn-create" class="btn primary" disabled>Raum erstellen</button>
+            <label class="field inline checkbox-field">
+              <input type="checkbox" id="create-public" checked>
+              <span>List in Public Lobby Browser</span>
+            </label>
+            <button id="btn-create" class="btn primary" disabled>Create Versus Room</button>
           </div>
           <div class="mode">
-            <h3>Versus – Beitreten</h3>
-            <p class="muted small">Code vom Host eingeben.</p>
+            <h3>Join Versus</h3>
+            <p class="muted small">Enter room code from host.</p>
             <input id="join-code" class="code-input" maxlength="5" placeholder="ABCDE" autocomplete="off" spellcheck="false">
-            <button id="btn-join" class="btn primary" disabled>Beitreten</button>
+            <button id="btn-join" class="btn primary" disabled>Join Versus</button>
           </div>
         </div>
+
+        <div class="public-lobbies-section">
+          <div class="public-lobbies-header">
+            <h3>Public Lobbies</h3>
+            <button id="btn-refresh-lobbies" class="btn small ghost" type="button">Refresh</button>
+          </div>
+          <div id="lobbies-container">
+            <div id="lobbies-empty" class="lobbies-empty">No public lobbies found. Create one above to get started!</div>
+            <div id="lobbies-table-wrap" class="lobbies-table-wrap" hidden>
+              <table class="lobbies-table">
+                <thead>
+                  <tr>
+                    <th>Room Code</th>
+                    <th>Host</th>
+                    <th>Players</th>
+                    <th>Map</th>
+                    <th>Goals</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="lobbies-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <p id="menu-error" class="status err" hidden></p>
       </section>
     </div>
 
+    <!-- ======================= Versus Lobby ======================= -->
     <section class="card" id="card-lobby" hidden>
-      <h2>Versus-Lobby (Wettkampf)</h2>
+      <h2>Versus Lobby</h2>
       <div class="lobby-grid">
         <div class="lobby-col-left">
-          <div class="muted small">Raum-Code (weitergeben!)</div>
+          <div class="muted small">Room Code (Share with friends!)</div>
           <div class="room-code" id="room-code">-----</div>
           <div class="row">
-            <button id="btn-copy-code" class="btn secondary small">Code kopieren</button>
-            <button id="btn-copy-link" class="btn secondary small">Einladungslink kopieren</button>
+            <button id="btn-copy-code" class="btn secondary small">Copy Code</button>
+            <button id="btn-copy-link" class="btn secondary small">Copy Invite Link</button>
           </div>
 
           <div class="players-box">
-            <div class="muted small" id="players-header">Spieler im Raum (1v1 Duell)</div>
+            <div class="muted small" id="players-header">Players in Room</div>
             <ul id="player-list"></ul>
           </div>
         </div>
 
         <div class="lobby-col-right">
           <div id="lobby-chat-box">
-            <div class="lobby-chat-header">💬 Lobby-Chat</div>
+            <div class="lobby-chat-header">💬 Lobby Chat</div>
             <div id="lobby-chat-log">
-              <div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>
+              <div class="chat-placeholder">No messages in lobby chat yet.</div>
             </div>
             <form id="lobby-chat-form">
-              <input id="lobby-chat-input" maxlength="200" autocomplete="off" placeholder="Nachricht an Mitspieler … (Enter)">
-              <button type="submit" class="btn small primary">Senden</button>
+              <input id="lobby-chat-input" maxlength="200" autocomplete="off" placeholder="Message to players … (Enter)">
+              <button type="submit" class="btn small primary">Send</button>
             </form>
           </div>
         </div>
       </div>
 
       <div id="host-options">
-        <h3>🎯 Wettkampf-Ziele (Quest-Chooser)</h3>
-        <p class="muted small">Stelle als Host die gewünschten Siegbedingungen ein. Alle aktiven Ziele müssen erreicht werden!</p>
-
-        <div class="quest-preset-bar">
-          <span class="muted small">Schnellwahl:</span>
-          <button type="button" class="btn-chip" data-preset="sprint">⚡ 10 Heilungen</button>
-          <button type="button" class="btn-chip" data-preset="duel">⚔️ 25 Heilungen + 30 Min.</button>
-          <button type="button" class="btn-chip" data-preset="cashrace">💰 $100k + 20 Min.</button>
-          <button type="button" class="btn-chip" data-preset="tycoon">💎 50 Heilungen + $150k</button>
-          <button type="button" class="btn-chip" data-preset="builder">🏥 5 Räume & Personal</button>
-        </div>
+        <h3>Versus Goals (Quest Chooser)</h3>
+        <p class="muted small">Configure match win conditions. All active goals must be achieved!</p>
 
         <div class="quest-chooser-grid">
-          <label class="field">❤️ Geheilte Patienten
+          <label class="field">Cured Patients
             <select id="goal-cured">
-              <option value="0">Kein Ziel (Beliebig)</option>
-              <option value="10">10 Patienten heilen</option>
-              <option value="25" selected>25 Patienten heilen</option>
-              <option value="50">50 Patienten heilen</option>
-              <option value="100">100 Patienten heilen</option>
-              <option value="200">200 Patienten heilen</option>
-              <option value="400">400 Patienten heilen</option>
+              <option value="0">Any (No Goal)</option>
+              <option value="10">10 Patients</option>
+              <option value="25" selected>25 Patients</option>
+              <option value="50">50 Patients</option>
+              <option value="100">100 Patients</option>
+              <option value="200">200 Patients</option>
+              <option value="400">400 Patients</option>
             </select>
           </label>
 
-          <label class="field">💰 Barvermögen
+          <label class="field">Cash Balance
             <select id="goal-money">
-              <option value="0">Kein Ziel (Beliebig)</option>
-              <option value="50000">$50.000 Guthaben</option>
-              <option value="100000" selected>$100.000 Guthaben</option>
-              <option value="150000">$150.000 Guthaben</option>
-              <option value="250000">$250.000 Guthaben</option>
+              <option value="0">Any (No Goal)</option>
+              <option value="50000">$50,000</option>
+              <option value="100000" selected>$100,000</option>
+              <option value="150000">$150,000</option>
+              <option value="250000">$250,000</option>
+              <option value="500000">$500,000</option>
             </select>
           </label>
 
-          <label class="field">🏥 Räume & Personal
-            <select id="goal-rooms">
-              <option value="0" selected>Kein Ziel (Beliebig)</option>
-              <option value="3">3 Räume & 3 Mitarbeiter</option>
-              <option value="5">5 Räume & 5 Mitarbeiter</option>
-              <option value="8">8 Räume & 8 Mitarbeiter</option>
-            </select>
-          </label>
-
-          <label class="field">⏱️ Zeitlimit
+          <label class="field">Time Limit
             <select id="goal-time">
-              <option value="0">Kein Zeitlimit</option>
-              <option value="15">15 Minuten</option>
-              <option value="20">20 Minuten</option>
-              <option value="30" selected>30 Minuten</option>
-              <option value="60">60 Minuten</option>
+              <option value="0">No Time Limit</option>
+              <option value="15">15 Minutes</option>
+              <option value="20">20 Minutes</option>
+              <option value="30" selected>30 Minutes</option>
+              <option value="60">60 Minutes</option>
             </select>
           </label>
         </div>
 
         <div id="goal-summary-box" class="goal-summary-card">
-          <div class="goal-summary-title">📋 Aktive Match-Bedingungen:</div>
+          <div class="goal-summary-title">Active Match Conditions:</div>
           <div id="goal-summary-text" class="goal-summary-content">...</div>
-          <div class="goal-summary-rule muted small">💡 Wer zuerst <b>alle</b> gesetzten Ziele erreicht, gewinnt! Bei Zeitablauf entscheidet das höchste Barvermögen.</div>
+          <div class="goal-summary-rule muted small">The first player to achieve <b>all</b> active goals wins! When time runs out, the player with the highest cash balance wins.</div>
         </div>
 
-        <label class="field" id="mp-level-wrap">Karte / Level
+        <label class="field" id="mp-level-wrap">Map / Level
           <select id="mp-level"></select>
         </label>
         <p id="level-compat-hint" class="status warn small" hidden></p>
       </div>
 
       <div id="guest-options" hidden>
-        <h3>Spieleinstellungen (vom Host festgelegt)</h3>
+        <h3>Match Settings (Set by Host)</h3>
         <div class="guest-info-box">
-          <div><b>Wettkampf-Ziele:</b></div>
+          <div><b>Versus Goals:</b></div>
           <div id="guest-goal-summary" class="guest-goals-list">...</div>
-          <div class="muted small" style="margin-top: 4px;">💡 Wer zuerst alle gesetzten Ziele erreicht, gewinnt! Bei Zeitablauf entscheidet das Barvermögen.</div>
-          <div style="margin-top: 8px;"><b>Karte:</b> <span id="guest-level-val">Demo-Level</span></div>
+          <div class="muted small" style="margin-top: 4px;">The first player to achieve all active goals wins! When time runs out, the highest cash balance wins.</div>
+          <div style="margin-top: 8px;"><b>Map:</b> <span id="guest-level-val">Level 1</span></div>
         </div>
-        <p id="guest-wait" class="muted">Warte darauf, dass der Host das Spiel startet …</p>
+        <p id="guest-wait" class="muted">Waiting for the host to start the game …</p>
       </div>
 
       <div class="row lobby-actions-row">
-        <button id="btn-ready" class="btn secondary">✓ Bereit melden</button>
-        <button id="btn-start" class="btn primary" disabled>Spiel starten</button>
-        <button id="btn-leave-lobby" class="btn ghost">← Zurück (Raum verlassen)</button>
+        <button id="btn-start" class="btn primary" disabled>Start Game</button>
+        <button id="btn-ready" class="btn secondary">Ready</button>
+        <button id="btn-leave-lobby" class="btn ghost">Leave Room</button>
       </div>
       <p id="lobby-hint" class="muted small"></p>
     </section>
 
     <footer class="muted small">
-      <div>Basiert auf <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT-Lizenz). Theme Hospital © Bullfrog / EA.</div>
+      <div>Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License). Theme Hospital © Bullfrog / EA.</div>
       <div style="margin-top: 6px;">
-        <button id="btn-server-settings" class="btn ghost small" type="button" title="Netzwerk / Multiplayer-Modus konfigurieren">
-          ⚙️ Netzwerk: <span id="current-relay-host">Automatisch</span>
+        <button id="btn-server-settings" class="btn ghost small" type="button" title="Configure Network / Multiplayer Mode">
+          ⚙️ Network: <span id="current-relay-host">Automatic</span>
         </button>
       </div>
     </footer>
@@ -204,34 +225,34 @@
     <canvas id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
     <div id="loading">
       <div class="spinner"></div>
-      <div id="loading-text">Lade Spiel …</div>
+      <div id="loading-text">Loading game …</div>
     </div>
 
     <div id="hud" hidden>
       <span id="hud-room" class="chip"></span>
       <span id="hud-players" class="chip"></span>
-      <span id="hud-timer" class="chip warn" hidden>⏱️ 00:00</span>
+      <span id="hud-timer" class="chip warn" hidden>00:00</span>
       <span id="hud-sync" class="chip ok">Sync</span>
       <span id="hud-ping" class="chip">– ms</span>
-      <button id="hud-quest-btn" class="chip btn-chip" title="Wettkampf & Quests (Q)">🎯 Quests<span id="quest-badge" hidden></span></button>
-      <button id="hud-chat-btn" class="chip btn-chip" title="Chat (Enter)">💬<span id="chat-badge" hidden></span></button>
-      <button id="hud-fs-btn" class="chip btn-chip" title="Vollbild (F11)">⛶</button>
+      <button id="hud-quest-btn" class="chip btn-chip" title="Versus Goals & Quests (Q)">Quests<span id="quest-badge" hidden></span></button>
+      <button id="hud-chat-btn" class="chip btn-chip" title="Chat (Enter)">Chat<span id="chat-badge" hidden></span></button>
+      <button id="hud-fs-btn" class="chip btn-chip" title="Fullscreen (F11)">⛶</button>
     </div>
     <div id="net-banner" hidden></div>
 
     <div id="quest-win" hidden>
       <div id="quest-header">
-        <span id="quest-title">🎯 Wettkampf-Ziele & Quests</span>
+        <span id="quest-title">Versus Goals & Quests</span>
         <div class="win-actions">
-          <button id="quest-close" type="button" class="btn-chip" title="Schließen">✕</button>
+          <button id="quest-close" type="button" class="btn-chip" title="Close">✕</button>
         </div>
       </div>
       <div id="quest-lead-banner">
-        <span id="quest-lead-text">Match läuft – Erreiche als Erster das Ziel!</span>
+        <span id="quest-lead-text">Match in progress – Be the first to reach the goal!</span>
       </div>
       <div id="quest-tabs">
-        <button type="button" class="quest-tab-btn active" data-tab="goals">📋 Aktive Quests</button>
-        <button type="button" class="quest-tab-btn" data-tab="dashboard">📊 Rivalen-Dashboard</button>
+        <button type="button" class="quest-tab-btn active" data-tab="goals">Active Quests</button>
+        <button type="button" class="quest-tab-btn" data-tab="dashboard">Rivals Leaderboard</button>
       </div>
       <div id="quest-view-goals" class="quest-view">
         <div id="quest-list"></div>
@@ -241,9 +262,12 @@
           <table class="rival-table">
             <thead>
               <tr>
-                <th>Kategorie</th>
-                <th id="th-you">Du</th>
-                <th id="th-opp">Gegner</th>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Cash</th>
+                <th>Cured</th>
+                <th>Value</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody id="rival-tbody"></tbody>
@@ -251,21 +275,21 @@
         </div>
       </div>
       <div id="quest-footer">
-        <span id="quest-match-goal">Ziel: $50.000 Guthaben</span>
-        <span id="quest-hotkey-hint" class="muted small">Taste <b>Q</b> öffnet/schließt diesen Block</span>
+        <span id="quest-match-goal">Goals: ...</span>
+        <span id="quest-hotkey-hint" class="muted small">Press <b>Q</b> to toggle this window</span>
       </div>
-      <div class="win-resize-handle" title="Größe anpassen"></div>
+      <div class="win-resize-handle" title="Resize window"></div>
     </div>
 
     <div id="victory-modal" hidden>
       <div class="box victory-box">
         <div class="victory-icon" id="vic-icon">🏆</div>
-        <h2 id="vic-title">Match beendet!</h2>
+        <h2 id="vic-title">Match Finished!</h2>
         <p id="vic-desc" class="vic-desc"></p>
         <div id="vic-stats-summary" class="vic-summary"></div>
         <div class="row victory-actions">
-          <button id="vic-continue" class="btn secondary">Weiterspielen</button>
-          <button id="vic-exit" class="btn primary">Zurück zum Menü</button>
+          <button id="vic-continue" class="btn secondary">Continue Playing</button>
+          <button id="vic-exit" class="btn primary">Return to Menu</button>
         </div>
       </div>
     </div>
@@ -273,18 +297,18 @@
     <div id="chat" hidden>
       <div id="chat-header">
         <span id="chat-title">💬 Chat</span>
-        <button id="chat-close" type="button" class="btn-chip" title="Schließen">✕</button>
+        <button id="chat-close" type="button" class="btn-chip" title="Close">✕</button>
       </div>
       <div id="chat-log"></div>
-      <form id="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="Nachricht … (Enter)"></form>
-      <div class="win-resize-handle" title="Größe anpassen"></div>
+      <form id="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="Message … (Enter)"></form>
+      <div class="win-resize-handle" title="Resize window"></div>
     </div>
 
     <div id="fatal" hidden>
       <div class="box">
-        <h2>Das Spiel wurde beendet</h2>
+        <h2>The game was terminated</h2>
         <pre id="fatal-text"></pre>
-        <div class="row"><button id="fatal-reload" class="btn primary">Zurück zum Menü</button></div>
+        <div class="row"><button id="fatal-reload" class="btn primary">Return to Menu</button></div>
       </div>
     </div>
   </div>

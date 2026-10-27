@@ -80,172 +80,130 @@
   const GOAL_PRESETS = {
     cured_10: {
       id: "cured_10",
-      title: "❤️ Rettungsrennen: 10 Patienten heilen",
-      shortTitle: "10 Heilungen",
-      desc: "10 Patienten heilen",
+      title: "❤️ Rescue Race: Cure 10 Patients",
+      shortTitle: "10 Cures",
+      desc: "Cure 10 patients",
       quests: [
-        { id: "cured", name: "Geheilte Patienten", target: 10, unit: "", getVal: (s) => s.cured },
+        { id: "cured", name: "Cured Patients", target: 10, unit: "", getVal: (s) => s.cured },
       ],
     },
     cured_25: {
       id: "cured_25",
-      title: "❤️ Meisterschaft: 25 Patienten heilen",
-      shortTitle: "25 Heilungen",
-      desc: "25 Patienten heilen",
+      title: "❤️ Championship: Cure 25 Patients",
+      shortTitle: "25 Cures",
+      desc: "Cure 25 patients",
       quests: [
-        { id: "cured", name: "Geheilte Patienten", target: 25, unit: "", getVal: (s) => s.cured },
+        { id: "cured", name: "Cured Patients", target: 25, unit: "", getVal: (s) => s.cured },
       ],
     },
     cured_100: {
       id: "cured_100",
-      title: "❤️ Großhospital: 100 Patienten heilen",
-      shortTitle: "100 Heilungen",
-      desc: "100 Patienten heilen",
+      title: "❤️ Grand Hospital: Cure 100 Patients",
+      shortTitle: "100 Cures",
+      desc: "Cure 100 patients",
       quests: [
-        { id: "cured", name: "Geheilte Patienten", target: 100, unit: "", getVal: (s) => s.cured },
+        { id: "cured", name: "Cured Patients", target: 100, unit: "", getVal: (s) => s.cured },
       ],
     },
     cured_200: {
       id: "cured_200",
-      title: "❤️ Metropole: 200 Patienten heilen",
-      shortTitle: "200 Heilungen",
-      desc: "200 Patienten heilen",
+      title: "❤️ Metropolis: Cure 200 Patients",
+      shortTitle: "200 Cures",
+      desc: "Cure 200 patients",
       quests: [
-        { id: "cured", name: "Geheilte Patienten", target: 200, unit: "", getVal: (s) => s.cured },
+        { id: "cured", name: "Cured Patients", target: 200, unit: "", getVal: (s) => s.cured },
       ],
     },
     cured_400: {
       id: "cured_400",
-      title: "❤️ Legende: 400 Patienten heilen",
-      shortTitle: "400 Heilungen",
-      desc: "400 Patienten heilen",
+      title: "❤️ Legend: Cure 400 Patients",
+      shortTitle: "400 Cures",
+      desc: "Cure 400 patients",
       quests: [
-        { id: "cured", name: "Geheilte Patienten", target: 400, unit: "", getVal: (s) => s.cured },
+        { id: "cured", name: "Cured Patients", target: 400, unit: "", getVal: (s) => s.cured },
       ],
     },
     time_20m: {
       id: "time_20m",
-      title: "⏱️ 20-Minuten-Sprint: Meistes Geld nach 20 Min.",
-      shortTitle: "20 Min. Cash-Race",
-      desc: "Wer nach 20 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      title: "⏱️ 20-Minute Sprint: Most cash after 20 min",
+      shortTitle: "20 Min Cash Race",
+      desc: "The player with the most cash after 20 minutes wins!",
       durationSec: 20 * 60,
       isTimed: true,
       quests: [
-        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+        { id: "bal", name: "Cash Balance", target: 0, unit: "$", getVal: (s) => s.bal },
       ],
     },
     time_30m: {
       id: "time_30m",
-      title: "⏱️ 30-Minuten-Duell: Meistes Geld nach 30 Min.",
-      shortTitle: "30 Min. Cash-Race",
-      desc: "Wer nach 30 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      title: "⏱️ 30-Minute Duel: Most cash after 30 min",
+      shortTitle: "30 Min Cash Race",
+      desc: "The player with the most cash after 30 minutes wins!",
       durationSec: 30 * 60,
       isTimed: true,
       quests: [
-        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+        { id: "bal", name: "Cash Balance", target: 0, unit: "$", getVal: (s) => s.bal },
       ],
     },
     time_60m: {
       id: "time_60m",
-      title: "⏱️ 60-Minuten-Marathon: Meistes Geld nach 60 Min.",
-      shortTitle: "60 Min. Cash-Race",
-      desc: "Wer nach 60 Minuten Spielzeit das meiste Barvermögen hat, gewinnt!",
+      title: "⏱️ 60-Minute Marathon: Most cash after 60 min",
+      shortTitle: "60 Min Cash Race",
+      desc: "The player with the most cash after 60 minutes wins!",
       durationSec: 60 * 60,
       isTimed: true,
       quests: [
-        { id: "bal", name: "Barvermögen", target: 0, unit: "$", getVal: (s) => s.bal },
+        { id: "bal", name: "Cash Balance", target: 0, unit: "$", getVal: (s) => s.bal },
       ],
     },
     money_100k: {
       id: "money_100k",
-      title: "💰 Wirtschaftsrennen: $100.000 Barvermögen",
-      shortTitle: "$100.000 Guthaben",
-      desc: "Krankenhaus mit $100.000 Barvermögen",
+      title: "💰 Economy Race: $100,000 Cash Balance",
+      shortTitle: "$100,000 Balance",
+      desc: "Reach $100,000 in hospital cash balance",
       quests: [
-        { id: "bal", name: "Barvermögen", target: 100000, unit: "$", getVal: (s) => s.bal },
+        { id: "bal", name: "Cash Balance", target: 100000, unit: "$", getVal: (s) => s.bal },
       ],
     },
     money_150k: {
       id: "money_150k",
-      title: "💎 Tycoon: $150.000 Barvermögen",
-      shortTitle: "$150.000 Guthaben",
-      desc: "Großes Wirtschaftsrennen: $150.000 Barvermögen",
+      title: "💎 Tycoon: $150,000 Cash Balance",
+      shortTitle: "$150,000 Balance",
+      desc: "Reach $150,000 in hospital cash balance",
       quests: [
-        { id: "bal", name: "Barvermögen", target: 150000, unit: "$", getVal: (s) => s.bal },
-      ],
-    },
-    expand_5: {
-      id: "expand_5",
-      title: "🏥 Bau-Duell: 5 verschiedene Räume & 5 Mitarbeiter",
-      shortTitle: "5 Räume & 5 Mitarbeiter",
-      desc: "5 funktionierende Räume & 5 Mitarbeiter anstellen",
-      quests: [
-        { id: "rooms", name: "Funktionierende Räume", target: 5, unit: "", getVal: (s) => s.rooms },
-        { id: "staff", name: "Mitarbeiter angestellt", target: 5, unit: "", getVal: (s) => s.staff },
-      ],
-    },
-    allround: {
-      id: "allround",
-      title: "⭐ Allrounder: $75.000, 4 Räume, 4 Mitarbeiter & 5 Heilungen",
-      shortTitle: "Allrounder-Klinik",
-      desc: "$75.000 Guthaben, 4 Räume, 4 Mitarbeiter und 5 Heilungen",
-      quests: [
-        { id: "bal", name: "Barvermögen", target: 75000, unit: "$", getVal: (s) => s.bal },
-        { id: "rooms", name: "Räume gebaut", target: 4, unit: "", getVal: (s) => s.rooms },
-        { id: "staff", name: "Mitarbeiter angestellt", target: 4, unit: "", getVal: (s) => s.staff },
-        { id: "cured", name: "Geheilte Patienten", target: 5, unit: "", getVal: (s) => s.cured },
-      ],
-    },
-    val_150k: {
-      id: "val_150k",
-      title: "🏷️ Gesamtbewertung: Krankenhauswert $150.000",
-      shortTitle: "Krankenhauswert $150.000",
-      desc: "Krankenhaus-Gesamtwert von mindestens $150.000 erreichen",
-      quests: [
-        { id: "val", name: "Krankenhauswert", target: 150000, unit: "$", getVal: (s) => s.val },
+        { id: "bal", name: "Cash Balance", target: 150000, unit: "$", getVal: (s) => s.bal },
       ],
     },
     endless: {
       id: "endless",
-      title: "♾️ Freies Duell (Punkte- & Statistikvergleich)",
-      shortTitle: "Endlos-Duell",
-      desc: "Kein festes Sieg-Ziel – Vergleicht live eure Kennzahlen und Statistiken!",
+      title: "♾️ Free Versus (Live Stats Comparison)",
+      shortTitle: "Endless Duel",
+      desc: "No fixed victory condition – Compare metrics and live stats with your rivals!",
       quests: [],
     },
-  };
-
-  const PRESETS = {
-    sprint: { cured: 10, money: 0, rooms: 0, timeLimit: 0 },
-    duel: { cured: 25, money: 0, rooms: 0, timeLimit: 30 },
-    cashrace: { cured: 0, money: 100000, rooms: 0, timeLimit: 20 },
-    tycoon: { cured: 50, money: 150000, rooms: 0, timeLimit: 0 },
-    builder: { cured: 0, money: 0, rooms: 5, timeLimit: 0 },
   };
 
   function getGoalsFromUI() {
     const cured = parseInt($("#goal-cured") ? $("#goal-cured").value : "25", 10) || 0;
     const money = parseInt($("#goal-money") ? $("#goal-money").value : "100000", 10) || 0;
-    const rooms = parseInt($("#goal-rooms") ? $("#goal-rooms").value : "0", 10) || 0;
     const timeLimit = parseInt($("#goal-time") ? $("#goal-time").value : "30", 10) || 0;
-    return { cured, money, rooms, timeLimit };
+    return { cured, money, timeLimit };
   }
 
   function setGoalsInUI(g) {
     if (!g) return;
     if ($("#goal-cured")) $("#goal-cured").value = String(g.cured ?? 0);
     if ($("#goal-money")) $("#goal-money").value = String(g.money ?? 0);
-    if ($("#goal-rooms")) $("#goal-rooms").value = String(g.rooms ?? 0);
     if ($("#goal-time")) $("#goal-time").value = String(g.timeLimit ?? 0);
   }
 
   function formatGoalsList(g) {
-    if (!g) return ["10 Patienten heilen"];
+    if (!g) return ["Cure 25 patients"];
     const items = [];
-    if (g.cured > 0) items.push(`❤️ ${g.cured} Patienten heilen`);
-    if (g.money > 0) items.push(`💰 $${g.money.toLocaleString()} Guthaben`);
-    if (g.rooms > 0) items.push(`🏥 ${g.rooms} Räume & Mitarbeiter`);
-    if (g.timeLimit > 0) items.push(`⏱️ ${g.timeLimit} Min. Zeitlimit`);
-    if (items.length === 0) items.push("♾️ Freies Duell (Punkte- & Statistikvergleich)");
+    if (g.cured > 0) items.push(`❤️ Cure ${g.cured} patients`);
+    if (g.money > 0) items.push(`💰 $${g.money.toLocaleString()} Cash balance`);
+    if (g.timeLimit > 0) items.push(`⏱️ ${g.timeLimit} Min. time limit`);
+    if (items.length === 0) items.push("♾️ Free Versus (Live Stats Comparison)");
     return items;
   }
 
@@ -267,7 +225,7 @@
     if (g.cured > 0) {
       quests.push({
         id: "cured",
-        name: "Geheilte Patienten",
+        name: "Cured Patients",
         target: g.cured,
         unit: "",
         getVal: (s) => s.cured || 0,
@@ -276,26 +234,10 @@
     if (g.money > 0) {
       quests.push({
         id: "bal",
-        name: "Barvermögen",
+        name: "Cash Balance",
         target: g.money,
         unit: "$",
         getVal: (s) => s.bal || 0,
-      });
-    }
-    if (g.rooms > 0) {
-      quests.push({
-        id: "rooms",
-        name: "Funktionierende Räume",
-        target: g.rooms,
-        unit: "",
-        getVal: (s) => s.rooms || 0,
-      });
-      quests.push({
-        id: "staff",
-        name: "Mitarbeiter angestellt",
-        target: g.rooms,
-        unit: "",
-        getVal: (s) => s.staff || 0,
       });
     }
     return quests;
@@ -309,10 +251,11 @@
     game: null,
     vs: {
       goal: "custom",
-      goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+      goals: { cured: 25, money: 100000, timeLimit: 30 },
       startTime: 0,
       myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
-      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: "Gegner" },
+      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: "Opponent" },
+      rivalStats: new Map(),
       winner: null,
       tab: "goals",
     },
@@ -325,7 +268,7 @@
       .map(([p, d]) => [p.replace(/\\/g, "/").replace(/^\.\//, ""), d])
       .filter(([p]) => !p.endsWith("/"));
     const marker = norm.find(([p]) => /(^|\/)data\/vspr-0\.tab$/i.test(p));
-    if (!marker) throw new Error("Das sieht nicht nach Theme Hospital aus (DATA/VSPR-0.TAB fehlt).");
+    if (!marker) throw new Error("This does not appear to be Theme Hospital (DATA/VSPR-0.TAB is missing).");
     const prefix = marker[0].slice(0, marker[0].length - "data/vspr-0.tab".length);
     const files = [];
     let demo = false, bytes = 0;
@@ -339,7 +282,10 @@
     }
     const need = ["data/vblk-0.dat", "data/vspr-0.dat", "qdata/font00v.dat"];
     for (const n of need) {
-      if (!files.some(([p]) => p.toLowerCase() === n)) throw new Error("Datei fehlt: " + n.toUpperCase());
+      if (!files.some(([p]) => p.toLowerCase() === n)) throw new Error("Missing required file: " + n.toUpperCase());
+    }
+    if (demo && !window.__ALLOW_DEMO_FOR_TESTS) {
+      throw new Error("Demo version detected! Only the full version of Theme Hospital is supported. Please upload your full game files (e.g. from GOG.com or EA).");
     }
     return { files, demo, name, bytes };
   }
@@ -356,7 +302,7 @@
       if (/\.(exe|dll|bat)$/i.test(p)) continue;
       entries.push([p, new Uint8Array(await f.arrayBuffer())]);
     }
-    return normaliseEntries(entries, (fileList[0].webkitRelativePath || "Ordner").split("/")[0]);
+    return normaliseEntries(entries, (fileList[0].webkitRelativePath || "Folder").split("/")[0]);
   }
   async function readDropped(items) {
     // Files or directories from a drag & drop operation.
@@ -384,7 +330,7 @@
       if (/\.(exe|dll|bat)$/i.test(p)) continue;
       entries.push([p, new Uint8Array(await f.arrayBuffer())]);
     }
-    return normaliseEntries(entries, out.length ? out[0][0].split("/")[0] : "Ordner");
+    return normaliseEntries(entries, out.length ? out[0][0].split("/")[0] : "Folder");
   }
 
   function fmtMB(b) { return (b / 1048576).toFixed(1) + " MB"; }
@@ -394,10 +340,10 @@
     const d = state.data;
     if (d) {
       st.className = "status ok";
-      st.textContent = `✔ ${d.demo ? "Demo" : "Vollversion"}-Daten bereit (${d.name}, ${fmtMB(d.bytes)})`;
+      st.textContent = `✔ Full version files ready (${d.name}, ${fmtMB(d.bytes)})`;
     } else {
       st.className = "status warn";
-      st.textContent = "Keine Spieldaten gefunden";
+      st.textContent = "No game files found";
     }
     $("#btn-forget").hidden = !d;
     $("#card-mode").setAttribute("aria-disabled", d ? "false" : "true");
@@ -412,7 +358,7 @@
       await kvPut("thdata", data);
     } catch (e) {
       console.warn("could not persist game data", e);
-      showMenuError("Spieldaten konnten nicht dauerhaft gespeichert werden (Speicherplatz?). Sie gelten nur für diese Sitzung.");
+      showMenuError("Game data could not be saved to IndexedDB. It will be available for this session only.");
     }
   }
 
@@ -436,23 +382,19 @@
   }
 
   // ----------------------------------------------------------- level list
-  /** What the host can pick. `full: true` = requires all players to have full game files. */
   const LEVELS = [
-    { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false },
-    { id: "avatar", label: "Avatar (Große Stadt)", full: true },
-    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: true },
-    { id: "finisham", label: "Finisham (Flusslandschaft)", full: true },
-    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: true },
-    { id: "level1", label: "Level 1 – Originalkampagne", full: true },
+    { id: "demo", label: "Town 1 – Original Hospital (Standard)" },
+    { id: "avatar", label: "Avatar – Large City" },
+    { id: "confined_v5", label: "Confined – Compact Grounds" },
+    { id: "finisham", label: "Finisham – River Landscape" },
+    { id: "st.peter's", label: "St. Peter's – Classic Compound" },
+    { id: "level1", label: "Level 1 – Original Campaign" },
   ];
+
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
     const L = state.lobby;
-    const anyDemo = L && L.players && L.players.length > 0
-      ? L.players.some((p) => p.demo)
-      : (state.data ? state.data.demo : true);
-
     const cur = sel.value || (L && L.level) || "demo";
     sel.innerHTML = "";
     let foundCurrent = false;
@@ -460,14 +402,9 @@
     for (const l of LEVELS) {
       const o = document.createElement("option");
       o.value = l.id;
-      if (anyDemo && l.full) {
-        o.disabled = true;
-        o.textContent = l.label + " 🔒 (Vollversion erforderlich)";
-      } else {
-        o.disabled = false;
-        o.textContent = l.label;
-        if (l.id === cur) foundCurrent = true;
-      }
+      o.disabled = false;
+      o.textContent = l.label;
+      if (l.id === cur) foundCurrent = true;
       sel.appendChild(o);
     }
 
@@ -483,18 +420,13 @@
 
     const hintEl = $("#level-compat-hint");
     if (hintEl) {
-      if (anyDemo) {
-        hintEl.hidden = false;
-        hintEl.textContent = "ℹ️ Ein Mitspieler nutzt die Demo-Version. Es ist nur die Demo-Karte verfügbar (weitere Karten erfordern die Vollversion bei beiden Spielern).";
-      } else {
-        hintEl.hidden = true;
-        hintEl.textContent = "";
-      }
+      hintEl.hidden = true;
+      hintEl.textContent = "";
     }
 
     const helpEl = $("#mp-mode-help");
     if (helpEl) {
-      helpEl.textContent = "Beide Spieler leiten auf derselben Karte ihr eigenes Hospital. Wer das gewählte Ziel als Erster erreicht, gewinnt das Match!";
+      helpEl.textContent = "All players manage their own hospital on the selected map. The first to reach all goals wins!";
     }
   }
 
@@ -618,7 +550,7 @@
     connect(kind, targetCode) {
       return new Promise((resolve, reject) => {
         if (!window.Peer) {
-          reject(new Error("PeerJS-Bibliothek nicht verfügbar."));
+          reject(new Error("PeerJS library not available."));
           return;
         }
         const iceServers = [
@@ -641,12 +573,11 @@
               this.roomCode = c;
               this.room = {
                 code: c,
-                max: 2,
+                max: 5,
                 started: false,
                 config: {
                   mode: "versus",
-                  goal: "cured_10",
-                  goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+                  goals: { cured: 25, money: 100000, timeLimit: 30 },
                   level: "demo"
                 },
                 players: new Map()
@@ -666,7 +597,7 @@
               if (err.type === "unavailable-id") {
                 initHostPeer(newCode().toUpperCase());
               } else {
-                if (!this.open) reject(new Error("P2P-Fehler: " + (err.message || err.type)));
+                if (!this.open) reject(new Error("P2P Error: " + (err.message || err.type)));
               }
             });
           };
@@ -677,7 +608,7 @@
           this.isHost = false;
           const code = String(targetCode || "").trim().toUpperCase();
           if (!code) {
-            reject(new Error("Bitte gib einen Raum-Code ein."));
+            reject(new Error("Please enter a room code."));
             return;
           }
           this.roomCode = code;
@@ -692,7 +623,7 @@
             const tm = setTimeout(() => {
               if (!this.open) {
                 try { conn.close(); } catch (e) {}
-                reject(new Error("Zeitüberschreitung: Raum '" + code + "' antwortet nicht. Ist der Host online?"));
+                reject(new Error("Timeout: Room '" + code + "' is not responding. Is the host online?"));
               }
             }, 10000);
 
@@ -728,15 +659,15 @@
 
             conn.on("error", (err) => {
               clearTimeout(tm);
-              if (!this.open) reject(new Error("P2P-Verbindungsfehler: " + (err.message || err.type)));
+              if (!this.open) reject(new Error("P2P connection error: " + (err.message || err.type)));
             });
           });
 
           peer.on("error", (err) => {
             if (err.type === "peer-unavailable") {
-              if (!this.open) reject(new Error("Raum '" + code + "' wurde nicht gefunden. Bitte prüfe den Code oder frage den Host."));
+              if (!this.open) reject(new Error("Room '" + code + "' not found. Please verify the code or check with the host."));
             } else {
-              if (!this.open) reject(new Error("P2P-Fehler: " + (err.message || err.type)));
+              if (!this.open) reject(new Error("P2P Error: " + (err.message || err.type)));
             }
           });
         }
@@ -755,11 +686,16 @@
             conn.send({ t: "error", error: "room_full" });
             return;
           }
-          const guestId = 1;
+          if (!conn._guestId) {
+            let nextId = 1;
+            while (this.room.players.has(nextId)) nextId++;
+            conn._guestId = nextId;
+          }
+          const guestId = conn._guestId;
           const guest = {
             id: guestId,
-            name: String(m.name || "Gast").slice(0, 24),
-            demo: !!m.demo,
+            name: String(m.name || ("Player " + guestId)).slice(0, 24),
+            demo: false,
             ready: false,
             connected: true,
             host: false,
@@ -767,11 +703,6 @@
           };
           this.guestConns.set(guestId, conn);
           this.room.players.set(guestId, guest);
-
-          const anyDemo = [...this.room.players.values()].some((p) => p.demo);
-          if (anyDemo && this.room.config.level !== "demo") {
-            this.room.config.level = "demo";
-          }
 
           conn.send({
             t: "joined",
@@ -793,39 +724,48 @@
           break;
         }
         case "ready": {
-          const p = this.room.players.get(1);
+          const guestId = conn._guestId;
+          const p = guestId ? this.room.players.get(guestId) : null;
           if (p) {
             p.ready = !!m.ready;
             this._hostBroadcast({
               t: "players",
               players: this._playerList(),
               config: this.room.config,
-              readyChange: { id: 1, name: p.name, ready: p.ready }
+              readyChange: { id: p.id, name: p.name, ready: p.ready }
             });
           }
           break;
         }
         case "chat": {
-          const p = this.room.players.get(1);
+          const guestId = conn._guestId;
+          const p = guestId ? this.room.players.get(guestId) : null;
           this._hostBroadcast({
             t: "chat",
-            from: 1,
-            name: p ? p.name : "Gast",
+            from: p ? p.id : 1,
+            name: p ? p.name : "Guest",
             text: String(m.text || "").slice(0, 300)
           });
           break;
         }
         case "game_ready": {
-          const p = this.room.players.get(1);
+          const guestId = conn._guestId;
+          const p = guestId ? this.room.players.get(guestId) : null;
           if (p) p.gameReady = true;
-          const hostP = this.room.players.get(0);
-          if (hostP && hostP.gameReady && p && p.gameReady) {
+          const allP = [...this.room.players.values()];
+          if (allP.length > 0 && allP.every((pl) => pl.gameReady)) {
             this._hostBroadcast({ t: "start_sim" });
           }
           break;
         }
         case "msg": {
-          this.emit("msg", { t: "msg", from: 1, d: m.d });
+          const fromId = conn._guestId || 1;
+          this.emit("msg", { t: "msg", from: fromId, d: m.d });
+          for (const [gid, otherConn] of this.guestConns) {
+            if (gid !== fromId && otherConn && otherConn.open) {
+              try { otherConn.send({ t: "msg", from: fromId, d: m.d }); } catch (e) {}
+            }
+          }
           break;
         }
         case "ping": {
@@ -841,13 +781,14 @@
 
     _hostHandleDisconnect(conn) {
       if (!this.room) return;
-      const guest = this.room.players.get(1);
-      if (guest && guest.conn === conn) {
-        this.room.players.delete(1);
-        this.guestConns.delete(1);
+      const guestId = conn._guestId;
+      if (guestId && this.room.players.has(guestId)) {
+        const guest = this.room.players.get(guestId);
+        this.room.players.delete(guestId);
+        this.guestConns.delete(guestId);
         this._hostBroadcast({
           t: "left",
-          id: 1,
+          id: guestId,
           players: this._playerList(),
           host: 0,
           explicit: true
@@ -860,7 +801,7 @@
       return [...this.room.players.values()].map((p) => ({
         id: p.id,
         name: p.name,
-        demo: p.demo,
+        demo: false,
         ready: p.ready,
         connected: p.connected !== false,
         host: p.id === 0
@@ -885,12 +826,12 @@
           const hostPlayer = {
             id: 0,
             name: String(o.name || "Host").slice(0, 24),
-            demo: !!o.demo,
+            demo: false,
             ready: false,
             connected: true,
             host: true
           };
-          this.room.max = o.max || 2;
+          this.room.max = Math.min(5, Math.max(2, o.max || 5));
           this.room.players.set(0, hostPlayer);
           setTimeout(() => {
             this.emit("joined", {
@@ -907,6 +848,33 @@
         }
         const hostPlayer = this.room ? this.room.players.get(0) : null;
         switch (o.t) {
+          case "kick": {
+            const targetId = Number(o.targetId);
+            const targetConn = this.guestConns.get(targetId);
+            if (targetConn) {
+              try { targetConn.send({ t: "kicked" }); } catch (e) {}
+              try { targetConn.close(); } catch (e) {}
+              this.guestConns.delete(targetId);
+            }
+            if (this.room && this.room.players.has(targetId)) {
+              const kickedPlayer = this.room.players.get(targetId);
+              this.room.players.delete(targetId);
+              this._hostBroadcast({
+                t: "left",
+                id: targetId,
+                players: this._playerList(),
+                host: 0,
+                explicit: true
+              });
+              this._hostBroadcast({
+                t: "chat",
+                from: null,
+                sys: true,
+                text: `${kickedPlayer ? kickedPlayer.name : "Player"} was kicked by the host.`
+              });
+            }
+            break;
+          }
           case "ready": {
             if (hostPlayer) {
               hostPlayer.ready = !!o.ready;
@@ -923,14 +891,12 @@
             if (this.room) {
               if (o.goals) this.room.config.goals = o.goals;
               let level = o.level || this.room.config.level || "demo";
-              const anyDemo = [...this.room.players.values()].some((p) => p.demo);
-              if (anyDemo && level !== "demo") level = "demo";
               this.room.config.level = level;
               if (o.mode) this.room.config.mode = o.mode;
               for (const p of this.room.players.values()) p.ready = false;
               this._hostBroadcast({
                 t: "lobby_config",
-                goal: this.room.config.goal,
+                goal: "custom",
                 goals: this.room.config.goals,
                 mode: this.room.config.mode,
                 level: this.room.config.level
@@ -947,8 +913,6 @@
             if (this.room) {
               this.room.started = true;
               let level = (o.config && o.config.level) || this.room.config.level || "demo";
-              const anyDemo = [...this.room.players.values()].some((p) => p.demo);
-              if (anyDemo && level !== "demo") level = "demo";
               this.room.config = Object.assign({}, this.room.config, o.config || {}, {
                 hostId: 0,
                 level,
@@ -960,8 +924,8 @@
           }
           case "game_ready": {
             if (hostPlayer) hostPlayer.gameReady = true;
-            const guestP = this.room ? this.room.players.get(1) : null;
-            if (hostPlayer && hostPlayer.gameReady && guestP && guestP.gameReady) {
+            const allP = [...this.room.players.values()];
+            if (allP.length > 0 && allP.every((pl) => pl.gameReady)) {
               this._hostBroadcast({ t: "start_sim" });
             }
             break;
@@ -1043,22 +1007,36 @@
       if (!p.connected) li.className = "off";
 
       const nameSpan = document.createElement("span");
-      nameSpan.textContent = p.name + (p.id === L.id ? " (du)" : "");
+      nameSpan.textContent = p.name + (p.id === L.id ? " (you)" : "");
 
       const badges = document.createElement("div");
       badges.className = "player-badges";
 
       const tag = document.createElement("span");
       tag.className = "tag";
-      const contentTag = p.demo ? "Demo" : "Vollversion";
-      tag.textContent = (p.host ? "HOST · " : "") + contentTag;
+      tag.textContent = p.host ? "Host" : "Player";
 
       const readyBadge = document.createElement("span");
       readyBadge.className = "badge-ready " + (p.ready ? "ready" : "waiting");
-      readyBadge.textContent = p.ready ? "✓ Bereit" : "⏳ Wartet";
+      readyBadge.textContent = p.ready ? "Ready" : "Waiting";
 
       badges.appendChild(tag);
       badges.appendChild(readyBadge);
+
+      if (L.host && p.id !== L.id) {
+        const kickBtn = document.createElement("button");
+        kickBtn.className = "btn-kick";
+        kickBtn.textContent = "Kick";
+        kickBtn.title = "Kick " + p.name;
+        kickBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm(`Kick ${p.name} from the room?`)) {
+            state.net.sendRaw({ t: "kick", targetId: p.id });
+          }
+        };
+        badges.appendChild(kickBtn);
+      }
+
       li.appendChild(nameSpan);
       li.appendChild(badges);
       ul.appendChild(li);
@@ -1073,50 +1051,60 @@
     const btnReady = $("#btn-ready");
     if (btnReady) {
       if (amReady) {
-        btnReady.textContent = "✓ Du bist bereit (Klicken zum Abbrechen)";
+        btnReady.textContent = "Ready (Click to cancel)";
         btnReady.className = "btn ready-active";
       } else {
-        btnReady.textContent = "✓ Bereit melden";
+        btnReady.textContent = "Ready";
         btnReady.className = "btn secondary";
       }
     }
 
-    const max = L.max || 2;
-    if ($("#players-header")) $("#players-header").textContent = `Spieler im Raum (${connectedCount}/${max})`;
+    const btnStart = $("#btn-start");
+    if (btnStart) {
+      btnStart.textContent = "Start Game";
+      btnStart.hidden = !L.host;
+      btnStart.disabled = !allReady;
+      if (allReady) {
+        btnStart.classList.add("all-ready");
+      } else {
+        btnStart.classList.remove("all-ready");
+      }
+    }
+
+    const btnLeave = $("#btn-leave-lobby");
+    if (btnLeave) {
+      btnLeave.textContent = "Leave Room";
+    }
+
+    const max = L.max || 5;
+    if ($("#players-header")) $("#players-header").textContent = `Players in Room (${connectedCount}/${max})`;
     $("#host-options").hidden = !L.host;
     $("#guest-options").hidden = !!L.host;
-    $("#btn-start").hidden = !L.host;
-    $("#btn-start").disabled = !allReady;
-    if (allReady) {
-      $("#btn-start").classList.add("all-ready");
-    } else {
-      $("#btn-start").classList.remove("all-ready");
-    }
 
     if (L.host) {
       if (connectedCount < 2) {
-        $("#lobby-hint").textContent = "Warte auf Mitspieler … Teile den Code oder den Einladungslink.";
+        $("#lobby-hint").textContent = "Waiting for players... Share the room code or invite link.";
       } else if (!allReady) {
-        $("#lobby-hint").textContent = "Beide Spieler müssen auf 'Bereit melden' klicken, bevor gestartet werden kann.";
+        $("#lobby-hint").textContent = "All players must click 'Ready' before the match can be started.";
       } else {
-        $("#lobby-hint").textContent = "Beide Spieler sind bereit! Klicke auf 'Spiel starten'.";
+        $("#lobby-hint").textContent = "All players are ready! Click 'Start Game'.";
       }
       if (L.goals) setGoalsInUI(L.goals);
       updateGoalSummaryUI(L.goals || getGoalsFromUI());
       refreshLevelOptions();
     } else {
       const levelObj = LEVELS.find((x) => x.id === L.level);
-      const levelName = levelObj ? levelObj.label : (L.level || "Demo-Level");
+      const levelName = levelObj ? levelObj.label : (L.level || "Town 1");
       if ($("#guest-level-val")) $("#guest-level-val").textContent = levelName;
       updateGoalSummaryUI(L.goals);
       const guestWait = $("#guest-wait");
       if (guestWait) {
         if (!amReady) {
-          guestWait.textContent = "Bitte klicke auf 'Bereit melden', wenn du startklar bist.";
+          guestWait.textContent = "Please click 'Ready' when you are set.";
         } else if (!allReady) {
-          guestWait.textContent = "Du bist bereit! Warte darauf, dass der Host sich bereit meldet …";
+          guestWait.textContent = "You are ready! Waiting for other players...";
         } else {
-          guestWait.textContent = "Beide bereit! Warte darauf, dass der Host das Spiel startet …";
+          guestWait.textContent = "Everyone is ready! Waiting for the host to start...";
         }
       }
     }
@@ -1179,14 +1167,6 @@
     if (state.lobby && state.lobby.host && state.net) {
       const goals = getGoalsFromUI();
       let level = $("#mp-level") ? $("#mp-level").value : (state.lobby.level || "demo");
-      const anyDemo = state.lobby.players && state.lobby.players.length > 0
-        ? state.lobby.players.some((p) => p.demo)
-        : (state.data ? state.data.demo : true);
-      const lObj = LEVELS.find((x) => x.id === level);
-      if (anyDemo && lObj && lObj.full) {
-        level = "demo";
-        if ($("#mp-level")) $("#mp-level").value = "demo";
-      }
       state.lobby.mode = "versus";
       state.lobby.goals = goals;
       state.lobby.level = level;
@@ -1198,7 +1178,7 @@
   async function enterLobby(kind, code) {
     showMenuError("");
     const chatLog = $("#lobby-chat-log");
-    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
+    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">No messages in lobby chat yet.</div>';
     let net = createNet(kind, code);
     state.net = net;
     try {
@@ -1212,30 +1192,30 @@
         try {
           await net.connect(kind, code);
         } catch (e2) {
-          showMenuError(e2.message || "Verbindung fehlgeschlagen.");
+          showMenuError(e2.message || "Connection failed.");
           return;
         }
       } else {
         const isVercel = location.hostname.endsWith(".vercel.app") || location.hostname.includes("vercel");
         if (isVercel && net.mode === "ws") {
-          showMenuError("Verbindung zum WebSocket-Server fehlgeschlagen. Du kannst unten bei '⚙️ Netzwerk' auf WebRTC P2P (ohne Server) umschalten.");
+          showMenuError("WebSocket connection failed. You can switch to WebRTC P2P (Serverless) at the bottom under 'Network'.");
         } else {
-          showMenuError(e.message || "Verbindung zum Server fehlgeschlagen.");
+          showMenuError(e.message || "Connection to server failed.");
         }
         return;
       }
     }
     const name = playerName();
-    const isDemo = state.data ? !!state.data.demo : true;
+    const isDemo = false;
     net.on("joined", (m) => {
       state.lobby = {
         code: m.code,
         id: m.id,
         host: m.host,
         players: m.players,
-        max: m.max,
+        max: m.max || 5,
         mode: "versus",
-        goals: (m.config && m.config.goals) ? m.config.goals : { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+        goals: (m.config && m.config.goals) ? m.config.goals : { cured: 25, money: 100000, timeLimit: 30 },
         level: (m.config && m.config.level) ? m.config.level : "demo",
       };
       net.id = m.id;
@@ -1247,7 +1227,7 @@
         setGoalsInUI(state.lobby.goals);
       }
       renderLobby();
-      lobbyChatSys(`Raum ${m.code} betreten als "${name}".`);
+      lobbyChatSys(`Entered room ${m.code} as "${name}".`);
     });
     net.on("players", (m) => {
       if (state.lobby && !state.game) {
@@ -1257,14 +1237,18 @@
           if (m.config.level) state.lobby.level = m.config.level;
         }
         if (m.readyChange) {
-          const statusTxt = m.readyChange.ready ? "BEREIT ✓" : "nicht mehr bereit ⏳";
-          lobbyChatSys(`${m.readyChange.name} ist jetzt ${statusTxt}`);
+          const statusTxt = m.readyChange.ready ? "READY" : "NOT READY";
+          lobbyChatSys(`${m.readyChange.name} is now ${statusTxt}`);
         } else if (m.joined !== undefined && m.joined !== net.id) {
           const joinedP = m.players.find((p) => p.id === m.joined);
-          if (joinedP) lobbyChatSys(`${joinedP.name} ist dem Raum beigetreten.`);
+          if (joinedP) lobbyChatSys(`${joinedP.name} joined the room.`);
         }
         renderLobby();
       }
+    });
+    net.on("kicked", () => {
+      leaveLobby();
+      showMenuError("You were kicked from the room by the host.");
     });
     net.on("lobby_config", (m) => {
       if (state.lobby && !state.game) {
@@ -1275,7 +1259,7 @@
           setGoalsInUI(m.goals);
         }
         updateGoalSummaryUI(state.lobby.goals);
-        lobbyChatSys("Einstellungen geändert – Bereitschaft zurückgesetzt.");
+        lobbyChatSys("Settings updated – Ready status reset.");
         if (!state.lobby.host) renderLobby();
       }
     });
@@ -1285,18 +1269,22 @@
     net.on("left", (m) => {
       if (!state.lobby) return;
       const leftPlayer = state.lobby.players.find((p) => p.id === m.id);
-      if (leftPlayer) lobbyChatSys(`${leftPlayer.name} hat den Raum verlassen.`);
+      if (leftPlayer) lobbyChatSys(`${leftPlayer.name} left the room.`);
       state.lobby.players = m.players;
       if (m.host !== undefined && m.host !== null) state.lobby.host = m.host === state.lobby.id;
       if (!state.game) renderLobby();
     });
     net.on("error", (m) => {
       if (m.error === "not_all_ready") {
-        lobbyChatSys("Start abgebrochen: Beide Spieler müssen bereit sein!");
-        if ($("#lobby-hint")) $("#lobby-hint").textContent = "Beide Spieler müssen auf 'Bereit melden' klicken!";
+        lobbyChatSys("Start canceled: All players must be ready!");
+        if ($("#lobby-hint")) $("#lobby-hint").textContent = "All players must click 'Ready' before starting!";
         return;
       }
-      const t = { no_such_room: "Diesen Raum gibt es nicht.", room_full: "Der Raum ist voll.", alreadyを開始: "Das Spiel läuft bereits." }[m.error] || m.error;
+      const t = {
+        no_such_room: "This room does not exist.",
+        room_full: "The room is full.",
+        already_started: "The match has already started."
+      }[m.error] || m.error;
       showMenuError(t);
       $("#card-lobby").hidden = true;
       if ($("#view-setup")) $("#view-setup").hidden = false;
@@ -1312,12 +1300,23 @@
         if (state.net === net) state.net = null;
       }
     });
-    if (kind === "create") net.sendRaw({ t: "create", name, demo: isDemo, max: parseInt($("#max-players").value, 10), token: token() });
-    else net.sendRaw({ t: "join", code, name, demo: isDemo, token: token() });
+    if (kind === "create") {
+      const isPublic = $("#create-public") ? $("#create-public").checked : true;
+      net.sendRaw({
+        t: "create",
+        name,
+        demo: false,
+        max: parseInt($("#max-players") ? $("#max-players").value : "5", 10),
+        isPublic,
+        token: token()
+      });
+    } else {
+      net.sendRaw({ t: "join", code, name, demo: false, token: token() });
+    }
   }
 
   function playerName() {
-    const n = $("#player-name").value.trim() || "Spieler";
+    const n = $("#player-name").value.trim() || "Player";
     localStorage.setItem("bth-name", n);
     return n;
   }
@@ -1329,8 +1328,9 @@
     $("#card-lobby").hidden = true;
     if ($("#view-setup")) $("#view-setup").hidden = false;
     const chatLog = $("#lobby-chat-log");
-    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
+    if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">No messages in lobby chat yet.</div>';
     history.replaceState(null, "", location.pathname);
+    refreshPublicLobbies();
   }
 
   function hostStart() {
@@ -1338,22 +1338,74 @@
     if (!L || !L.host || !state.net) return;
     const connectedPlayers = L.players.filter((p) => p.connected);
     if (connectedPlayers.length < 2) {
-      lobbyChatSys("Es werden mindestens 2 Spieler benötigt, um zu starten.");
+      lobbyChatSys("At least 2 players are required to start.");
       return;
     }
     if (!connectedPlayers.every((p) => p.ready)) {
-      lobbyChatSys("Alle Spieler müssen bereit sein, bevor das Spiel gestartet werden kann!");
+      lobbyChatSys("All players must be ready before the match can be started!");
       return;
     }
     const goals = getGoalsFromUI();
     let level = $("#mp-level") ? $("#mp-level").value : (L.level || "demo");
-    const anyDemo = L.players.some((p) => p.demo);
-    const lObj = LEVELS.find((x) => x.id === level);
-    if (anyDemo && lObj && lObj.full) {
-      level = "demo";
-    }
     const seed = (Math.random() * 0x7fffffff) | 0;
     state.net.sendRaw({ t: "start", config: { mode: "versus", level, goals, seed, language: $("#language").value } });
+  }
+
+  async function refreshPublicLobbies() {
+    const container = $("#lobbies-container");
+    if (!container) return;
+    try {
+      const res = await fetch("/api/lobbies");
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      const lobbies = data.lobbies || [];
+      if (lobbies.length === 0) {
+        container.innerHTML = '<div class="lobbies-empty">No active public lobbies found. Create one above!</div>';
+        return;
+      }
+      let html = `
+        <table class="lobbies-table">
+          <thead>
+            <tr>
+              <th>Room</th>
+              <th>Host</th>
+              <th>Players</th>
+              <th>Map</th>
+              <th>Goals</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      for (const lob of lobbies) {
+        const goalsDesc = lob.goals ? formatGoalsList(lob.goals).join(", ") : "Standard";
+        const lObj = LEVELS.find((x) => x.id === lob.level);
+        const mapName = lObj ? lObj.label.split(" (")[0].split(" –")[0] : (lob.level || "Town 1");
+        html += `
+          <tr>
+            <td><span class="room-code-badge">${escapeHtml(lob.code)}</span></td>
+            <td><b>${escapeHtml(lob.hostName || "Host")}</b></td>
+            <td>${lob.playerCount} / ${lob.max}</td>
+            <td>${escapeHtml(mapName)}</td>
+            <td style="font-size: 0.82rem; color: var(--muted);">${escapeHtml(goalsDesc)}</td>
+            <td>
+              <button class="btn primary btn-sm btn-join-lobby" data-code="${escapeHtml(lob.code)}">Join</button>
+            </td>
+          </tr>
+        `;
+      }
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+      container.querySelectorAll(".btn-join-lobby").forEach((btn) => {
+        btn.onclick = () => {
+          const code = btn.dataset.code;
+          if ($("#join-code")) $("#join-code").value = code;
+          enterLobby("join", code);
+        };
+      });
+    } catch (e) {
+      container.innerHTML = '<div class="lobbies-empty">Public lobby list not available on standalone / static host. Join using a Room Code directly above.</div>';
+    }
   }
 
   // ----------------------------------------------------------- game launch
@@ -1398,7 +1450,7 @@
       const s = document.createElement("script");
       s.src = src;
       s.onload = res;
-      s.onerror = () => rej(new Error("Konnte " + src + " nicht laden – wurde das Spiel gebaut? (npm run build)"));
+      s.onerror = () => rej(new Error("Could not load " + src + " – has the game been built? (npm run build)"));
       document.head.appendChild(s);
     });
   }
@@ -1411,7 +1463,7 @@
     $("#menu").hidden = true;
     $("#game").hidden = false;
     $("#loading").hidden = false;
-    setLoading("Lade Spiel-Engine …");
+    setLoading("Loading game engine ...");
     const canvas = $("#canvas");
     const W = Math.max(640, window.innerWidth), H = Math.max(480, window.innerHeight);
     let ready;
@@ -1429,7 +1481,7 @@
       });
       state.game = { mod, canvas };
       const FS = mod.FS;
-      setLoading("Kopiere Spieldaten …");
+      setLoading("Copying game files ...");
       for (const [p, d] of state.data.files) {
         const full = "/thdata/" + p;
         mkdirp(FS, full.slice(0, full.lastIndexOf("/")));
@@ -1445,7 +1497,7 @@
       FS.writeFile(cfgDir + "/config.txt", configText(W, H, session.language || $("#language").value, session.name || playerName()));
       mkdirp(FS, "/tmp");
       canvas.focus();
-      setLoading("Starte …");
+      setLoading("Launching ...");
       installWindowHandlers(mod);
       mod.callMain([]);
       // First frame arrives asynchronously; hide the loader shortly after.
@@ -1545,7 +1597,7 @@
       case "vs.win": {
         const parts = (arg || "").split("|");
         const winId = parseInt(parts[0], 10);
-        const winName = parts[1] || "Ein Spieler";
+        const winName = parts[1] || "A Player";
         showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
         return null;
       }
@@ -1598,16 +1650,16 @@
     if (hostP) {
       const isMe = hostP.id === myId;
       const offline = hostP.connected === false ? " (offline)" : "";
-      parts.push(`<span class="hud-role-host" title="Host des Spiels">👑 Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (Du)" : ""}${offline}</span>`);
+      parts.push(`<span class="hud-role-host" title="Game Host">👑 Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
     }
     if (guestPs.length > 0) {
       for (const gp of guestPs) {
         const isMe = gp.id === myId;
         const offline = gp.connected === false ? " (offline)" : "";
-        parts.push(`<span class="hud-role-guest" title="Beigetretener Spieler">🎮 Gast: <b>${escapeHtml(gp.name)}</b>${isMe ? " (Du)" : ""}${offline}</span>`);
+        parts.push(`<span class="hud-role-guest" title="Connected Player">🎮 Player: <b>${escapeHtml(gp.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
       }
     } else {
-      parts.push(`<span class="hud-role-guest muted">🎮 Gast: (wartet …)</span>`);
+      parts.push(`<span class="hud-role-guest muted">🎮 Player: (waiting …)</span>`);
     }
     el.innerHTML = parts.join(' <span class="hud-sep">·</span> ');
     el.hidden = false;
@@ -1619,9 +1671,9 @@
     $("#hud").hidden = false;
     const mp = state.session && state.session.mp;
     const lObj = LEVELS.find((x) => x.id === (mp && mp.level));
-    const mapLabel = lObj ? lObj.label.split(" (")[0] : (mp && mp.level || "");
+    const mapLabel = lObj ? lObj.label.split(" (")[0].split(" –")[0] : (mp && mp.level || "");
     const roomCode = (state.lobby && state.lobby.code) || (mp && mp.code) || "";
-    $("#hud-room").textContent = "Raum " + roomCode + (mapLabel ? " · " + mapLabel : "");
+    $("#hud-room").textContent = "Room " + roomCode + (mapLabel ? " · " + mapLabel : "");
     updateHudPlayers();
     if (net) {
       net.on("ping", (ms) => {
@@ -1633,6 +1685,9 @@
         if (typeof m.d === "string" && m.d.startsWith("vstats:")) {
           const s = parseStats(m.d.slice(7));
           if (s) {
+            const fromP = state.lobby && state.lobby.players ? state.lobby.players.find((p) => p.id === m.from) : null;
+            s.name = (fromP && fromP.name) || `Player ${m.from}`;
+            state.vs.rivalStats.set(m.from, s);
             Object.assign(state.vs.oppStats, s);
             updateQuestUI();
             checkWinConditions();
@@ -1640,7 +1695,7 @@
         } else if (typeof m.d === "string" && m.d.startsWith("win:")) {
           const parts = m.d.slice(4).split("|");
           const winId = parseInt(parts[0], 10);
-          const winName = parts[1] || "Ein Spieler";
+          const winName = parts[1] || "A Player";
           showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
         } else {
           net.inbox.push({ from: m.from, d: m.d });
@@ -1660,7 +1715,7 @@
           }
         }
         net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") });
-        chatSys(`${((state.lobby && state.lobby.players || []).find(p=>p.id===m.id)||{name:"Ein Spieler"}).name} hat die Verbindung verloren.`);
+        chatSys(`${((state.lobby && state.lobby.players || []).find(p=>p.id===m.id)||{name:"A Player"}).name} disconnected.`);
         updateHudPlayers();
       });
       net.on("start_sim", () => {
@@ -1668,11 +1723,11 @@
         const banner = $("#net-banner");
         if (banner) {
           banner.className = "";
-          banner.textContent = "Spiel gestartet!";
+          banner.textContent = "Match started!";
           setTimeout(() => { banner.hidden = true; }, 3000);
         }
       });
-      net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Verbindung zum Server verloren – Spiel angehalten."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
+      net.on("close", () => { $("#net-banner").className = "err"; $("#net-banner").textContent = "Lost connection to server – Game paused."; $("#net-banner").hidden = false; net.inbox.push({ from: -1, d: "server_closed" }); });
       net.on("chat", (m) => chatMsg(m.name, m.text, m.from !== net.id));
     }
     const tickTimer = () => {
@@ -1870,7 +1925,7 @@
   function checkWinConditions() {
     if (state.vs.winner) return; // match already concluded
     if (!state.vs.startTime || Date.now() - state.vs.startTime < 4000) return;
-    const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+    const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
     const my = state.vs.myStats;
     const opp = state.vs.oppStats;
     const quests = buildQuestsFromConfig(g);
@@ -1893,7 +1948,7 @@
           isMe = true;
         } else if (oppQuestsDone && !myQuestsDone) {
           winnerId = -999;
-          winnerName = opp.name || "Gegner";
+          winnerName = opp.name || "Opponent";
           isMe = false;
         } else {
           // Compare cash balance
@@ -1903,7 +1958,7 @@
             isMe = true;
           } else if (opp.bal > my.bal) {
             winnerId = -999;
-            winnerName = opp.name || "Gegner";
+            winnerName = opp.name || "Opponent";
             isMe = false;
           } else {
             // Tie breaker: hospital overall value
@@ -1913,7 +1968,7 @@
               isMe = true;
             } else {
               winnerId = -999;
-              winnerName = opp.name || "Gegner";
+              winnerName = opp.name || "Opponent";
               isMe = false;
             }
           }
@@ -1941,26 +1996,26 @@
         showVictoryModal(myName, true);
       } else if (oppMet) {
         state.vs.winner = -999;
-        showVictoryModal(opp.name || "Gegner", false);
+        showVictoryModal(opp.name || "Opponent", false);
       }
     }
   }
 
   function updateQuestUI() {
-    const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+    const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
     const my = state.vs.myStats;
     const opp = state.vs.oppStats;
     const quests = buildQuestsFromConfig(g);
 
     // Header names
     const thYou = $("#th-you");
-    if (thYou) thYou.textContent = "Du (" + playerName() + ")";
+    if (thYou) thYou.textContent = "You (" + playerName() + ")";
     const thOpp = $("#th-opp");
-    if (thOpp) thOpp.textContent = opp.name || "Gegner";
+    if (thOpp) thOpp.textContent = opp.name || "Opponent";
 
     // Match Goal footer
     const goalFooter = $("#quest-match-goal");
-    if (goalFooter) goalFooter.textContent = "Ziele: " + formatGoalsList(g).join(" + ");
+    if (goalFooter) goalFooter.textContent = "Goals: " + formatGoalsList(g).join(" + ");
 
     // Lead Banner
     const leadText = $("#quest-lead-text");
@@ -1974,14 +2029,14 @@
         const diff = (my.bal || 0) - (opp.bal || 0);
 
         if (diff > 500) {
-          leadText.innerHTML = `🟢 <b>Du liegst in Führung! (+$${diff.toLocaleString()})</b> · Restzeit: <b>${timeStr}</b>`;
+          leadText.innerHTML = `🟢 <b>You are in the lead! (+$${diff.toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
         } else if (diff < -500) {
-          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Gegner")} liegt vorn! (+$${Math.abs(diff).toLocaleString()})</b> · Restzeit: <b>${timeStr}</b>`;
+          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Opponent")} is leading! (+$${Math.abs(diff).toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
         } else {
-          leadText.innerHTML = `⚔️ <b>Gleichstand beim Barvermögen!</b> · Restzeit: <b>${timeStr}</b>`;
+          leadText.innerHTML = `⚔️ <b>Tied cash balance!</b> · Time left: <b>${timeStr}</b>`;
         }
       } else if (quests.length === 0) {
-        leadText.innerHTML = "♾️ <b>Freies Duell</b> – Vergleicht eure Statistiken live!";
+        leadText.innerHTML = "♾️ <b>Free Versus</b> – Compare your live metrics!";
       } else {
         let myPctSum = 0, oppPctSum = 0;
         for (const q of quests) {
@@ -1992,11 +2047,11 @@
         const oppAvg = Math.round(oppPctSum / quests.length);
 
         if (myAvg > oppAvg + 5) {
-          leadText.innerHTML = `🟢 <b>Du führst das Rennen an!</b> (${myAvg}% vs. ${oppAvg}%)`;
+          leadText.innerHTML = `🟢 <b>You are leading the race!</b> (${myAvg}% vs. ${oppAvg}%)`;
         } else if (oppAvg > myAvg + 5) {
-          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Gegner")} liegt vorn!</b> (${oppAvg}% vs. ${myAvg}%)`;
+          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Opponent")} is leading!</b> (${oppAvg}% vs. ${myAvg}%)`;
         } else {
-          leadText.innerHTML = `⚔️ <b>Kopf-an-Kopf-Rennen!</b> (${myAvg}% vs. ${oppAvg}%)`;
+          leadText.innerHTML = `⚔️ <b>Head-to-head race!</b> (${myAvg}% vs. ${oppAvg}%)`;
         }
       }
     }
@@ -2021,15 +2076,15 @@
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title">⏱️ Zeit-Wettkampf (${g.timeLimit} Min.)</span>
-              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">⏱️ ${timeStr} verbleibend</span>
+              <span class="quest-card-title">⏱️ Time Challenge (${g.timeLimit} Min.)</span>
+              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">⏱️ ${timeStr} left</span>
             </div>
             <p class="muted small" style="margin: 4px 0 8px;">
-              Wer nach Ablauf der Zeit die Ziele bzw. das meiste Barvermögen hat, gewinnt!
+              Whoever reaches the goals or holds the most cash when time runs out wins!
             </p>
             <div class="prog-row">
               <div class="prog-label">
-                <span>Du: $${(my.bal || 0).toLocaleString()}</span>
+                <span>You: $${(my.bal || 0).toLocaleString()}</span>
                 <span>${diff >= 0 ? '+' : ''}$${diff.toLocaleString()} (${myPct}%)</span>
               </div>
               <div class="prog-bar-wrap">
@@ -2038,7 +2093,7 @@
             </div>
             <div class="prog-row">
               <div class="prog-label">
-                <span>${escapeHtml(opp.name || "Gegner")}: $${(opp.bal || 0).toLocaleString()}</span>
+                <span>${escapeHtml(opp.name || "Opponent")}: $${(opp.bal || 0).toLocaleString()}</span>
                 <span>${oppPct}%</span>
               </div>
               <div class="prog-bar-wrap">
@@ -2061,11 +2116,11 @@
           <div class="quest-card">
             <div class="quest-card-header">
               <span class="quest-card-title">${escapeHtml(q.name)}</span>
-              <span class="quest-badge ${myDone ? "done" : "pending"}">Ziel: ${formatVal(q.target, q.unit)}</span>
+              <span class="quest-badge ${myDone ? "done" : "pending"}">Goal: ${formatVal(q.target, q.unit)}</span>
             </div>
             <div class="prog-row">
               <div class="prog-label">
-                <span>Du: ${formatVal(myVal, q.unit)}</span>
+                <span>You: ${formatVal(myVal, q.unit)}</span>
                 <span>${myPct}%${myDone ? " ✓" : ""}</span>
               </div>
               <div class="prog-bar-wrap">
@@ -2074,7 +2129,7 @@
             </div>
             <div class="prog-row">
               <div class="prog-label">
-                <span>${escapeHtml(opp.name || "Gegner")}: ${formatVal(oppVal, q.unit)}</span>
+                <span>${escapeHtml(opp.name || "Opponent")}: ${formatVal(oppVal, q.unit)}</span>
                 <span>${oppPct}%${oppDone ? " ✓" : ""}</span>
               </div>
               <div class="prog-bar-wrap">
@@ -2089,9 +2144,9 @@
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title">♾️ Freies Endlos-Duell</span>
+              <span class="quest-card-title">♾️ Free Versus Match</span>
             </div>
-            <p class="muted small" style="margin: 6px 0 0;">In diesem Modus gibt es kein festes Sieg-Kriterium. Vergleicht eure Kennzahlen live im Tab <b>Rivalen-Dashboard</b>!</p>
+            <p class="muted small" style="margin: 6px 0 0;">There is no fixed victory condition in this mode. Compare metrics in real time under the <b>Rivals Dashboard</b> tab!</p>
           </div>
         `);
       }
@@ -2105,8 +2160,8 @@
       const myStarted = my.started;
       const oppStarted = opp.started;
 
-      const myStatus = myStarted ? '<span class="status-pill active">🟢 Gestartet</span>' : '<span class="status-pill wait">⏳ Wartet</span>';
-      const oppStatus = oppStarted ? '<span class="status-pill active">🟢 Gestartet</span>' : '<span class="status-pill wait">⏳ Wartet</span>';
+      const myStatus = myStarted ? '<span class="status-pill active">🟢 Active</span>' : '<span class="status-pill wait">⏳ Waiting</span>';
+      const oppStatus = oppStarted ? '<span class="status-pill active">🟢 Active</span>' : '<span class="status-pill wait">⏳ Waiting</span>';
 
       const cmp = (v1, v2, higherIsBetter = true) => {
         if (v1 === v2) return ["", ""];
@@ -2124,42 +2179,42 @@
 
       tbody.innerHTML = `
         <tr>
-          <td>Status Unternehmen</td>
+          <td>Hospital Status</td>
           <td class="val-you">${myStatus}</td>
           <td class="val-opp">${oppStatus}</td>
         </tr>
         <tr>
-          <td>💰 Barvermögen</td>
+          <td>💰 Cash Balance</td>
           <td class="val-you ${cBal1}">$${my.bal.toLocaleString()}</td>
           <td class="val-opp ${cBal2}">$${opp.bal.toLocaleString()}</td>
         </tr>
         <tr>
-          <td>🏥 Räume / Gebäude</td>
-          <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Raum" : "Räume"}</td>
-          <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Raum" : "Räume"}</td>
+          <td>🏥 Built Rooms</td>
+          <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Room" : "Rooms"}</td>
+          <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Room" : "Rooms"}</td>
         </tr>
         <tr>
-          <td>👥 Mitarbeiter</td>
-          <td class="val-you ${cStaff1}">${my.staff} Personal</td>
-          <td class="val-opp ${cStaff2}">${opp.staff} Personal</td>
+          <td>👥 Staff Members</td>
+          <td class="val-you ${cStaff1}">${my.staff} Staff</td>
+          <td class="val-opp ${cStaff2}">${opp.staff} Staff</td>
         </tr>
         <tr>
-          <td>💉 Geheilte Patienten</td>
+          <td>💉 Cured Patients</td>
           <td class="val-you ${cCured1}">${my.cured}</td>
           <td class="val-opp ${cCured2}">${opp.cured}</td>
         </tr>
         <tr>
-          <td>💀 Todesfälle</td>
+          <td>💀 Patient Deaths</td>
           <td class="val-you ${cDeaths1}">${my.deaths}</td>
           <td class="val-opp ${cDeaths2}">${opp.deaths}</td>
         </tr>
         <tr>
-          <td>⭐ Ruf des Hauses</td>
+          <td>⭐ Hospital Reputation</td>
           <td class="val-you ${cRep1}">${my.rep} / 1000</td>
           <td class="val-opp ${cRep2}">${opp.rep} / 1000</td>
         </tr>
         <tr>
-          <td>📈 Gesamtwert</td>
+          <td>📈 Overall Valuation</td>
           <td class="val-you ${cVal1}">$${my.val.toLocaleString()}</td>
           <td class="val-opp ${cVal2}">$${opp.val.toLocaleString()}</td>
         </tr>
@@ -2224,22 +2279,22 @@
 
     if (iconEl) iconEl.textContent = isMe ? "🏆" : "🥈";
     if (titleEl) {
-      titleEl.textContent = isMe ? "🎉 Sieg! Du hast gewonnen!" : `Match beendet – ${winnerName} gewinnt!`;
+      titleEl.textContent = isMe ? "🎉 Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
       titleEl.className = isMe ? "vic-won" : "vic-lost";
     }
     if (descEl) {
-      const g = state.vs.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
-      const goalsDesc = formatGoalsList(g).join(" und ");
+      const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
+      const goalsDesc = formatGoalsList(g).join(" and ");
       if (g.timeLimit > 0) {
         const my = state.vs.myStats;
         const opp = state.vs.oppStats;
         descEl.textContent = isMe
-          ? `Glückwunsch! Nach Ablauf der ${g.timeLimit} Minuten hast du mit einem Barvermögen von $${(my.bal || 0).toLocaleString()} gegenüber $${(opp.bal || 0).toLocaleString()} gesiegt! (Ziele: ${goalsDesc})`
-          : `Die ${g.timeLimit} Minuten sind um! ${winnerName} gewinnt mit einem Barvermögen von $${(opp.bal || 0).toLocaleString()} gegenüber $${(my.bal || 0).toLocaleString()}. (Ziele: ${goalsDesc})`;
+          ? `Congratulations! After ${g.timeLimit} minutes, you won with a cash balance of $${(my.bal || 0).toLocaleString()} compared to $${(opp.bal || 0).toLocaleString()}! (Goals: ${goalsDesc})`
+          : `Time is up! ${winnerName} won with a cash balance of $${(opp.bal || 0).toLocaleString()} compared to $${(my.bal || 0).toLocaleString()}. (Goals: ${goalsDesc})`;
       } else {
         descEl.textContent = isMe
-          ? `Glückwunsch! Du hast die Ziele (${goalsDesc}) vor deinem Kontrahenten erreicht!`
-          : `${winnerName} hat die Ziele (${goalsDesc}) als Erster abgeschlossen.`;
+          ? `Congratulations! You reached all goals (${goalsDesc}) before your rivals!`
+          : `${winnerName} reached all goals (${goalsDesc}) first.`;
       }
     }
 
@@ -2250,19 +2305,19 @@
         <table class="rival-table">
           <thead>
             <tr>
-              <th>Statistik</th>
-              <th id="th-you">Du (${escapeHtml(playerName())})</th>
-              <th id="th-opp">${escapeHtml(opp.name || "Gegner")}</th>
+              <th>Metric</th>
+              <th id="th-you">You (${escapeHtml(playerName())})</th>
+              <th id="th-opp">${escapeHtml(opp.name || "Opponent")}</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td>💰 Barvermögen</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
-            <tr><td>🏥 Räume</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
-            <tr><td>👥 Mitarbeiter</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
-            <tr><td>💉 Geheilte Patienten</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
-            <tr><td>💀 Todesfälle</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
-            <tr><td>⭐ Ruf des Hauses</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
-            <tr><td>📈 Gesamtwert</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
+            <tr><td>💰 Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
+            <tr><td>🏥 Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
+            <tr><td>👥 Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
+            <tr><td>💉 Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
+            <tr><td>💀 Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
+            <tr><td>⭐ Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
+            <tr><td>📈 Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
           </tbody>
         </table>
       `;
@@ -2278,14 +2333,15 @@
     const me = players.find((p) => p.id === L.id) || { id: L.id, name: playerName() };
     const opp = players.find((p) => p.id !== L.id);
     const hostId = config.hostId !== undefined ? config.hostId : (players.find((p) => p.host) ? players.find((p) => p.host).id : (players.length ? Math.min(...players.map((p) => p.id)) : 0));
-    const goals = config.goals || (L && L.goals) || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 };
+    const goals = config.goals || (L && L.goals) || { cured: 25, money: 100000, timeLimit: 30 };
 
     state.vs = {
       goal: config.goal || "custom",
       goals,
       startTime: Date.now(),
       myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
-      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: opp ? opp.name : "Gegner" },
+      oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: opp ? opp.name : "Opponent" },
+      rivalStats: new Map(),
       winner: null,
       tab: "goals",
     };
@@ -2310,7 +2366,7 @@
       const banner = $("#net-banner");
       if (banner) {
         banner.className = "";
-        banner.textContent = "Spiel gestartet!";
+        banner.textContent = "Match started!";
         setTimeout(() => { banner.hidden = true; }, 3000);
       }
     });
@@ -2320,7 +2376,7 @@
   // ----------------------------------------------------------------- wiring
   async function init() {
     $("#player-name").value = localStorage.getItem("bth-name") || "";
-    $("#language").value = localStorage.getItem("bth-lang") || "German";
+    $("#language").value = localStorage.getItem("bth-lang") || "English";
     $("#language").onchange = () => localStorage.setItem("bth-lang", $("#language").value);
 
     try { state.data = (await kvGet("thdata")) || null; } catch (e) { state.data = null; }
@@ -2329,15 +2385,15 @@
     $("#btn-zip").onclick = () => $("#file-zip").click();
     $("#btn-folder").onclick = () => $("#file-folder").click();
     $("#btn-forget").onclick = async () => { await kvDel("thdata"); state.data = null; renderDataStatus(); };
-    $("#file-zip").onchange = (e) => { const f = e.target.files[0]; if (f) withBusy("Entpacke " + f.name + " …", () => importZip(f)); e.target.value = ""; };
-    $("#file-folder").onchange = (e) => { const fl = [...e.target.files]; if (fl.length) withBusy("Lese Ordner …", () => importFolder(fl)); e.target.value = ""; };
+    $("#file-zip").onchange = (e) => { const f = e.target.files[0]; if (f) withBusy("Unpacking " + f.name + " …", () => importZip(f)); e.target.value = ""; };
+    $("#file-folder").onchange = (e) => { const fl = [...e.target.files]; if (fl.length) withBusy("Reading folder …", () => importFolder(fl)); e.target.value = ""; };
 
     const dz = $("#dropzone");
     ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
     ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
     dz.addEventListener("drop", (e) => {
       const items = e.dataTransfer.items;
-      if (items && items.length) withBusy("Lese Dateien …", () => readDropped([...items].map((i) => i)));
+      if (items && items.length) withBusy("Reading files …", () => readDropped([...items].map((i) => i)));
     });
     document.addEventListener("dragover", (e) => e.preventDefault());
     document.addEventListener("drop", (e) => e.preventDefault());
@@ -2346,7 +2402,7 @@
     $("#btn-create").onclick = () => enterLobby("create");
     $("#btn-join").onclick = () => {
       const code = $("#join-code").value.trim().toUpperCase();
-      if (code.length < 4) { showMenuError("Bitte den Raum-Code eingeben."); return; }
+      if (code.length < 4) { showMenuError("Please enter a room code."); return; }
       enterLobby("join", code);
     };
     $("#join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
@@ -2354,25 +2410,16 @@
     $("#btn-ready").onclick = toggleReady;
     $("#btn-leave-lobby").onclick = leaveLobby;
     $("#btn-start").onclick = hostStart;
-    for (const gid of ["#goal-cured", "#goal-money", "#goal-rooms", "#goal-time"]) {
+    for (const gid of ["#goal-cured", "#goal-money", "#goal-time"]) {
       const el = $(gid);
       if (el) el.onchange = () => broadcastLobbyConfig();
     }
-    document.querySelectorAll(".quest-preset-bar .btn-chip").forEach((btn) => {
-      btn.onclick = () => {
-        const p = PRESETS[btn.dataset.preset];
-        if (p) {
-          setGoalsInUI(p);
-          broadcastLobbyConfig();
-        }
-      };
-    });
     $("#mp-level").onchange = () => { broadcastLobbyConfig(); };
     $("#btn-copy-code").onclick = () => {
       if (state.lobby) navigator.clipboard.writeText(state.lobby.code).catch(() => {});
       const btn = $("#btn-copy-code");
       const oldTxt = btn.textContent;
-      btn.textContent = "✓ Code kopiert!";
+      btn.textContent = "Code copied!";
       setTimeout(() => { btn.textContent = oldTxt; }, 1800);
     };
     $("#btn-copy-link").onclick = () => {
@@ -2385,10 +2432,15 @@
       navigator.clipboard.writeText(u.toString()).catch(() => {});
       const btn = $("#btn-copy-link");
       const oldTxt = btn.textContent;
-      btn.textContent = "✓ Link kopiert!";
+      btn.textContent = "Link copied!";
       setTimeout(() => { btn.textContent = oldTxt; }, 1800);
     };
     $("#fatal-reload").onclick = () => (location.href = location.pathname);
+
+    const btnRefreshLobbies = $("#btn-refresh-lobbies");
+    if (btnRefreshLobbies) {
+      btnRefreshLobbies.onclick = () => refreshPublicLobbies();
+    }
 
     const updateRelayDisplay = () => {
       const el = $("#current-relay-host");
@@ -2414,10 +2466,10 @@
         const currentMode = getNetworkMode();
         const currentUrl = localStorage.getItem("bth-relay-url") || "";
         const input = prompt(
-          "Netzwerk-Modus für Multiplayer wählen:\n\n" +
-          "• 'p2p' eingeben für WebRTC Direktverbindung (Kein Server nötig – ideal für Vercel!)\n" +
-          "• Oder eine WebSocket Relay-Server URL eingeben (z. B. wss://mein-hospital.onrender.com/ws)\n\n" +
-          "Leer lassen für automatischen Standard:",
+          "Choose multiplayer network mode:\n\n" +
+          "• Enter 'p2p' for WebRTC direct connection (Serverless – ideal for Vercel!)\n" +
+          "• Or enter a WebSocket relay server URL (e.g. wss://my-hospital.onrender.com/ws)\n\n" +
+          "Leave blank for automatic default:",
           currentMode === "p2p" ? "p2p" : currentUrl
         );
         if (input !== null) {
@@ -2456,11 +2508,19 @@
     }
 
     refreshLevelOptions();
+    refreshPublicLobbies();
+    setInterval(() => {
+      const setupView = $("#view-setup");
+      if (setupView && !setupView.hidden && !state.lobby && !state.game) {
+        refreshPublicLobbies();
+      }
+    }, 8000);
+
     const join = new URLSearchParams(location.search).get("join");
     if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies };
   }
 
   init();

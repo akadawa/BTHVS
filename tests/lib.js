@@ -41,8 +41,12 @@ async function newPage(browser, port, name, opts = {}) {
 }
 
 async function loadDemo(page) {
+  await page.evaluate(() => { window.__ALLOW_DEMO_FOR_TESTS = true; });
   await page.setInputFiles("#file-zip", ZIP);
-  await page.waitForFunction(() => document.querySelector("#data-status").textContent.includes("bereit"), null, { timeout: 60000 });
+  await page.waitForFunction(() => {
+    const txt = document.querySelector("#data-status")?.textContent || "";
+    return txt.includes("ready") || txt.includes("bereit");
+  }, null, { timeout: 60000 });
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

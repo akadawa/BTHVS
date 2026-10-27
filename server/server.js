@@ -20,7 +20,7 @@ function arg(name, def) {
 const PORT = parseInt(process.env.PORT || arg("port", "8085"), 10);
 const HOST = process.env.HOST || arg("host", "0.0.0.0");
 const ROOT = path.resolve(__dirname, "..", "dist");
-const MAX_PLAYERS = 2;
+const MAX_PLAYERS = 5;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const MIME = {
@@ -44,6 +44,29 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/health") {
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+    return;
+  }
+  if (url.pathname === "/api/lobbies") {
+    const list = [];
+    for (const r of rooms.values()) {
+      if (r.isPublic && !r.started && r.connectedCount() < r.max && r.connectedCount() > 0) {
+        const host = r.players.get(r.hostId);
+        list.push({
+          code: r.code,
+          hostName: host ? host.name : "Host",
+          players: r.connectedCount(),
+          max: r.max,
+          level: r.config.level,
+          goals: r.config.goals,
+        });
+      }
+    }
+    res.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "cache-control": "no-cache",
+    });
+    res.end(JSON.stringify({ ok: true, lobbies: list }));
     return;
   }
   const m = url.pathname.match(/^\/api\/room\/([A-Za-z0-9]+)$/);
@@ -90,14 +113,14 @@ function isFullOnlyLevel(lvl) {
 }
 
 class Room {
-  constructor(code, max) {
+  constructor(code, max, isPublic = true) {
     this.code = code;
     this.max = max;
+    this.isPublic = isPublic;
     this.started = false;
     this.config = {
       mode: "versus",
-      goal: "cured_10",
-      goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+      goals: { cured: 25, money: 100000, timeLimit: 30 },
       level: "demo"
     };
     this.players = new Map(); // id -> {id, name, demo, token, ws|null}
@@ -168,8 +191,9 @@ function handle(ws, msg) {
   switch (msg.t) {
     case "create": {
       if (ws.room) return;
-      const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 2));
-      const room = new Room(newCode(), max);
+      const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 5));
+      const isPublic = msg.isPublic !== undefined ? !!msg.isPublic : true;
+      const room = new Room(newCode(), max, isPublic);
       rooms.set(room.code, room);
       const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), demo: !!msg.demo, ready: false, token: String(msg.token || ""), ws };
       room.players.set(p.id, p);
@@ -177,6 +201,42 @@ function handle(ws, msg) {
       ws.room = room;
       ws.pid = p.id;
       send(ws, { t: "joined", code: room.code, id: p.id, host: true, max: room.max, players: room.playerList(), config: room.config });
+      break;
+    }
+    case "list_lobbies": {
+      const list = [];
+      for (const r of rooms.values()) {
+        if (r.isPublic && !r.started && r.connectedCount() < r.max && r.connectedCount() > 0) {
+          const host = r.players.get(r.hostId);
+          list.push({
+            code: r.code,
+            hostName: host ? host.name : "Host",
+            players: r.connectedCount(),
+            max: r.max,
+            level: r.config.level,
+            goals: r.config.goals,
+          });
+        }
+      }
+      send(ws, { t: "lobbies", lobbies: list });
+      break;
+    }
+    case "kick": {
+      const room = ws.room;
+      if (!room || ws.pid !== room.hostId || room.started) return;
+      const targetId = msg.targetId | 0;
+      if (targetId === room.hostId) return;
+      const targetP = room.players.get(targetId);
+      if (!targetP) return;
+      if (targetP.ws && targetP.ws.readyState === 1) {
+        send(targetP.ws, { t: "kicked", reason: "You were kicked from the lobby by the host." });
+        targetP.ws.room = null;
+        targetP.ws.pid = null;
+      }
+      room.players.delete(targetId);
+      for (const pl of room.players.values()) pl.ready = false;
+      room.broadcast({ t: "players", players: room.playerList(), config: room.config });
+      room.broadcast({ t: "chat", from: -1, name: "System", text: `${targetP.name} was kicked from the lobby.` });
       break;
     }
     case "join": {
@@ -239,15 +299,12 @@ function handle(ws, msg) {
         room.config.goals = {
           cured: Number(msg.goals.cured) || 0,
           money: Number(msg.goals.money) || 0,
-          rooms: Number(msg.goals.rooms) || 0,
           timeLimit: Number(msg.goals.timeLimit) || 0,
         };
       }
       if (msg.mode) room.config.mode = String(msg.mode);
       if (msg.level) {
-        let lvl = String(msg.level);
-        if (room.hasDemoPlayer() && isFullOnlyLevel(lvl)) lvl = "demo";
-        room.config.level = lvl;
+        room.config.level = String(msg.level);
       }
       // Unready players on settings change so everyone re-confirms
       for (const pl of room.players.values()) pl.ready = false;
@@ -271,14 +328,10 @@ function handle(ws, msg) {
       room.started = true;
       for (const pl of room.players.values()) pl.gameReady = false;
       let level = (msg.config && msg.config.level) || room.config.level || "demo";
-      if (room.hasDemoPlayer() && isFullOnlyLevel(level)) {
-        level = "demo";
-      }
       room.config = Object.assign({}, room.config, msg.config || {}, {
         level,
         hostId: room.hostId,
-        goal: (msg.config && msg.config.goal) || room.config.goal || "cured_10",
-        goals: (msg.config && msg.config.goals) || room.config.goals || { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+        goals: (msg.config && msg.config.goals) || room.config.goals || { cured: 25, money: 100000, timeLimit: 30 },
         players: connected.map((pl) => ({ id: pl.id, name: pl.name, demo: pl.demo, host: pl.id === room.hostId })),
       });
       room.broadcast({ t: "start", config: room.config });

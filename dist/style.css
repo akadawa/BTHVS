@@ -251,3 +251,26 @@ footer { text-align: center; margin: 32px auto 0; padding: 10px 20px;
 #fatal .box { background: var(--card); border: 1px solid var(--err); border-radius: 14px; padding: 20px; max-width: 760px; width: 92vw; }
 #fatal pre { white-space: pre-wrap; max-height: 50vh; overflow: auto; background: #0b141a; padding: 10px; border-radius: 8px;
   font-size: 12px; color: #f2b8b3; }
+
+/* Lobby Actions: Start Game on the left, Ready in the middle, Leave Room on the right - all equal size */
+.lobby-actions-row { display: flex; gap: 12px; margin-top: 18px; width: 100%; }
+.lobby-actions-row .btn { flex: 1 1 0; text-align: center; justify-content: center; padding: 12px 14px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+
+/* Player List Kick Button */
+.btn-kick { background: rgba(224, 82, 74, 0.15); border: 1px solid rgba(224, 82, 74, 0.4); color: var(--err);
+  border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer; transition: .15s; }
+.btn-kick:hover { background: var(--err); color: #fff; }
+
+/* Public Lobby Browser */
+.public-lobbies-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.public-lobbies-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.checkbox-field { cursor: pointer; user-select: none; }
+.checkbox-field input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.lobbies-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card2); }
+.lobbies-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lobbies-table th, .lobbies-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.lobbies-table th { color: var(--muted); font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.15); }
+.lobbies-table tr:hover td { background: rgba(255,255,255,0.03); }
+.lobbies-empty { text-align: center; color: var(--muted); font-style: italic; padding: 18px 10px; font-size: 13px;
+  background: var(--card2); border: 1px dashed var(--line); border-radius: 10px; }
+.room-code-badge { font-family: ui-monospace, Consolas, monospace; font-weight: 700; letter-spacing: 2px; color: var(--accent); }

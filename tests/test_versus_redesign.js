@@ -76,43 +76,48 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   console.log("✓ Guest entering lobby also replaces setup view.");
 
   // 3. Test Quest-Chooser and Multi-Goal Sync
-  // Verify Host has all 4 goal selectors:
+  // Verify Host has the 3 goal selectors (cured, money, time):
   const hasCured = await pHost.$("#goal-cured");
   const hasMoney = await pHost.$("#goal-money");
   const hasRooms = await pHost.$("#goal-rooms");
   const hasTime = await pHost.$("#goal-time");
-  if (!hasCured || !hasMoney || !hasRooms || !hasTime) {
-    throw new Error("FAIL: Host Quest-Chooser missing one of the 4 goal selectors!");
+  if (!hasCured || !hasMoney || hasRooms !== null || !hasTime) {
+    throw new Error("FAIL: Host Quest-Chooser should have cured, money, time and NO rooms!");
   }
 
-  // Host clicks preset: 25 Heilungen + 30 Min.
-  await pHost.click('.quest-preset-bar button[data-preset="duel"]');
+  // Host sets 25 patients + 30 Min
+  await pHost.selectOption("#goal-cured", "25");
+  await pHost.selectOption("#goal-money", "0");
+  await pHost.selectOption("#goal-time", "30");
+  await pHost.evaluate(() => {
+    document.querySelector("#goal-cured").dispatchEvent(new Event("change"));
+    document.querySelector("#goal-money").dispatchEvent(new Event("change"));
+    document.querySelector("#goal-time").dispatchEvent(new Event("change"));
+  });
   await sleep(400);
 
   let hostSummary = await pHost.textContent("#goal-summary-text");
-  console.log("Host Goal Summary (duel preset):", hostSummary);
-  if (!hostSummary.includes("25 Patienten") || !hostSummary.includes("30 Min")) {
+  console.log("Host Goal Summary:", hostSummary);
+  if (!hostSummary.includes("25 patients") || !hostSummary.includes("30 Min")) {
     throw new Error(`FAIL: Host summary should show 25 patients and 30 min, got: ${hostSummary}`);
   }
 
   let guestSummary = await pGuest.textContent("#guest-goal-summary");
   console.log("Guest Goal Summary (synced):", guestSummary);
-  if (!guestSummary.includes("25 Patienten") || !guestSummary.includes("30 Min")) {
+  if (!guestSummary.includes("25 patients") || !guestSummary.includes("30 Min")) {
     throw new Error(`FAIL: Guest should receive synced 25 patients and 30 min goals! Got: ${guestSummary}`);
   }
 
-  // Host customizes: adds $100.000 Guthaben + 5 Räume
+  // Host customizes: adds $100,000 balance
   await pHost.selectOption("#goal-money", "100000");
-  await pHost.selectOption("#goal-rooms", "5");
   await pHost.evaluate(() => {
     document.querySelector("#goal-money").dispatchEvent(new Event("change"));
-    document.querySelector("#goal-rooms").dispatchEvent(new Event("change"));
   });
   await sleep(400);
 
   guestSummary = await pGuest.textContent("#guest-goal-summary");
   console.log("Guest Goal Summary (after custom adjustment):", guestSummary);
-  if (!guestSummary.includes("100.000") || !guestSummary.includes("5 Räume")) {
+  if (!guestSummary.includes("100.000") && !guestSummary.includes("100,000")) {
     throw new Error(`FAIL: Guest should receive customized goals! Got: ${guestSummary}`);
   }
   console.log("✓ Quest-Chooser multi-goal configuration perfectly synced to guest!");
@@ -165,7 +170,7 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   console.log("HUD Room:", roomText);
   console.log("HUD Players:", playersText);
   console.log("HUD Timer:", timerText, "Visible:", timerVisible);
-  if (!roomText.includes("Raum")) throw new Error("FAIL: Room chip missing!");
+  if (!roomText.includes("Room")) throw new Error("FAIL: Room chip missing!");
   if (!playersText.includes("HostDoc") || !playersText.includes("GuestDoc")) throw new Error("FAIL: Players chip missing names!");
   if (!timerVisible || !timerText.includes("⏱️")) throw new Error("FAIL: Timer chip should be visible for 30 min timed match!");
   console.log("✓ HUD contains Room, Host/Guest players, and live countdown timer.");
