@@ -23,6 +23,9 @@ const path = require("path");
   await p2.fill("#join-code", code);
   await p2.click("#btn-join");
   await p1.waitForFunction(() => document.querySelectorAll("#player-list li").length >= 2);
+  await p2.click("#btn-ready");
+  await p1.click("#btn-ready");
+  await p1.waitForFunction(() => !document.querySelector("#btn-start").disabled);
   await p1.click("#btn-start");
 
   await Promise.all([

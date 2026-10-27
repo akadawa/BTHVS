@@ -1004,6 +1004,75 @@
         time: timeStr,
         summary: `entließ ${role} (${sname})`
       };
+    } else if (kind === "demolish") {
+      const [_, player, roomName] = parts;
+      item = {
+        category: "room",
+        icon: "💥",
+        player: player || "Spieler",
+        action: "riss ab:",
+        target: roomName || "Raum",
+        cost: "",
+        isLocal,
+        time: timeStr,
+        summary: `riss ${roomName || "Raum"} ab`
+      };
+    } else if (kind === "land") {
+      const [_, player, plotNo, costStr] = parts;
+      const cost = parseInt(costStr, 10) || 0;
+      item = {
+        category: "room",
+        icon: "🗺️",
+        player: player || "Spieler",
+        action: "kaufte:",
+        target: `Grundstück #${plotNo}`,
+        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
+        isLocal,
+        time: timeStr,
+        summary: `kaufte Grundstück #${plotNo}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
+      };
+    } else if (kind === "loan") {
+      const [_, player, amountStr] = parts;
+      const amount = parseInt(amountStr, 10) || 0;
+      item = {
+        category: "finance",
+        icon: "💰",
+        player: player || "Spieler",
+        action: "nahm Kredit auf:",
+        target: `+$${amount.toLocaleString()}`,
+        cost: `+$${amount.toLocaleString()}`,
+        isLocal,
+        time: timeStr,
+        summary: `nahm Kredit über $${amount.toLocaleString()} auf`
+      };
+    } else if (kind === "repayloan") {
+      const [_, player, amountStr] = parts;
+      const amount = parseInt(amountStr, 10) || 0;
+      item = {
+        category: "finance",
+        icon: "💳",
+        player: player || "Spieler",
+        action: "tilgte Kredit:",
+        target: `-$${amount.toLocaleString()}`,
+        cost: `-$${amount.toLocaleString()}`,
+        isLocal,
+        time: timeStr,
+        summary: `tilgte Kredit über $${amount.toLocaleString()}`
+      };
+    } else if (kind === "replace") {
+      const [_, player, mName, costStr] = parts;
+      const cost = parseInt(costStr, 10) || 0;
+      item = {
+        category: "obj",
+        icon: "⚙️",
+        player: player || "Spieler",
+        action: "ersetzte Maschine:",
+        target: mName || "Maschine",
+        cost: cost > 0 ? `-$${cost.toLocaleString()}` : "",
+        isLocal,
+        time: timeStr,
+        summary: `ersetzte ${mName || "Maschine"}${cost > 0 ? " ($" + cost.toLocaleString() + ")" : ""}`
+      };
     }
 
     if (item) {

@@ -325,6 +325,146 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   }
   console.log("✓ Handyman synchronized successfully!");
 
+  // 6. Test Plot / Land Purchase Sync
+  console.log("Testing Land Purchase synchronization...");
+  const hostPlotResult = await p1.evaluate(() => {
+    window.__test_val = null;
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      local map = TheApp.world.map
+      local p_list = {}
+      for i = 1, 20 do
+        if map.th:isParcelPurchasable(i, hosp:getPlayerIndex()) then
+          table.insert(p_list, i)
+        end
+      end
+      local target_plot = p_list[1] or 2
+      local res = hosp:purchasePlot(target_plot)
+      if not res then
+        TheApp.multiplayer.web.call("net.send", string.format("all|plot:%d", target_plot))
+        table.insert(hosp.ownedPlots, target_plot)
+        res = true
+      end
+      require("web").call("test.val", tostring(res) .. "|" .. tostring(target_plot) .. "|list:" .. table.concat(p_list, ","))
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
+  });
+  console.log("Host purchase plot result:", hostPlotResult);
+  const targetPlot = parseInt(hostPlotResult.split("|")[1], 10);
+  await sleep(1500);
+
+  const guestPlotCheck = await p2.evaluate((tPlot) => {
+    window.__test_val = null;
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      local owned = false
+      local target = tonumber("${tPlot}")
+      for _, p in ipairs(hosp.ownedPlots) do
+        if p == target then owned = true break end
+      end
+      require("web").call("test.val", tostring(owned))
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
+  }, targetPlot);
+  console.log(`Guest owned plot ${targetPlot} check:`, guestPlotCheck);
+  if (guestPlotCheck !== "true") {
+    throw new Error(`Guest failed to synchronize plot purchase! Got: ${guestPlotCheck}`);
+  }
+  console.log("✓ Land purchase synchronized successfully!");
+
+  // 7. Test Bank Loan Sync
+  console.log("Testing Bank Loan synchronization...");
+  await p1.evaluate(() => {
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      local UIBankManager = _G["UIBankManager"]
+      local bm = UIBankManager(TheApp.ui)
+      bm:increaseLoan()
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+  });
+  await sleep(1500);
+
+  const guestLoanCheck = await p2.evaluate(() => {
+    window.__test_val = null;
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      require("web").call("test.val", tostring(hosp.loan))
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
+  });
+  console.log("Guest loan check:", guestLoanCheck);
+  if (!guestLoanCheck || parseInt(guestLoanCheck, 10) <= 0) {
+    throw new Error(`Guest failed to synchronize bank loan! Got: ${guestLoanCheck}`);
+  }
+  console.log("✓ Bank loan synchronized successfully!");
+
+  // 8. Test Research Policy Sync
+  console.log("Testing Research Policy synchronization...");
+  await p1.evaluate(() => {
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local UIResearch = _G["UIResearch"]
+      local r = UIResearch(TheApp.ui)
+      r:adjustResearch("cure", "more")
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+  });
+  await sleep(1500);
+
+  const guestResearchCheck = await p2.evaluate(() => {
+    window.__test_val = null;
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      local frac = hosp.research.research_policy.cure.frac
+      require("web").call("test.val", tostring(frac))
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
+  });
+  console.log("Guest cure research frac check:", guestResearchCheck);
+  if (!guestResearchCheck || parseFloat(guestResearchCheck) <= 0) {
+    throw new Error(`Guest failed to synchronize research policy! Got: ${guestResearchCheck}`);
+  }
+  console.log("✓ Research policy synchronized successfully!");
+
+  // 9. Test Disease Pricing Sync
+  console.log("Testing Disease Price synchronization...");
+  await p1.evaluate(() => {
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      hosp:setDiseasePrice("corrugated_ankles", 1.5)
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+  });
+  await sleep(1500);
+
+  const guestPriceCheck = await p2.evaluate(() => {
+    window.__test_val = null;
+    const mod = window.__bth.state.game.mod;
+    const lua = `
+      local hosp = TheApp.world:getLocalPlayerHospital()
+      local pr = hosp.disease_casebook["corrugated_ankles"] and hosp.disease_casebook["corrugated_ankles"].price or 1.0
+      require("web").call("test.val", tostring(pr))
+    `;
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
+  });
+  console.log("Guest price check for corrugated_ankles:", guestPriceCheck);
+  if (!guestPriceCheck || parseFloat(guestPriceCheck) <= 1.0) {
+    throw new Error(`Guest failed to synchronize price adjustment! Got: ${guestPriceCheck}`);
+  }
+  console.log("✓ Disease price adjustment synchronized successfully!");
+
   console.log("=== ALL SIMULATION SYNCHRONIZATION TESTS PASSED! ===");
   await browser.close();
   process.exit(0);

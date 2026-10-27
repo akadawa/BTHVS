@@ -33,6 +33,7 @@ function Multiplayer:Multiplayer(app)
   self.seed = 12345
   self.rejoin = false
   self.remote_cursors = {}
+  self.patient_treat_results = {}
   self.last_cursor_send = 0
   self.last_balance_send = 0
   self.last_hums_send = 0
@@ -107,6 +108,14 @@ function Multiplayer:installHooks()
   local Handyman = _G["Handyman"] or corsixth.require("entities.humanoids.staff.handyman")
   local UIStaffRise = _G["UIStaffRise"] or corsixth.require("dialogs.staff_rise")
   local UIFax = _G["UIFax"] or corsixth.require("dialogs.fullscreen.fax")
+  local Hospital = _G["Hospital"] or corsixth.require("hospital")
+  local UIBankManager = _G["UIBankManager"] or corsixth.require("dialogs.fullscreen.bank_manager")
+  local UIResearch = _G["UIResearch"] or corsixth.require("dialogs.fullscreen.research_policy")
+  local UICasebook = _G["UICasebook"] or corsixth.require("dialogs.fullscreen.drug_casebook")
+  local UIPolicy = _G["UIPolicy"] or corsixth.require("dialogs.fullscreen.hospital_policy")
+  local UIStaffManagement = _G["UIStaffManagement"] or corsixth.require("dialogs.fullscreen.staff_management")
+  local Patient = _G["Patient"] or corsixth.require("entities.humanoids.patient")
+  local Machine = _G["Machine"] or corsixth.require("entities.machine")
 
   -- Ensure all entities created in the world have a unique integer ID
   if World and World.newEntity then
@@ -156,6 +165,28 @@ function Multiplayer:installHooks()
         return
       end
       return orig_requestRaise(staff_self)
+    end
+  end
+
+  -- Host-authoritative patient treatment outcome (cure vs death)
+  if Patient and Patient.isTreatmentEffective then
+    local orig_isTreatmentEffective = Patient.isTreatmentEffective
+    Patient.isTreatmentEffective = function(p_self)
+      if not mp.active then return orig_isTreatmentEffective(p_self) end
+      if mp.is_host then
+        local eff = orig_isTreatmentEffective(p_self)
+        if p_self.id then
+          mp.web.call("net.send", string.format("all|treatres:%d,%s", p_self.id, eff and "1" or "0"))
+        end
+        return eff
+      else
+        if p_self.id and mp.patient_treat_results[p_self.id] ~= nil then
+          local eff = mp.patient_treat_results[p_self.id]
+          mp.patient_treat_results[p_self.id] = nil
+          return eff
+        end
+        return orig_isTreatmentEffective(p_self)
+      end
     end
   end
 
@@ -284,6 +315,33 @@ function Multiplayer:installHooks()
       end
     end
 
+    if UIEditRoom.abortRoom then
+      local orig_abortRoom = UIEditRoom.abortRoom
+      UIEditRoom.abortRoom = function(edit_self)
+        local was_paid = edit_self.paid
+        local had_room = (edit_self.room ~= nil)
+        local r_name = "Raum"
+        if edit_self.room and edit_self.room.room_info and edit_self.room.room_info.name then
+          r_name = clean_name(edit_self.room.room_info.name)
+        elseif edit_self.room_type and edit_self.room_type.name then
+          r_name = clean_name(edit_self.room_type.name)
+        elseif edit_self.title_text then
+          r_name = clean_name(edit_self.title_text)
+        end
+        local res = orig_abortRoom(edit_self)
+        if mp.active and (was_paid or had_room) and not mp.internal_action then
+          TheApp:save("/tmp/snapshot_out.sav")
+          mp.web.call("snap.send", "all|/tmp/snapshot_out.sav|room_deleted")
+          mp.web.call("ui.banner", "wRaum abgerissen: " .. r_name)
+          local p_name = clean_name(mp.name)
+          local payload = string.format("demolish|%s|%s", p_name, r_name)
+          mp.web.call("hist.record", payload)
+          mp.web.call("net.send", "all|hist:" .. payload)
+        end
+        return res
+      end
+    end
+
     if UIEditRoom.close then
       local orig_close = UIEditRoom.close
       UIEditRoom.close = function(edit_self)
@@ -403,6 +461,283 @@ function Multiplayer:installHooks()
         mp.web.call("net.send", "all|hist:" .. hist_payload)
       end
       return res
+    end
+  end
+
+  -- 6. Hook Hospital:purchasePlot to synchronize land buying
+  if Hospital and Hospital.purchasePlot then
+    local orig_purchasePlot = Hospital.purchasePlot
+    Hospital.purchasePlot = function(hosp_self, plot_number)
+      local res = orig_purchasePlot(hosp_self, plot_number)
+      if res and mp.active and not mp.internal_action then
+        mp.web.call("net.send", string.format("all|plot:%d", plot_number))
+        local p_name = clean_name(mp.name)
+        local cost = hosp_self.world and hosp_self.world.map and hosp_self.world.map:getParcelPrice(plot_number) or 0
+        local payload = string.format("land|%s|%d|%d", p_name, plot_number, cost)
+        mp.web.call("hist.record", payload)
+        mp.web.call("net.send", "all|hist:" .. payload)
+        mp.web.call("ui.banner", "oGrundstueck #" .. tostring(plot_number) .. " erworben")
+      end
+      return res
+    end
+  end
+
+  -- 7. Hook UIBankManager for loans and repayments
+  if UIBankManager then
+    if UIBankManager.increaseLoan then
+      local orig_incLoan = UIBankManager.increaseLoan
+      UIBankManager.increaseLoan = function(bm_self)
+        local prev_loan = bm_self.ui.hospital.loan
+        local res = orig_incLoan(bm_self)
+        local cur_loan = bm_self.ui.hospital.loan
+        if mp.active and not mp.internal_action and cur_loan > prev_loan then
+          local diff = cur_loan - prev_loan
+          mp.web.call("net.send", string.format("all|loan:%d,%d", cur_loan, bm_self.ui.hospital.balance))
+          local p_name = clean_name(mp.name)
+          local payload = string.format("loan|%s|%d", p_name, diff)
+          mp.web.call("hist.record", payload)
+          mp.web.call("net.send", "all|hist:" .. payload)
+        end
+        return res
+      end
+    end
+    if UIBankManager.decreaseLoan then
+      local orig_decLoan = UIBankManager.decreaseLoan
+      UIBankManager.decreaseLoan = function(bm_self)
+        local prev_loan = bm_self.ui.hospital.loan
+        local res = orig_decLoan(bm_self)
+        local cur_loan = bm_self.ui.hospital.loan
+        if mp.active and not mp.internal_action and cur_loan < prev_loan then
+          local diff = prev_loan - cur_loan
+          mp.web.call("net.send", string.format("all|loan:%d,%d", cur_loan, bm_self.ui.hospital.balance))
+          local p_name = clean_name(mp.name)
+          local payload = string.format("repayloan|%s|%d", p_name, diff)
+          mp.web.call("hist.record", payload)
+          mp.web.call("net.send", "all|hist:" .. payload)
+        end
+        return res
+      end
+    end
+  end
+
+  -- 8. Hook UIResearch:adjustResearch for shared research department distribution
+  if UIResearch and UIResearch.adjustResearch then
+    local orig_adjustResearch = UIResearch.adjustResearch
+    UIResearch.adjustResearch = function(r_self, area, mode)
+      local res = orig_adjustResearch(r_self, area, mode)
+      if mp.active and not mp.internal_action and r_self.research and r_self.research.research_policy then
+        local pol = r_self.research.research_policy
+        local c = pol.cure and pol.cure.frac or 0
+        local d = pol.diagnosis and pol.diagnosis.frac or 0
+        local dr = pol.drugs and pol.drugs.frac or 0
+        local im = pol.improvements and pol.improvements.frac or 0
+        local sp = pol.specialisation and pol.specialisation.frac or 0
+        mp.web.call("net.send", string.format("all|respol:%.2f,%.2f,%.2f,%.2f,%.2f", c, d, dr, im, sp))
+      end
+      return res
+    end
+  end
+
+  -- 9. Hook Hospital:setDiseasePrice & UICasebook for disease treatment pricing & concentrated research
+  if Hospital then
+    Hospital.setDiseasePrice = function(hosp_self, disease_id, price)
+      if hosp_self.disease_casebook and hosp_self.disease_casebook[disease_id] then
+        hosp_self.disease_casebook[disease_id].price = tonumber(price) or 1.0
+        if mp.active and not mp.internal_action then
+          mp.web.call("net.send", string.format("all|price:%s,%.2f", disease_id, hosp_self.disease_casebook[disease_id].price))
+        end
+        return true
+      end
+      return false
+    end
+  end
+
+  if UICasebook then
+    if UICasebook.increasePay then
+      local orig_incPay = UICasebook.increasePay
+      UICasebook.increasePay = function(cb_self)
+        local res = orig_incPay(cb_self)
+        if mp.active and not mp.internal_action and cb_self.selected_disease and cb_self.casebook then
+          local p = cb_self.casebook[cb_self.selected_disease].price
+          mp.web.call("net.send", string.format("all|price:%s,%.2f", cb_self.selected_disease, p))
+        end
+        return res
+      end
+    end
+    if UICasebook.decreasePay then
+      local orig_decPay = UICasebook.decreasePay
+      UICasebook.decreasePay = function(cb_self)
+        local res = orig_decPay(cb_self)
+        if mp.active and not mp.internal_action and cb_self.selected_disease and cb_self.casebook then
+          local p = cb_self.casebook[cb_self.selected_disease].price
+          mp.web.call("net.send", string.format("all|price:%s,%.2f", cb_self.selected_disease, p))
+        end
+        return res
+      end
+    end
+    if UICasebook.concentrateResearch then
+      local orig_conc = UICasebook.concentrateResearch
+      UICasebook.concentrateResearch = function(cb_self)
+        local res = orig_conc(cb_self)
+        if mp.active and not mp.internal_action and cb_self.selected_disease then
+          mp.web.call("net.send", "all|concresearch:" .. tostring(cb_self.selected_disease))
+        end
+        return res
+      end
+    end
+  end
+
+  -- 10. Hook UIPolicy:close for shared hospital policy sliders
+  if UIPolicy and UIPolicy.close then
+    local orig_polClose = UIPolicy.close
+    UIPolicy.close = function(pol_self)
+      local res = orig_polClose(pol_self)
+      if mp.active and not mp.internal_action and pol_self.hospital and pol_self.hospital.policies then
+        local p = pol_self.hospital.policies
+        local gc = p["guess_cure"] or 0.1
+        local sh = p["send_home"] or 0.1
+        local sp = p["stop_procedure"] or 1.0
+        local sl = p["staff_leave"] or 0.1
+        mp.web.call("net.send", string.format("all|policies:%.2f,%.2f,%.2f,%.2f", gc, sh, sp, sl))
+      end
+      return res
+    end
+  end
+
+  -- 11. Hook Staff:increaseWage and UIStaffManagement:payBonus
+  if Staff and Staff.increaseWage then
+    local orig_incWage = Staff.increaseWage
+    Staff.increaseWage = function(s_self, amount)
+      local res = orig_incWage(s_self, amount)
+      if mp.active and not mp.internal_action and s_self.id then
+        mp.web.call("net.send", string.format("all|staffwage:%d,%d", s_self.id, amount))
+      end
+      return res
+    end
+  end
+  if UIStaffManagement and UIStaffManagement.payBonus then
+    local orig_payBonus = UIStaffManagement.payBonus
+    UIStaffManagement.payBonus = function(sm_self)
+      local cat = sm_self.staff_members and sm_self.staff_members[sm_self.category]
+      local member = cat and cat[sm_self.selected_staff]
+      local mid = member and member.id
+      local res = orig_payBonus(sm_self)
+      if mp.active and not mp.internal_action and mid then
+        mp.web.call("net.send", string.format("all|staffbonus:%d", mid))
+      end
+      return res
+    end
+  end
+
+  -- 12. Hook World:makeAvailableStaff so candidate staff pool is 1:1 identical every month
+  if World and World.makeAvailableStaff then
+    local orig_makeStaff = World.makeAvailableStaff
+    World.makeAvailableStaff = function(world_self, month)
+      if not mp.active then
+        return orig_makeStaff(world_self, month)
+      end
+      if mp.is_host then
+        orig_makeStaff(world_self, month)
+        local lines = {}
+        local cats = {"Doctor", "Nurse", "Handyman", "Receptionist"}
+        for _, cat in ipairs(cats) do
+          local pool = world_self.available_staff and world_self.available_staff[cat] or {}
+          local cand_strs = {}
+          for _, prof in ipairs(pool) do
+            local is_psy = (type(prof.is_psychiatrist) == "number" and prof.is_psychiatrist >= 1.0 or prof.is_psychiatrist == true) and 1 or 0
+            local is_sur = (type(prof.is_surgeon) == "number" and prof.is_surgeon >= 1.0 or prof.is_surgeon == true) and 1 or 0
+            local is_res = (type(prof.is_researcher) == "number" and prof.is_researcher >= 1.0 or prof.is_researcher == true) and 1 or 0
+            table.insert(cand_strs, string.format("%s/%d/%.2f/%d/%d/%d/%d/%d/%d",
+              clean_name(prof.name),
+              prof.wage or 100,
+              prof.skill or 0.5,
+              prof.layer5 or 2,
+              is_psy, is_sur, is_res,
+              prof.is_junior and 1 or 0,
+              prof.is_consultant and 1 or 0
+            ))
+          end
+          table.insert(lines, cat .. ":" .. table.concat(cand_strs, ";"))
+        end
+        mp.web.call("net.send", "all|staffpool:" .. table.concat(lines, "#"))
+      else
+        if mp.internal_action then
+          orig_makeStaff(world_self, month)
+        end
+      end
+    end
+  end
+
+  -- 13. Hook Hospital:createEmergency to make emergency generation host-authoritative
+  if Hospital and Hospital.createEmergency then
+    local orig_createEmergency = Hospital.createEmergency
+    Hospital.createEmergency = function(hosp_self, emergency)
+      if not mp.active then
+        return orig_createEmergency(hosp_self, emergency)
+      end
+      if mp.is_host then
+        local res = orig_createEmergency(hosp_self, emergency)
+        if hosp_self.emergency and not mp.internal_action then
+          local em = hosp_self.emergency
+          local did = em.disease and em.disease.id or ""
+          mp.web.call("net.send", string.format("all|emerg:%s,%d,%d,%.2f", did, em.victims or 3, em.bonus or 1000, em.percentage or 0.75))
+        end
+        return res
+      else
+        if mp.internal_action or emergency then
+          return orig_createEmergency(hosp_self, emergency)
+        end
+        return nil
+      end
+    end
+  end
+
+  -- 14. Hook UIFax:choice for shared decisions (patient triage, emergencies, etc.)
+  if UIFax and UIFax.choice then
+    local orig_faxChoice = UIFax.choice
+    UIFax.choice = function(fax_self, choice_number)
+      local choices = fax_self.message and fax_self.message.choices
+      local choice_str = choices and choices[choice_number] and choices[choice_number].choice or ""
+      local target_id = (fax_self.owner and fax_self.owner.id) or 0
+      local res = orig_faxChoice(fax_self, choice_number)
+      if mp.active and not mp.internal_action and choice_str ~= "" then
+        mp.web.call("net.send", string.format("all|faxchoice:%s,%d", choice_str, target_id))
+      end
+      return res
+    end
+  end
+
+  -- 15. Hook Machine:replaceMachine and calculateIsMachineMustExplode
+  if Machine then
+    if Machine.replaceMachine then
+      local orig_replaceMachine = Machine.replaceMachine
+      Machine.replaceMachine = function(mach_self, cost)
+        local tx = mach_self.tile_x
+        local ty = mach_self.tile_y
+        local m_name = mach_self.object_type and clean_name(mach_self.object_type.name) or "Maschine"
+        local res = orig_replaceMachine(mach_self, cost)
+        if mp.active and not mp.internal_action and tx and ty then
+          mp.web.call("net.send", string.format("all|replacemach:%d,%d,%d", tx, ty, cost))
+          local p_name = clean_name(mp.name)
+          local payload = string.format("replace|%s|%s|%d", p_name, m_name, cost)
+          mp.web.call("hist.record", payload)
+          mp.web.call("net.send", "all|hist:" .. payload)
+        end
+        return res
+      end
+    end
+    if Machine.calculateIsMachineMustExplode then
+      local orig_calcExplode = Machine.calculateIsMachineMustExplode
+      Machine.calculateIsMachineMustExplode = function(mach_self, room)
+        if mp.active and not mp.is_host then
+          return false
+        end
+        local must = orig_calcExplode(mach_self, room)
+        if mp.active and mp.is_host and must and mach_self.tile_x and mach_self.tile_y then
+          mp.web.call("net.send", string.format("all|explodemach:%d,%d", mach_self.tile_x, mach_self.tile_y))
+        end
+        return must
+      end
     end
   end
 end
@@ -531,16 +866,18 @@ function Multiplayer:onTick()
     end
   end
 
-  -- 3. Host periodically syncs authoritative bank balance and in-game date (~2s)
+  -- 3. Host periodically syncs authoritative bank balance, reputation and in-game date (~2s)
   if self.is_host and (now - self.last_balance_send > 2000) then
     self.last_balance_send = now
     if self.app.world and self.app.world.ui and self.app.world.ui.hospital then
-      local bal = self.app.world.ui.hospital.balance
+      local hosp = self.app.world.ui.hospital
+      local bal = hosp.balance
+      local rep = hosp.reputation or 500
       local d = self.app.world.game_date
       if d then
-        self.web.call("net.send", string.format("all|syncstate:%d,%d,%d,%d,%d", bal, d:year(), d:monthOfYear(), d:dayOfMonth(), d:hourOfDay()))
+        self.web.call("net.send", string.format("all|syncstate:%d,%d,%d,%d,%d,%d", bal, rep, d:year(), d:monthOfYear(), d:dayOfMonth(), d:hourOfDay()))
       else
-        self.web.call("net.send", "all|balance:" .. tostring(bal))
+        self.web.call("net.send", string.format("all|syncstate:%d,%d,1997,1,1,1", bal, rep))
       end
     end
   end
@@ -868,12 +1205,18 @@ function Multiplayer:handleMessage(from, data)
     return
   end
 
-  -- State synchronization (balance and calendar date)
+  -- State synchronization (balance, reputation and calendar date)
   if data:sub(1, 10) == "syncstate:" then
-    local bal, y, m, d, h = data:match("syncstate:(%-?%d+),(%d+),(%d+),(%d+),(%d+)")
+    local bal, rep, y, m, d, h = data:match("syncstate:(%-?%d+),(%d+),(%d+),(%d+),(%d+),(%d+)")
+    if not rep then
+      bal, y, m, d, h = data:match("syncstate:(%-?%d+),(%d+),(%d+),(%d+),(%d+)")
+    end
     if bal and self.app.world then
       local hosp = self.app.world:getLocalPlayerHospital()
-      if hosp then hosp.balance = tonumber(bal) end
+      if hosp then
+        hosp.balance = tonumber(bal)
+        if rep then hosp.reputation = tonumber(rep) end
+      end
       if y and m and d and h and self.app.world.game_date then
         y, m, d, h = tonumber(y), tonumber(m), tonumber(d), tonumber(h)
         local cur = self.app.world.game_date
@@ -883,6 +1226,289 @@ function Multiplayer:handleMessage(from, data)
             self.app.world.game_date = Date(y, m, d, h)
           end
         end
+      end
+    end
+    return
+  end
+
+  -- Authoritative treatment outcome (cure vs death) from host
+  if data:sub(1, 9) == "treatres:" then
+    local pid, flag = data:match("treatres:(%d+),([01])")
+    if pid and flag then
+      self.patient_treat_results[tonumber(pid)] = (flag == "1")
+    end
+    return
+  end
+
+  -- Plot purchase replication
+  if data:sub(1, 5) == "plot:" then
+    local plot_no = tonumber(data:sub(6))
+    if plot_no and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp then
+        self.internal_action = true
+        self.app.world:setPlotOwner(plot_no, hosp:getPlayerIndex())
+        table.insert(hosp.ownedPlots, plot_no)
+        if self.app.world.ui and self.app.world.ui.applyTransparency then
+          self.app.world.ui:applyTransparency()
+        end
+        local cost = hosp.world and hosp.world.map and hosp.world.map:getParcelPrice(plot_no) or 0
+        hosp:spendMoney(cost, _S and _S.transactions and _S.transactions.buy_land or "Land", cost)
+        self.internal_action = false
+      end
+    end
+    return
+  end
+
+  -- Loan & balance sync from bank manager
+  if data:sub(1, 5) == "loan:" then
+    local loan, bal = data:match("loan:(%d+),(%-?%d+)")
+    if loan and bal and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp then
+        hosp.loan = tonumber(loan)
+        hosp.balance = tonumber(bal)
+      end
+    end
+    return
+  end
+
+  -- Research policy replication
+  if data:sub(1, 7) == "respol:" then
+    local c, d, dr, im, sp = data:match("respol:([%d%.]+),([%d%.]+),([%d%.]+),([%d%.]+),([%d%.]+)")
+    if c and d and dr and im and sp and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp and hosp.research and hosp.research.research_policy then
+        local pol = hosp.research.research_policy
+        if pol.cure then pol.cure.frac = tonumber(c) end
+        if pol.diagnosis then pol.diagnosis.frac = tonumber(d) end
+        if pol.drugs then pol.drugs.frac = tonumber(dr) end
+        if pol.improvements then pol.improvements.frac = tonumber(im) end
+        if pol.specialisation then pol.specialisation.frac = tonumber(sp) end
+        pol.global = tonumber(c) + tonumber(d) + tonumber(dr) + tonumber(im) + tonumber(sp)
+      end
+    end
+    return
+  end
+
+  -- Disease price adjustment
+  if data:sub(1, 6) == "price:" then
+    local did, pr = data:match("price:([^,]+),([%d%.]+)")
+    if did and pr and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp and hosp.disease_casebook and hosp.disease_casebook[did] then
+        hosp.disease_casebook[did].price = tonumber(pr)
+      end
+    end
+    return
+  end
+
+  -- Concentrate research on a disease
+  if data:sub(1, 13) == "concresearch:" then
+    local did = data:sub(14)
+    if did and did ~= "" and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp and hosp.research and hosp.research.concentrateResearch then
+        hosp.research:concentrateResearch(did)
+      end
+    end
+    return
+  end
+
+  -- Hospital policy sliders replication
+  if data:sub(1, 9) == "policies:" then
+    local gc, sh, sp, sl = data:match("policies:([%d%.]+),([%d%.]+),([%d%.]+),([%d%.]+)")
+    if gc and sh and sp and sl and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp and hosp.policies then
+        hosp.policies["guess_cure"] = tonumber(gc)
+        hosp.policies["send_home"] = tonumber(sh)
+        hosp.policies["stop_procedure"] = tonumber(sp)
+        hosp.policies["staff_leave"] = tonumber(sl)
+      end
+    end
+    return
+  end
+
+  -- Staff wage increase and bonus
+  if data:sub(1, 10) == "staffwage:" then
+    local sid, amt = data:match("staffwage:(%d+),(%d+)")
+    if sid and amt and self.app.world and self.app.world.entities then
+      sid, amt = tonumber(sid), tonumber(amt)
+      for _, e in ipairs(self.app.world.entities) do
+        if e.id == sid and e.increaseWage then
+          self.internal_action = true
+          e:increaseWage(amt)
+          self.internal_action = false
+          break
+        end
+      end
+    end
+    return
+  end
+  if data:sub(1, 11) == "staffbonus:" then
+    local sid = tonumber(data:sub(12))
+    if sid and self.app.world and self.app.world.entities then
+      for _, e in ipairs(self.app.world.entities) do
+        if e.id == sid then
+          if e.changeAttribute then e:changeAttribute("happiness", 0.5) end
+          local hosp = self.app.world:getLocalPlayerHospital()
+          if hosp and e.profile and e.profile.wage then
+            hosp:spendMoney(math.floor(e.profile.wage * 0.1), _S and _S.transactions and _S.transactions.personal_bonus or "Bonus")
+          end
+          break
+        end
+      end
+    end
+    return
+  end
+
+  -- Authoritative monthly staff candidate pool from host
+  if data:sub(1, 10) == "staffpool:" then
+    local payload = data:sub(11)
+    if self.app.world then
+      local StaffProfile = _G["StaffProfile"] or corsixth.require("staff_profile")
+      self.app.world.available_staff = self.app.world.available_staff or {}
+      for cat_chunk in payload:gmatch("([^#]+)") do
+        local colon = cat_chunk:find(":")
+        if colon then
+          local cat = cat_chunk:sub(1, colon - 1)
+          local list_str = cat_chunk:sub(colon + 1)
+          local new_pool = {}
+          if list_str ~= "" then
+            for cand in list_str:gmatch("([^;]+)") do
+              local name, wage, skill, l5, psy, sur, resr, jun, cons = cand:match("([^/]+)/(%d+)/([%d%.]+)/(%d+)/([01])/([01])/([01])/([01])/([01])")
+              if name and wage and skill then
+                local prof = StaffProfile(self.app.world, cat)
+                prof.name = clean_name(name)
+                prof.wage = tonumber(wage) or 100
+                prof.skill = tonumber(skill) or 0.5
+                prof.layer5 = tonumber(l5) or 2
+                prof.is_psychiatrist = (psy == "1") and 1.0 or 0.0
+                prof.is_surgeon = (sur == "1") and 1.0 or 0.0
+                prof.is_researcher = (resr == "1") and 1.0 or 0.0
+                prof.is_junior = (jun == "1")
+                prof.is_consultant = (cons == "1")
+                table.insert(new_pool, prof)
+              end
+            end
+          end
+          self.app.world.available_staff[cat] = new_pool
+        end
+      end
+    end
+    return
+  end
+
+  -- Authoritative emergency replication from host
+  if data:sub(1, 6) == "emerg:" then
+    local did, victims, bonus, perc = data:match("emerg:([^,]+),(%d+),(%d+),([%d%.]+)")
+    if did and victims and bonus and perc and self.app.world then
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if hosp then
+        local disease = TheApp.diseases and TheApp.diseases[did]
+        if not disease and self.app.world.available_diseases then
+          for _, d in ipairs(self.app.world.available_diseases) do
+            if d.id == did then disease = d break end
+          end
+        end
+        if disease then
+          self.internal_action = true
+          hosp:createEmergency({
+            disease = disease,
+            victims = tonumber(victims) or 3,
+            bonus = tonumber(bonus) or 1000,
+            percentage = tonumber(perc) or 0.75,
+            killed_emergency_patients = 0,
+            cured_emergency_patients = 0,
+          })
+          self.internal_action = false
+        end
+      end
+    end
+    return
+  end
+
+  -- Fax / patient triage decision replication
+  if data:sub(1, 10) == "faxchoice:" then
+    local choice, tid = data:match("faxchoice:([^,]+),(%d+)")
+    if choice and tid and self.app.world then
+      tid = tonumber(tid)
+      local hosp = self.app.world:getLocalPlayerHospital()
+      if tid > 0 and self.app.world.entities then
+        for _, e in ipairs(self.app.world.entities) do
+          if e.id == tid then
+            self.internal_action = true
+            if e.setMood then e:setMood("patient_wait", "deactivate") end
+            e.message_callback = nil
+            if choice == "send_home" then
+              if e.goHome then e:goHome("kicked") end
+            elseif choice == "wait" then
+              e.waiting = 60
+            elseif choice == "guess_cure" then
+              if e.setDiagnosed then e:setDiagnosed() end
+              local SeekRoomAction = _G["SeekRoomAction"] or corsixth.require("humanoid_actions.seek_room")
+              if e.agreesToPay and e.disease and e:agreesToPay(e.disease.id) then
+                if SeekRoomAction and e.disease.treatment_rooms and e.disease.treatment_rooms[1] then
+                  e:setNextAction(SeekRoomAction(e.disease.treatment_rooms[1]):enableTreatmentRoom())
+                end
+              elseif e.goHome and e.disease then
+                e:goHome("over_priced", e.disease.id)
+              end
+            elseif choice == "research" then
+              if e.unregisterCallbacks then e:unregisterCallbacks() end
+              if e.setMood then e:setMood("idea", "activate") end
+              local SeekRoomAction = _G["SeekRoomAction"] or corsixth.require("humanoid_actions.seek_room")
+              if SeekRoomAction then e:setNextAction(SeekRoomAction("research")) end
+            end
+            if hosp and hosp.removeMessage then hosp:removeMessage(e) end
+            self.internal_action = false
+            break
+          end
+        end
+      elseif tid == 0 and hosp then
+        self.internal_action = true
+        if choice == "accept_emergency" then
+          if hosp.emergency then hosp.emergency.status = "accepted" end
+        elseif choice == "refuse_emergency" then
+          hosp.emergency = nil
+        end
+        local UIFax = _G["UIFax"]
+        if self.app.ui and UIFax then
+          local win = self.app.ui:getWindow(UIFax)
+          if win then win:close() end
+        end
+        self.internal_action = false
+      end
+    end
+    return
+  end
+
+  -- Machine replacement replication
+  if data:sub(1, 12) == "replacemach:" then
+    local x, y, cost = data:match("replacemach:(%d+),(%d+),(%d+)")
+    if x and y and cost and self.app.world then
+      x, y, cost = tonumber(x), tonumber(y), tonumber(cost)
+      local mach = self.app.world:getObject(x, y, "machine")
+      if mach and mach.replaceMachine then
+        self.internal_action = true
+        mach:replaceMachine(cost)
+        self.internal_action = false
+      end
+    end
+    return
+  end
+
+  -- Authoritative machine explosion from host
+  if data:sub(1, 11) == "explodemach:" then
+    local x, y = data:match("explodemach:(%d+),(%d+)")
+    if x and y and self.app.world then
+      x, y = tonumber(x), tonumber(y)
+      local mach = self.app.world:getObject(x, y, "machine")
+      if mach and mach.explodeMachine then
+        self.internal_action = true
+        mach:explodeMachine(mach:getRoom())
+        self.internal_action = false
       end
     end
     return

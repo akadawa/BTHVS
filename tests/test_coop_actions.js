@@ -25,7 +25,11 @@ const fs = require("fs");
   await p2.fill("#join-code", code);
   await p2.click("#btn-join");
   await p1.waitForFunction(() => document.querySelectorAll("#player-list li").length >= 2);
-  console.log("Both players in lobby, starting game...");
+  console.log("Both players in lobby, clicking ready...");
+  await p2.click("#btn-ready");
+  await p1.click("#btn-ready");
+  await p1.waitForFunction(() => !document.querySelector("#btn-start").disabled);
+  console.log("Starting game...");
   await p1.click("#btn-start");
 
   await Promise.all([
