@@ -7,7 +7,7 @@
     "start": "node server/server.js",
     "build": "echo Prebuilt dist ready",
     "build:wasm": "powershell -ExecutionPolicy Bypass -File web/build.ps1",
-    "test": "node tests/run.js"
+    "test": "node tests/test_versus_redesign.js"
   },
   "dependencies": {
     "fflate": "^0.8.2",
