@@ -47,36 +47,31 @@ git push -u github main
 
 ---
 
-### 2. Frontend auf Vercel deployen
+### 2. Frontend auf Vercel deployen (Serverless Multiplayer)
 
 1. Melde dich bei [vercel.com](https://vercel.com) an.
 2. Klicke auf **"Add New Project"** und importiere dein GitHub-Repository.
 3. Vercel erkennt automatisch die beiliegende `vercel.json` (Output Directory: `dist`).
 4. Klicke auf **"Deploy"**.
 
-> [!NOTE]
-> **Wichtig für Multiplayer auf Vercel:**
-> Vercel ist eine Serverless-Plattform und unterstützt keine dauerhaften WebSocket-Server (`node server/server.js`).
-> Um mit einem Freund online über das Internet zu spielen, muss der kleine WebSocket-Relay-Server auf einer Plattform mit dauerhafter WebSocket-Unterstützung (z. B. kostenlos auf **Render.com** oder **Railway.app**) laufen.
+> [!TIP]
+> **Zero-Setup Multiplayer auf Vercel:**
+> Das Spiel verfügt über eine **voll integrierte WebRTC P2P-Direktverbindung**!
+> Auf Vercel verbindet sich das Spiel automatisch direkt Browser-zu-Browser (Host ↔ Gast) über WebRTC DataChannels mit extrem niedriger Latenz.
+> **Du musst keinen externen Server aufsetzen!**
+> Einfach Raum erstellen, Einladungslink an deinen Freund senden und sofort loslegen.
 
 ---
 
-### 3. WebSocket-Relay kostenlos hosten (z. B. auf Render.com)
+### 3. Optional: Eigener WebSocket-Relay-Server (z. B. auf Render.com)
+
+Falls du statt WebRTC lieber einen zentralen WebSocket-Server nutzen möchtest (z. B. bei extrem restriktiven Firmen-Firewalls):
 
 1. Melde dich bei [render.com](https://render.com) an (kostenloser Account).
 2. Klicke auf **New +** -> **Web Service**.
-3. Wähle dasselbe GitHub-Repository aus:
-   - **Runtime**: `Node`
-   - **Build Command**: `npm install`
-   - **Start Command**: `npm start`
-4. Nach dem Deployment erhältst du eine URL, z. B.: `https://mein-hospital-relay.onrender.com`.
-5. Die WebSocket-URL lautet dann: `wss://mein-hospital-relay.onrender.com/ws`.
-
-#### Verbindung in der Web-App:
-- Klicke auf der Webseite unten auf **⚙️ Relay-Server** und trage die Render-URL ein.
-- **Oder noch einfacher**: Teile deinem Freund einfach den Einladungslink aus der Lobby – dieser enthält den Server-Parameter automatisch (z. B. `https://deine-app.vercel.app/?join=ABCDE&server=wss://mein-hospital-relay.onrender.com/ws`).
-
-*(Alternativ: Du kannst auf Render.com auch direkt das gesamte Spiel inkl. Frontend hosten, da `server.js` sowohl die Webseite als auch die WebSockets auf einem einzigen Port bereitstellt!)*
+3. Wähle dasselbe GitHub-Repository aus (`render.yaml` ist bereits enthalten).
+4. Nach dem Deployment erhältst du deine URL: `wss://mein-hospital-relay.onrender.com/ws`.
+5. Klicke auf der Webseite unten auf **⚙️ Netzwerk** und trage die WebSocket-URL ein.
 
 ---
 

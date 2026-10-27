@@ -505,14 +505,35 @@
     return `${proto}//${location.host}/ws`;
   }
 
-  class Net {
+  const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  function newCode() {
+    let c = "";
+    for (let i = 0; i < 5; i++) c += CODE_ALPHABET[(Math.random() * CODE_ALPHABET.length) | 0];
+    return c;
+  }
+
+  function getNetworkMode() {
+    const saved = localStorage.getItem("bth-net-mode");
+    if (saved) return saved;
+    const param = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay");
+    if (param) return "ws";
+    if (localStorage.getItem("bth-relay-url")) return "ws";
+    const isVercel = location.hostname.endsWith(".vercel.app") || location.hostname.includes("vercel");
+    if (isVercel) return "p2p";
+    const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname.endsWith(".local") || location.hostname.endsWith(".lan");
+    if (isLocal) return "ws";
+    return "p2p";
+  }
+
+  class WsNet {
     constructor() {
       this.ws = null;
       this.listeners = new Map();
-      this.inbox = []; // messages for the Lua side: {from, d}
+      this.inbox = [];
       this.id = null;
       this.pingMs = null;
       this.open = false;
+      this.mode = "ws";
     }
     on(t, fn) { (this.listeners.get(t) || this.listeners.set(t, []).get(t)).push(fn); }
     off(t) { this.listeners.delete(t); }
@@ -520,15 +541,32 @@
     connect() {
       return new Promise((resolve, reject) => {
         const wsUrl = getRelayUrl();
-        const ws = new WebSocket(wsUrl);
+        let ws;
+        try {
+          ws = new WebSocket(wsUrl);
+        } catch (e) {
+          reject(e);
+          return;
+        }
         this.ws = ws;
+        const tm = setTimeout(() => {
+          if (!this.open) {
+            try { ws.close(); } catch (e) {}
+            reject(new Error("Timeout beim Verbinden mit WebSocket-Server"));
+          }
+        }, 5000);
         ws.onopen = () => {
+          clearTimeout(tm);
           this.open = true;
           this._pingTimer = setInterval(() => this.sendRaw({ t: "ping", ts: performance.now() }), 2000);
           resolve();
         };
-        ws.onerror = () => { if (!this.open) reject(new Error("Server nicht erreichbar")); };
+        ws.onerror = () => {
+          clearTimeout(tm);
+          if (!this.open) reject(new Error("Server nicht erreichbar"));
+        };
         ws.onclose = () => {
+          clearTimeout(tm);
           this.open = false;
           clearInterval(this._pingTimer);
           this.emit("close", {});
@@ -544,6 +582,422 @@
     }
     sendRaw(o) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(o)); }
     close() { try { this.ws && this.ws.close(); } catch (e) {} }
+  }
+
+  class P2PNet {
+    constructor() {
+      this.listeners = new Map();
+      this.inbox = [];
+      this.id = null;
+      this.pingMs = null;
+      this.open = false;
+      this.mode = "p2p";
+      this.isHost = false;
+      this.peer = null;
+      this.conn = null;
+      this.guestConns = new Map();
+      this.room = null;
+      this._pingTimer = null;
+    }
+    on(t, fn) { (this.listeners.get(t) || this.listeners.set(t, []).get(t)).push(fn); }
+    off(t) { this.listeners.delete(t); }
+    emit(t, m) { for (const fn of this.listeners.get(t) || []) fn(m); }
+
+    connect(kind, targetCode) {
+      return new Promise((resolve, reject) => {
+        if (!window.Peer) {
+          reject(new Error("PeerJS-Bibliothek nicht verfügbar."));
+          return;
+        }
+        const iceServers = [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" }
+        ];
+
+        if (kind === "create") {
+          this.isHost = true;
+          this.id = 0;
+          let code = (targetCode || newCode()).toUpperCase();
+
+          const initHostPeer = (c) => {
+            const peerId = "bth-vs-" + c.toLowerCase();
+            const peer = new Peer(peerId, { config: { iceServers } });
+            this.peer = peer;
+
+            peer.on("open", () => {
+              this.open = true;
+              this.roomCode = c;
+              this.room = {
+                code: c,
+                max: 2,
+                started: false,
+                config: {
+                  mode: "versus",
+                  goal: "cured_10",
+                  goals: { cured: 25, money: 100000, rooms: 0, timeLimit: 30 },
+                  level: "demo"
+                },
+                players: new Map()
+              };
+
+              peer.on("connection", (conn) => {
+                conn.on("open", () => {});
+                conn.on("data", (m) => this._hostHandleMsg(conn, m));
+                conn.on("close", () => this._hostHandleDisconnect(conn));
+                conn.on("error", () => this._hostHandleDisconnect(conn));
+              });
+
+              resolve();
+            });
+
+            peer.on("error", (err) => {
+              if (err.type === "unavailable-id") {
+                initHostPeer(newCode().toUpperCase());
+              } else {
+                if (!this.open) reject(new Error("P2P-Fehler: " + (err.message || err.type)));
+              }
+            });
+          };
+
+          initHostPeer(code);
+
+        } else {
+          this.isHost = false;
+          const code = String(targetCode || "").trim().toUpperCase();
+          if (!code) {
+            reject(new Error("Bitte gib einen Raum-Code ein."));
+            return;
+          }
+          this.roomCode = code;
+          const peer = new Peer({ config: { iceServers } });
+          this.peer = peer;
+
+          peer.on("open", () => {
+            const targetPeerId = "bth-vs-" + code.toLowerCase();
+            const conn = peer.connect(targetPeerId, { reliable: true });
+            this.conn = conn;
+
+            const tm = setTimeout(() => {
+              if (!this.open) {
+                try { conn.close(); } catch (e) {}
+                reject(new Error("Zeitüberschreitung: Raum '" + code + "' antwortet nicht. Ist der Host online?"));
+              }
+            }, 10000);
+
+            conn.on("open", () => {
+              clearTimeout(tm);
+              this.open = true;
+              this._pingTimer = setInterval(() => {
+                if (conn && conn.open) conn.send({ t: "ping", ts: performance.now() });
+              }, 2000);
+              resolve();
+            });
+
+            conn.on("data", (m) => {
+              if (m.t === "joined") {
+                this.id = m.id;
+              } else if (m.t === "pong") {
+                this.pingMs = Math.round(performance.now() - m.ts);
+                this.emit("ping", this.pingMs);
+                return;
+              } else if (m.t === "msg") {
+                this.emit("msg", m);
+                return;
+              }
+              this.emit(m.t, m);
+            });
+
+            conn.on("close", () => {
+              clearTimeout(tm);
+              this.open = false;
+              clearInterval(this._pingTimer);
+              this.emit("close", {});
+            });
+
+            conn.on("error", (err) => {
+              clearTimeout(tm);
+              if (!this.open) reject(new Error("P2P-Verbindungsfehler: " + (err.message || err.type)));
+            });
+          });
+
+          peer.on("error", (err) => {
+            if (err.type === "peer-unavailable") {
+              if (!this.open) reject(new Error("Raum '" + code + "' wurde nicht gefunden. Bitte prüfe den Code oder frage den Host."));
+            } else {
+              if (!this.open) reject(new Error("P2P-Fehler: " + (err.message || err.type)));
+            }
+          });
+        }
+      });
+    }
+
+    _hostHandleMsg(conn, m) {
+      if (!this.room) return;
+      switch (m.t) {
+        case "join": {
+          if (this.room.started) {
+            conn.send({ t: "error", error: "already_started" });
+            return;
+          }
+          if (this.room.players.size >= this.room.max) {
+            conn.send({ t: "error", error: "room_full" });
+            return;
+          }
+          const guestId = 1;
+          const guest = {
+            id: guestId,
+            name: String(m.name || "Gast").slice(0, 24),
+            demo: !!m.demo,
+            ready: false,
+            connected: true,
+            host: false,
+            conn
+          };
+          this.guestConns.set(guestId, conn);
+          this.room.players.set(guestId, guest);
+
+          conn.send({
+            t: "joined",
+            code: this.room.code,
+            id: guestId,
+            host: false,
+            max: this.room.max,
+            players: this._playerList(),
+            started: this.room.started,
+            config: this.room.config
+          });
+
+          this._hostBroadcast({
+            t: "players",
+            players: this._playerList(),
+            joined: guestId,
+            config: this.room.config
+          });
+          break;
+        }
+        case "ready": {
+          const p = this.room.players.get(1);
+          if (p) {
+            p.ready = !!m.ready;
+            this._hostBroadcast({
+              t: "players",
+              players: this._playerList(),
+              config: this.room.config,
+              readyChange: { id: 1, name: p.name, ready: p.ready }
+            });
+          }
+          break;
+        }
+        case "chat": {
+          const p = this.room.players.get(1);
+          this._hostBroadcast({
+            t: "chat",
+            from: 1,
+            name: p ? p.name : "Gast",
+            text: String(m.text || "").slice(0, 300)
+          });
+          break;
+        }
+        case "game_ready": {
+          const p = this.room.players.get(1);
+          if (p) p.gameReady = true;
+          const hostP = this.room.players.get(0);
+          if (hostP && hostP.gameReady && p && p.gameReady) {
+            this._hostBroadcast({ t: "start_sim" });
+          }
+          break;
+        }
+        case "msg": {
+          this.emit("msg", { t: "msg", from: 1, d: m.d });
+          break;
+        }
+        case "ping": {
+          conn.send({ t: "pong", ts: m.ts });
+          break;
+        }
+        case "leave": {
+          this._hostHandleDisconnect(conn);
+          break;
+        }
+      }
+    }
+
+    _hostHandleDisconnect(conn) {
+      if (!this.room) return;
+      const guest = this.room.players.get(1);
+      if (guest && guest.conn === conn) {
+        this.room.players.delete(1);
+        this.guestConns.delete(1);
+        this._hostBroadcast({
+          t: "left",
+          id: 1,
+          players: this._playerList(),
+          host: 0,
+          explicit: true
+        });
+      }
+    }
+
+    _playerList() {
+      if (!this.room) return [];
+      return [...this.room.players.values()].map((p) => ({
+        id: p.id,
+        name: p.name,
+        demo: p.demo,
+        ready: p.ready,
+        connected: p.connected !== false,
+        host: p.id === 0
+      }));
+    }
+
+    _hostBroadcast(msg, skipHost = false) {
+      for (const conn of this.guestConns.values()) {
+        if (conn && conn.open) {
+          try { conn.send(msg); } catch (e) {}
+        }
+      }
+      if (!skipHost) {
+        if (msg.t === "msg") this.emit("msg", msg);
+        else this.emit(msg.t, msg);
+      }
+    }
+
+    sendRaw(o) {
+      if (this.isHost) {
+        if (o.t === "create") {
+          const hostPlayer = {
+            id: 0,
+            name: String(o.name || "Host").slice(0, 24),
+            demo: !!o.demo,
+            ready: false,
+            connected: true,
+            host: true
+          };
+          this.room.max = o.max || 2;
+          this.room.players.set(0, hostPlayer);
+          setTimeout(() => {
+            this.emit("joined", {
+              t: "joined",
+              code: this.room.code,
+              id: 0,
+              host: true,
+              max: this.room.max,
+              players: this._playerList(),
+              config: this.room.config
+            });
+          }, 0);
+          return;
+        }
+        const hostPlayer = this.room ? this.room.players.get(0) : null;
+        switch (o.t) {
+          case "ready": {
+            if (hostPlayer) {
+              hostPlayer.ready = !!o.ready;
+              this._hostBroadcast({
+                t: "players",
+                players: this._playerList(),
+                config: this.room.config,
+                readyChange: { id: 0, name: hostPlayer.name, ready: hostPlayer.ready }
+              });
+            }
+            break;
+          }
+          case "lobby_config": {
+            if (this.room) {
+              if (o.goals) this.room.config.goals = o.goals;
+              if (o.level) this.room.config.level = o.level;
+              if (o.mode) this.room.config.mode = o.mode;
+              for (const p of this.room.players.values()) p.ready = false;
+              this._hostBroadcast({
+                t: "lobby_config",
+                goal: this.room.config.goal,
+                goals: this.room.config.goals,
+                mode: this.room.config.mode,
+                level: this.room.config.level
+              });
+              this._hostBroadcast({
+                t: "players",
+                players: this._playerList(),
+                config: this.room.config
+              });
+            }
+            break;
+          }
+          case "start": {
+            if (this.room) {
+              this.room.started = true;
+              this.room.config = Object.assign({}, this.room.config, o.config || {}, {
+                hostId: 0,
+                players: this._playerList()
+              });
+              this._hostBroadcast({ t: "start", config: this.room.config });
+            }
+            break;
+          }
+          case "game_ready": {
+            if (hostPlayer) hostPlayer.gameReady = true;
+            const guestP = this.room ? this.room.players.get(1) : null;
+            if (hostPlayer && hostPlayer.gameReady && guestP && guestP.gameReady) {
+              this._hostBroadcast({ t: "start_sim" });
+            }
+            break;
+          }
+          case "msg": {
+            for (const conn of this.guestConns.values()) {
+              if (conn && conn.open) {
+                try { conn.send({ t: "msg", from: 0, d: o.d }); } catch (e) {}
+              }
+            }
+            break;
+          }
+          case "chat": {
+            this._hostBroadcast({
+              t: "chat",
+              from: 0,
+              name: hostPlayer ? hostPlayer.name : "Host",
+              text: String(o.text || "").slice(0, 300)
+            });
+            break;
+          }
+          case "ping": {
+            this.pingMs = 1;
+            this.emit("ping", 1);
+            break;
+          }
+          case "leave": {
+            this.close();
+            break;
+          }
+        }
+      } else {
+        if (this.conn && this.conn.open) {
+          try { this.conn.send(o); } catch (e) {}
+        }
+      }
+    }
+
+    close() {
+      this.open = false;
+      if (this._pingTimer) clearInterval(this._pingTimer);
+      if (this.conn) {
+        try { this.conn.close(); } catch (e) {}
+      }
+      for (const conn of this.guestConns.values()) {
+        try { conn.close(); } catch (e) {}
+      }
+      if (this.peer) {
+        try { this.peer.destroy(); } catch (e) {}
+      }
+      this.emit("close", {});
+    }
+  }
+
+  function createNet(kind, code) {
+    const mode = getNetworkMode();
+    if (mode === "p2p" && window.Peer) {
+      return new P2PNet();
+    }
+    return new WsNet();
   }
 
   function token() {
@@ -713,18 +1167,31 @@
     showMenuError("");
     const chatLog = $("#lobby-chat-log");
     if (chatLog) chatLog.innerHTML = '<div class="chat-placeholder">Noch keine Nachrichten im Lobby-Chat.</div>';
-    const net = new Net();
+    let net = createNet(kind, code);
     state.net = net;
     try {
-      await net.connect();
+      await net.connect(kind, code);
     } catch (e) {
-      const isVercel = location.hostname.endsWith(".vercel.app") || location.hostname.includes("vercel");
-      if (isVercel) {
-        showMenuError("Verbindung zum WebSocket-Server fehlgeschlagen. Vercel unterstützt keine dauerhaften WebSockets. Bitte trage deinen Relay-Server (z. B. auf Render.com) unten bei '⚙️ Relay-Server' ein oder hänge '?server=wss://...' an.");
+      console.warn("Net connect failed", e);
+      if (net.mode === "ws" && window.Peer) {
+        console.log("WebSocket connection failed, falling back to WebRTC P2P...");
+        net = new P2PNet();
+        state.net = net;
+        try {
+          await net.connect(kind, code);
+        } catch (e2) {
+          showMenuError(e2.message || "Verbindung fehlgeschlagen.");
+          return;
+        }
       } else {
-        showMenuError("Verbindung zum Server fehlgeschlagen. Läuft der Server? (" + getRelayUrl() + ")");
+        const isVercel = location.hostname.endsWith(".vercel.app") || location.hostname.includes("vercel");
+        if (isVercel && net.mode === "ws") {
+          showMenuError("Verbindung zum WebSocket-Server fehlgeschlagen. Du kannst unten bei '⚙️ Netzwerk' auf WebRTC P2P (ohne Server) umschalten.");
+        } else {
+          showMenuError(e.message || "Verbindung zum Server fehlgeschlagen.");
+        }
+        return;
       }
-      return;
     }
     const name = playerName();
     const isDemo = state.data ? !!state.data.demo : true;
@@ -1879,8 +2346,10 @@
     $("#btn-copy-link").onclick = () => {
       const u = new URL(location.origin + location.pathname);
       if (state.lobby) u.searchParams.set("join", state.lobby.code);
-      const relayParam = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay") || localStorage.getItem("bth-relay-url");
-      if (relayParam) u.searchParams.set("server", relayParam);
+      if (state.net && state.net.mode === "ws") {
+        const relayParam = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay") || localStorage.getItem("bth-relay-url");
+        if (relayParam) u.searchParams.set("server", relayParam);
+      }
       navigator.clipboard.writeText(u.toString()).catch(() => {});
       const btn = $("#btn-copy-link");
       const oldTxt = btn.textContent;
@@ -1892,32 +2361,48 @@
     const updateRelayDisplay = () => {
       const el = $("#current-relay-host");
       if (!el) return;
+      const mode = getNetworkMode();
       const saved = localStorage.getItem("bth-relay-url");
       const param = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay");
-      if (param) el.textContent = param;
-      else if (saved) el.textContent = saved;
-      else el.textContent = "Automatisch (" + location.host + ")";
+      if (mode === "p2p") {
+        el.textContent = "WebRTC P2P (Serverless)";
+      } else if (param) {
+        el.textContent = "WebSocket: " + param;
+      } else if (saved) {
+        el.textContent = "WebSocket: " + saved;
+      } else {
+        el.textContent = "WebSocket (" + location.host + ")";
+      }
     };
     updateRelayDisplay();
 
     const btnServer = $("#btn-server-settings");
     if (btnServer) {
       btnServer.onclick = () => {
-        const current = localStorage.getItem("bth-relay-url") || "";
+        const currentMode = getNetworkMode();
+        const currentUrl = localStorage.getItem("bth-relay-url") || "";
         const input = prompt(
-          "WebSocket Relay-Server URL eingeben (z. B. wss://mein-hospital.onrender.com/ws):\n\nLeer lassen für Standard (gleicher Host wie Webseite):",
-          current
+          "Netzwerk-Modus für Multiplayer wählen:\n\n" +
+          "• 'p2p' eingeben für WebRTC Direktverbindung (Kein Server nötig – ideal für Vercel!)\n" +
+          "• Oder eine WebSocket Relay-Server URL eingeben (z. B. wss://mein-hospital.onrender.com/ws)\n\n" +
+          "Leer lassen für automatischen Standard:",
+          currentMode === "p2p" ? "p2p" : currentUrl
         );
         if (input !== null) {
           const trimmed = input.trim();
-          if (trimmed) {
+          if (trimmed.toLowerCase() === "p2p") {
+            localStorage.setItem("bth-net-mode", "p2p");
+            localStorage.removeItem("bth-relay-url");
+          } else if (trimmed) {
             let u = trimmed;
             if (!u.startsWith("ws://") && !u.startsWith("wss://")) {
               u = (location.protocol === "https:" ? "wss://" : "ws://") + u;
             }
             if (!u.includes("/ws") && !u.endsWith("/")) u += "/ws";
             localStorage.setItem("bth-relay-url", u);
+            localStorage.setItem("bth-net-mode", "ws");
           } else {
+            localStorage.removeItem("bth-net-mode");
             localStorage.removeItem("bth-relay-url");
           }
           updateRelayDisplay();
