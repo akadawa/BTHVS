@@ -86,9 +86,7 @@ const rooms = new Map();
 
 function isFullOnlyLevel(lvl) {
   const s = String(lvl || "").toLowerCase();
-  // All included custom maps and level 1 are fully supported with HOSP.zip demo files
-  if (["demo", "avatar", "confined_v5", "finisham", "st.peter's", "level1"].includes(s)) return false;
-  return /^level\d+$/i.test(s);
+  return s !== "demo";
 }
 
 class Room {

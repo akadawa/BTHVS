@@ -439,11 +439,11 @@
   /** What the host can pick. `full: true` = requires all players to have full game files. */
   const LEVELS = [
     { id: "demo", label: "Demo-Level (Originalkrankenhaus)", full: false },
-    { id: "avatar", label: "Avatar (Große Stadt)", full: false },
-    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: false },
-    { id: "finisham", label: "Finisham (Flusslandschaft)", full: false },
-    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: false },
-    { id: "level1", label: "Level 1 – Originalkampagne", full: false },
+    { id: "avatar", label: "Avatar (Große Stadt)", full: true },
+    { id: "confined_v5", label: "Confined (Kompaktes Gelände)", full: true },
+    { id: "finisham", label: "Finisham (Flusslandschaft)", full: true },
+    { id: "st.peter's", label: "St. Peter's (Klassische Anlage)", full: true },
+    { id: "level1", label: "Level 1 – Originalkampagne", full: true },
   ];
   function refreshLevelOptions() {
     const sel = $("#mp-level");
@@ -460,24 +460,36 @@
     for (const l of LEVELS) {
       const o = document.createElement("option");
       o.value = l.id;
-      o.textContent = l.label;
-      if (l.id === cur) foundCurrent = true;
+      if (anyDemo && l.full) {
+        o.disabled = true;
+        o.textContent = l.label + " 🔒 (Vollversion erforderlich)";
+      } else {
+        o.disabled = false;
+        o.textContent = l.label;
+        if (l.id === cur) foundCurrent = true;
+      }
       sel.appendChild(o);
     }
 
+    const prev = cur;
     if (foundCurrent) {
       sel.value = cur;
     } else {
       sel.value = "demo";
     }
-    if (L && L.host && sel.value !== cur) {
+    if (L && L.host && sel.value !== prev) {
       broadcastLobbyConfig();
     }
 
     const hintEl = $("#level-compat-hint");
     if (hintEl) {
-      hintEl.hidden = true;
-      hintEl.textContent = "";
+      if (anyDemo) {
+        hintEl.hidden = false;
+        hintEl.textContent = "ℹ️ Ein Mitspieler nutzt die Demo-Version. Es ist nur die Demo-Karte verfügbar (weitere Karten erfordern die Vollversion bei beiden Spielern).";
+      } else {
+        hintEl.hidden = true;
+        hintEl.textContent = "";
+      }
     }
 
     const helpEl = $("#mp-mode-help");
@@ -756,6 +768,11 @@
           this.guestConns.set(guestId, conn);
           this.room.players.set(guestId, guest);
 
+          const anyDemo = [...this.room.players.values()].some((p) => p.demo);
+          if (anyDemo && this.room.config.level !== "demo") {
+            this.room.config.level = "demo";
+          }
+
           conn.send({
             t: "joined",
             code: this.room.code,
@@ -905,7 +922,10 @@
           case "lobby_config": {
             if (this.room) {
               if (o.goals) this.room.config.goals = o.goals;
-              if (o.level) this.room.config.level = o.level;
+              let level = o.level || this.room.config.level || "demo";
+              const anyDemo = [...this.room.players.values()].some((p) => p.demo);
+              if (anyDemo && level !== "demo") level = "demo";
+              this.room.config.level = level;
               if (o.mode) this.room.config.mode = o.mode;
               for (const p of this.room.players.values()) p.ready = false;
               this._hostBroadcast({
@@ -926,8 +946,12 @@
           case "start": {
             if (this.room) {
               this.room.started = true;
+              let level = (o.config && o.config.level) || this.room.config.level || "demo";
+              const anyDemo = [...this.room.players.values()].some((p) => p.demo);
+              if (anyDemo && level !== "demo") level = "demo";
               this.room.config = Object.assign({}, this.room.config, o.config || {}, {
                 hostId: 0,
+                level,
                 players: this._playerList()
               });
               this._hostBroadcast({ t: "start", config: this.room.config });
@@ -1154,7 +1178,15 @@
   function broadcastLobbyConfig() {
     if (state.lobby && state.lobby.host && state.net) {
       const goals = getGoalsFromUI();
-      const level = $("#mp-level") ? $("#mp-level").value : (state.lobby.level || "demo");
+      let level = $("#mp-level") ? $("#mp-level").value : (state.lobby.level || "demo");
+      const anyDemo = state.lobby.players && state.lobby.players.length > 0
+        ? state.lobby.players.some((p) => p.demo)
+        : (state.data ? state.data.demo : true);
+      const lObj = LEVELS.find((x) => x.id === level);
+      if (anyDemo && lObj && lObj.full) {
+        level = "demo";
+        if ($("#mp-level")) $("#mp-level").value = "demo";
+      }
       state.lobby.mode = "versus";
       state.lobby.goals = goals;
       state.lobby.level = level;
