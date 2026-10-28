@@ -93,7 +93,7 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   }
   console.log("✓ Game Data notes contain GitHub link, serverless testing & dedicated server roadmap, and dialog pause notice.");
 
-  // Verify Footer Card design and static Network info
+  // Verify Footer Card design, Based on, and GitHub link (Network WebSockets line removed as requested)
   const footerCard = await pHost.$("footer.card.footer-card");
   if (!footerCard) throw new Error("FAIL: Footer must have .card.footer-card class to match other cards!");
   const footerWidthMatch = await pHost.evaluate(() => {
@@ -102,12 +102,15 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     return cardData && footer && Math.abs(cardData.offsetWidth - footer.offsetWidth) < 4;
   });
   if (!footerWidthMatch) throw new Error("FAIL: Footer card should have the same width as the other cards!");
-  const networkText = await pHost.textContent(".footer-network-line");
-  console.log("Footer network display:", networkText);
-  if (!networkText.includes("WebSockets") || !networkText.includes("Serverless")) {
-    throw new Error("FAIL: Footer must show static 'WebSockets & Serverless (Vercel)' info!");
+  const footerText = await pHost.textContent("footer.footer-card");
+  console.log("Footer text display:", footerText.trim());
+  if (!footerText.includes("Based on") || !footerText.includes("GitHub")) {
+    throw new Error("FAIL: Footer must contain 'Based on' and 'GitHub'!");
   }
-  console.log("✓ Footer is styled as a full-width card matching other cards with static network display.");
+  if (footerText.includes("Network:") || footerText.includes("WebSockets")) {
+    throw new Error("FAIL: Footer must NOT display Network WebSockets line!");
+  }
+  console.log("✓ Footer cleanly displays 'Based on' and GitHub join link without Network WebSockets line.");
 
   // 2. Test Lobby Chat Height Alignment with Left Column
   console.log("2. Checking Lobby Chat height alignment...");

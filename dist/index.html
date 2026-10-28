@@ -383,17 +383,11 @@
     </section>
 
     <footer class="card footer-card">
-      <div class="footer-network-line">
-        <span class="network-badge">
-          <svg class="th-icon" aria-hidden="true"><use href="#th-cog"/></svg> Network: WebSockets & Serverless (Vercel)
-        </span>
-        <span class="network-status-indicator ok">Online</span>
+      <div class="footer-links-line">
+        Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License).
       </div>
       <div class="footer-links-line muted small">
-        Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License). Theme Hospital © Bullfrog / EA.
-      </div>
-      <div class="footer-links-line muted small">
-        Have feedback, issues or feature ideas? Join us on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a>.
+        Have feedback or ideas? Please join us on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub</a>.
       </div>
     </footer>
   </main>
@@ -414,7 +408,7 @@
       <span id="hud-ping" class="chip">– ms</span>
       <button id="hud-quest-btn" class="chip btn-chip" title="Versus Goals & Quests (Q)">Quests<span id="quest-badge" hidden></span></button>
       <button id="hud-chat-btn" class="chip btn-chip" title="Chat (Enter)">Chat<span id="chat-badge" hidden></span></button>
-      <button id="hud-fs-btn" class="chip btn-chip" title="Fullscreen (F11)">⛶</button>
+      <button id="hud-fs-btn" class="chip btn-chip" title="Fullscreen (F11)">FS</button>
     </div>
     <div id="net-banner" hidden></div>
 
@@ -422,7 +416,7 @@
       <div id="quest-header">
         <span id="quest-title"><svg class="th-icon" aria-hidden="true"><use href="#th-trophy"/></svg> Versus Goals & Quests</span>
         <div class="win-actions">
-          <button id="quest-close" type="button" class="btn-chip" title="Close">✕</button>
+          <button id="quest-close" type="button" class="btn-chip" title="Close">&times;</button>
         </div>
       </div>
       <div id="quest-lead-banner">
@@ -475,7 +469,7 @@
     <div id="chat" hidden>
       <div id="chat-header">
         <span id="chat-title"><svg class="th-icon" aria-hidden="true"><use href="#th-chat"/></svg> Chat</span>
-        <button id="chat-close" type="button" class="btn-chip" title="Close">✕</button>
+        <button id="chat-close" type="button" class="btn-chip" title="Close">&times;</button>
       </div>
       <div id="chat-log"></div>
       <form id="chat-form"><input id="chat-input" maxlength="200" autocomplete="off" placeholder="Message … (Enter)"></form>
