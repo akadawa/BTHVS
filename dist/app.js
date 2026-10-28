@@ -402,9 +402,15 @@
     renderDataStatus();
     try {
       await kvPut("thdata", data);
+      state.kvSaved = true;
     } catch (e) {
       console.warn("could not persist game data", e);
       showMenuError("Game data could not be saved to IndexedDB. It will be available for this session only.");
+    }
+    if (window.__pendingJoinCode && !state.lobby) {
+      const pendingCode = window.__pendingJoinCode;
+      window.__pendingJoinCode = null;
+      enterLobby("join", pendingCode);
     }
   }
 
@@ -701,8 +707,8 @@
                 started: false,
                 config: {
                   mode: "versus",
-                  goals: { cured: 25, money: 100000, timeLimit: 30 },
-                  level: "demo"
+                  goals: getGoalsFromUI(),
+                  level: ($("#mp-level") && $("#mp-level").value) || "demo"
                 },
                 players: new Map()
               };
@@ -1130,8 +1136,19 @@
       const li = document.createElement("li");
       if (!p.connected) li.className = "off";
 
-      const nameSpan = document.createElement("span");
-      nameSpan.textContent = p.name + (p.id === L.id ? " (you)" : "");
+      const nameWrap = document.createElement("span");
+      nameWrap.className = "player-name-wrap";
+
+      const led = document.createElement("span");
+      led.className = "player-status-led " + (p.ready ? "ready" : "waiting");
+      led.title = p.ready ? "Ready" : "Waiting";
+
+      const nameText = document.createElement("span");
+      nameText.className = "player-name-text";
+      nameText.textContent = p.name + (p.id === L.id ? " (you)" : "");
+
+      nameWrap.appendChild(led);
+      nameWrap.appendChild(nameText);
 
       const badges = document.createElement("div");
       badges.className = "player-badges";
@@ -1139,13 +1156,7 @@
       const tag = document.createElement("span");
       tag.className = "tag";
       tag.textContent = p.host ? "Host" : "Player";
-
-      const readyBadge = document.createElement("span");
-      readyBadge.className = "badge-ready " + (p.ready ? "ready" : "waiting");
-      readyBadge.textContent = p.ready ? "Ready" : "Waiting";
-
       badges.appendChild(tag);
-      badges.appendChild(readyBadge);
 
       if (L.host && p.id !== L.id) {
         const kickBtn = document.createElement("button");
@@ -1161,7 +1172,7 @@
         badges.appendChild(kickBtn);
       }
 
-      li.appendChild(nameSpan);
+      li.appendChild(nameWrap);
       li.appendChild(badges);
       ul.appendChild(li);
     }
@@ -1341,12 +1352,23 @@
         max: m.max || 5,
         isPublic,
         mode: "versus",
-        goals: (m.config && m.config.goals) ? m.config.goals : { cured: 25, money: 100000, timeLimit: 30 },
-        level: (m.config && m.config.level) ? m.config.level : "demo",
+        goals: (m.config && m.config.goals) ? m.config.goals : getGoalsFromUI(),
+        level: (m.config && m.config.level) ? m.config.level : (($("#mp-level") && $("#mp-level").value) || "demo"),
       };
       net.id = m.id;
       if (m.started && m.config) { startMultiplayer(m.config, true); return; }
-      history.replaceState(null, "", "?join=" + m.code);
+      const u = new URL(location.href);
+      u.searchParams.set("join", m.code);
+      const curGoals = (m.host ? getGoalsFromUI() : state.lobby.goals);
+      if (curGoals) {
+        if (curGoals.cured !== undefined) u.searchParams.set("curedPatients", curGoals.cured);
+        if (curGoals.money !== undefined) u.searchParams.set("cashBalance", curGoals.money);
+        if (curGoals.timeLimit !== undefined) u.searchParams.set("timeLimit", curGoals.timeLimit);
+      }
+      if (state.lobby.level) {
+        u.searchParams.set("level", state.lobby.level);
+      }
+      history.replaceState(null, "", u.pathname + u.search);
       if (m.host) {
         state.lobby.goals = getGoalsFromUI();
         const curTotal = (parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0) + 1;
@@ -1363,6 +1385,7 @@
         }
       } else {
         setGoalsInUI(state.lobby.goals);
+        updateGoalSummaryUI(state.lobby.goals);
       }
       renderLobby();
       lobbyChatSys(`Entered room ${m.code} as "${name}".`);
@@ -1459,7 +1482,11 @@
   }
 
   function playerName() {
-    const n = $("#player-name").value.trim() || "Player";
+    let n = $("#player-name") ? $("#player-name").value.trim() : "";
+    if (!n) {
+      n = localStorage.getItem("bth-name") || ("Doctor" + Math.floor(100 + Math.random() * 900));
+      if ($("#player-name")) $("#player-name").value = n;
+    }
     localStorage.setItem("bth-name", n);
     return n;
   }
@@ -2609,7 +2636,14 @@
 
   // ----------------------------------------------------------------- wiring
   async function init() {
-    $("#player-name").value = localStorage.getItem("bth-name") || "";
+    const storedName = localStorage.getItem("bth-name");
+    if (storedName && $("#player-name")) {
+      $("#player-name").value = storedName;
+    } else if ($("#player-name") && !$("#player-name").value) {
+      const generatedName = "Doctor" + Math.floor(100 + Math.random() * 900);
+      $("#player-name").value = generatedName;
+      localStorage.setItem("bth-name", generatedName);
+    }
     $("#language").value = localStorage.getItem("bth-lang") || "English";
     $("#language").onchange = () => localStorage.setItem("bth-lang", $("#language").value);
 
@@ -2665,7 +2699,18 @@
     };
     $("#btn-copy-link").onclick = () => {
       const u = new URL(location.origin + location.pathname);
-      if (state.lobby) u.searchParams.set("join", state.lobby.code);
+      if (state.lobby) {
+        u.searchParams.set("join", state.lobby.code);
+        const goals = state.lobby.goals || getGoalsFromUI();
+        if (goals) {
+          if (goals.cured !== undefined) u.searchParams.set("curedPatients", goals.cured);
+          if (goals.money !== undefined) u.searchParams.set("cashBalance", goals.money);
+          if (goals.timeLimit !== undefined) u.searchParams.set("timeLimit", goals.timeLimit);
+        }
+        if (state.lobby.level) {
+          u.searchParams.set("level", state.lobby.level);
+        }
+      }
       if (state.net && state.net.mode === "ws") {
         const relayParam = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay") || localStorage.getItem("bth-relay-url");
         if (relayParam) u.searchParams.set("server", relayParam);
@@ -2728,11 +2773,39 @@
       }
     }, 4000);
 
-    const join = new URLSearchParams(location.search).get("join");
-    if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
+    const urlParams = new URLSearchParams(location.search);
+    const joinCode = (urlParams.get("join") || "").trim().toUpperCase().slice(0, 5);
+    const curedParam = urlParams.get("curedPatients") ?? urlParams.get("cured");
+    const moneyParam = urlParams.get("cashBalance") ?? urlParams.get("money");
+    const timeParam = urlParams.get("timeLimit") ?? urlParams.get("time");
+    const levelParam = urlParams.get("level");
+
+    if (curedParam !== null || moneyParam !== null || timeParam !== null) {
+      const g = getGoalsFromUI();
+      if (curedParam !== null && curedParam !== undefined) g.cured = parseInt(curedParam, 10) || 0;
+      if (moneyParam !== null && moneyParam !== undefined) g.money = parseInt(moneyParam, 10) || 0;
+      if (timeParam !== null && timeParam !== undefined) g.timeLimit = parseInt(timeParam, 10) || 0;
+      setGoalsInUI(g);
+      updateGoalSummaryUI(g);
+    }
+    if (levelParam && $("#select-level")) {
+      $("#select-level").value = levelParam;
+    }
+    if (levelParam && $("#mp-level")) {
+      $("#mp-level").value = levelParam;
+    }
+
+    if (joinCode) {
+      $("#join-code").value = joinCode;
+      if (state.data) {
+        enterLobby("join", joinCode);
+      } else {
+        window.__pendingJoinCode = joinCode;
+      }
+    }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName };
   }
 
   init();
