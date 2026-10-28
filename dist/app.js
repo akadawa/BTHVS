@@ -201,25 +201,25 @@
     if ($("#goal-time")) $("#goal-time").value = String(g.timeLimit ?? 0);
   }
 
-  function formatGoalsList(g, html = false) {
-    if (!g) return [html ? '<svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cure 25 patients' : "Cure 25 patients"];
+  function formatGoalsList(g) {
+    if (!g) return ["Cure 25 patients"];
     const items = [];
-    if (g.cured > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cure ${g.cured} patients` : `Cure ${g.cured} patients`);
-    if (g.money > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> $${g.money.toLocaleString()} Cash balance` : `$${g.money.toLocaleString()} Cash balance`);
-    if (g.timeLimit > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> ${g.timeLimit} Min. time limit` : `${g.timeLimit} Min. time limit`);
+    if (g.cured > 0) items.push(`Cure ${g.cured} patients`);
+    if (g.money > 0) items.push(`${g.money.toLocaleString()} Cash balance`);
+    if (g.timeLimit > 0) items.push(`${g.timeLimit} Min. time limit`);
     if (items.length === 0) items.push("Free Versus (Live Stats Comparison)");
     return items;
   }
 
   function updateGoalSummaryUI(g) {
-    const htmlItems = formatGoalsList(g, true);
+    const items = formatGoalsList(g);
     const textEl = $("#goal-summary-text");
     if (textEl) {
-      textEl.innerHTML = htmlItems.map((it) => `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;">${it}</div>`).join("");
+      textEl.innerHTML = items.map((it) => `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;">${escapeHtml(it)}</div>`).join("");
     }
     const guestSummaryEl = $("#guest-goal-summary");
     if (guestSummaryEl) {
-      guestSummaryEl.innerHTML = htmlItems.map((it) => `<span class="guest-goal-badge">${it}</span>`).join("");
+      guestSummaryEl.innerHTML = items.map((it) => `<span class="guest-goal-badge">${escapeHtml(it)}</span>`).join("");
     }
   }
 
@@ -393,6 +393,8 @@
     }
     $("#btn-forget").hidden = !d;
     $("#card-mode").setAttribute("aria-disabled", d ? "false" : "true");
+    const notice = $("#play-disabled-notice");
+    if (notice) notice.hidden = !!d;
     for (const id of ["#btn-create", "#btn-join"]) if ($(id)) $(id).disabled = !d;
     refreshLevelOptions();
   }
@@ -1981,7 +1983,7 @@
         const remSec = rem % 60;
         if (timerEl) {
           timerEl.hidden = false;
-          timerEl.innerHTML = `<svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> <span>${remMin}:${String(remSec).padStart(2, "0")}</span>`;
+          timerEl.innerHTML = `<span>${remMin}:${String(remSec).padStart(2, "0")}</span>`;
           timerEl.className = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
         }
         if (!$("#quest-win").hidden && state.vs.tab === "goals") {
@@ -2000,8 +2002,12 @@
     $("#hud-fs-btn").onclick = toggleFullscreen;
 
     // Automatically open Chat and Quests on match start
-    if ($("#chat")) $("#chat").hidden = false;
+    if ($("#chat")) {
+      restoreWindowState("chat", $("#chat"));
+      $("#chat").hidden = false;
+    }
     if ($("#quest-win")) {
+      restoreWindowState("quests", $("#quest-win"));
       $("#quest-win").hidden = false;
       updateQuestUI();
     }
@@ -2026,7 +2032,42 @@
     else document.documentElement.requestFullscreen().catch(() => {});
   }
 
-  function makeDraggable(box, header, ignoreSelector) {
+  
+  function saveWindowState(key, box) {
+    if (!key || !box) return;
+    try {
+      const s = {
+        w: box.offsetWidth,
+        h: box.offsetHeight,
+        x: parseInt(box.style.left, 10),
+        y: parseInt(box.style.top, 10)
+      };
+      if (isNaN(s.x)) s.x = box.offsetLeft;
+      if (isNaN(s.y)) s.y = box.offsetTop;
+      localStorage.setItem("bth_win_" + key, JSON.stringify(s));
+    } catch (e) {}
+  }
+
+  function restoreWindowState(key, box) {
+    if (!key || !box) return;
+    try {
+      const raw = localStorage.getItem("bth_win_" + key);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.w && s.w >= 200) box.style.width = Math.min(window.innerWidth - 20, s.w) + "px";
+      if (s.h && s.h >= 120) box.style.height = Math.min(window.innerHeight - 20, s.h) + "px";
+      if (s.x !== undefined && s.y !== undefined && !isNaN(s.x) && !isNaN(s.y)) {
+        const maxX = Math.max(0, window.innerWidth - (s.w || box.offsetWidth || 300));
+        const maxY = Math.max(0, window.innerHeight - (s.h || box.offsetHeight || 200));
+        box.style.left = Math.max(0, Math.min(maxX, s.x)) + "px";
+        box.style.top = Math.max(0, Math.min(maxY, s.y)) + "px";
+        box.style.right = "auto";
+        box.style.bottom = "auto";
+      }
+    } catch (e) {}
+  }
+
+  function makeDraggable(box, header, ignoreSelector, key) {
     if (!box || !header) return;
     let isDragging = false;
     let dragStartX = 0, dragStartY = 0;
@@ -2063,7 +2104,9 @@
       e.preventDefault();
     });
     window.addEventListener("mousemove", (e) => onDragMove(e.clientX, e.clientY));
-    window.addEventListener("mouseup", () => { isDragging = false; });
+    const onDragEnd = () => { if (isDragging) { isDragging = false; if (key) saveWindowState(key, box); } };
+    window.addEventListener("mouseup", onDragEnd);
+    window.addEventListener("touchend", onDragEnd);
 
     header.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
@@ -2076,7 +2119,7 @@
     window.addEventListener("touchend", () => { isDragging = false; });
   }
 
-  function makeResizable(box, handle) {
+  function makeResizable(box, handle, key) {
     if (!box || !handle) return;
     let isResizing = false;
     let startX = 0, startY = 0;
@@ -2101,12 +2144,16 @@
     };
 
     const onPointerUp = () => {
-      isResizing = false;
+      if (isResizing) {
+        isResizing = false;
+        if (key) saveWindowState(key, box);
+      }
     };
 
     handle.addEventListener("mousedown", onPointerDown);
     window.addEventListener("mousemove", onPointerMove);
     window.addEventListener("mouseup", onPointerUp);
+    window.addEventListener("touchend", onPointerUp);
 
     handle.addEventListener("touchstart", (e) => {
       if (e.touches.length === 1) {
@@ -2159,8 +2206,9 @@
     $("#hud-chat-btn").onclick = () => toggle();
     if ($("#chat-close")) $("#chat-close").onclick = () => toggle(false);
 
-    makeDraggable(box, header, "#chat-close");
-    makeResizable(box, box.querySelector(".win-resize-handle"));
+    makeDraggable(box, header, "#chat-close", "chat");
+    makeResizable(box, box.querySelector(".win-resize-handle"), "chat");
+    restoreWindowState("chat", box);
 
     $("#chat-form").onsubmit = (e) => {
       e.preventDefault();
@@ -2336,8 +2384,8 @@
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title"><svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> Time Challenge (${g.timeLimit} Min.)</span>
-              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}"><svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> ${timeStr} left</span>
+              <span class="quest-card-title">Time Challenge (${g.timeLimit} Min.)</span>
+              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">${timeStr} left</span>
             </div>
             <p class="muted small" style="margin: 4px 0 8px;">
               Whoever reaches the goals or holds the most cash when time runs out wins!
@@ -2371,12 +2419,10 @@
         const oppPct = Math.min(100, Math.max(0, Math.round((oppVal / q.target) * 100)));
         const myDone = myVal >= q.target;
         const oppDone = oppVal >= q.target;
-        const iconHref = q.id === "cured" ? "#th-patient" : q.id === "bal" ? "#th-money" : "#th-trophy";
-
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title"><svg class="th-icon" aria-hidden="true"><use href="${iconHref}"/></svg> ${escapeHtml(q.name)}</span>
+              <span class="quest-card-title">${escapeHtml(q.name)}</span>
               <span class="quest-badge ${myDone ? "done" : "pending"}">Goal: ${formatVal(q.target, q.unit)}</span>
             </div>
             <div class="prog-row">
@@ -2445,37 +2491,37 @@
           <td class="val-opp">${oppStatus}</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> Cash Balance</td>
+          <td>Cash Balance</td>
           <td class="val-you ${cBal1}">$${my.bal.toLocaleString()}</td>
           <td class="val-opp ${cBal2}">$${opp.bal.toLocaleString()}</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-room"/></svg> Built Rooms</td>
+          <td>Built Rooms</td>
           <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Room" : "Rooms"}</td>
           <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Room" : "Rooms"}</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-staff"/></svg> Staff Members</td>
+          <td>Staff Members</td>
           <td class="val-you ${cStaff1}">${my.staff} Staff</td>
           <td class="val-opp ${cStaff2}">${opp.staff} Staff</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cured Patients</td>
+          <td>Cured Patients</td>
           <td class="val-you ${cCured1}">${my.cured}</td>
           <td class="val-opp ${cCured2}">${opp.cured}</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-death"/></svg> Patient Deaths</td>
+          <td>Patient Deaths</td>
           <td class="val-you ${cDeaths1}">${my.deaths}</td>
           <td class="val-opp ${cDeaths2}">${opp.deaths}</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-rep"/></svg> Hospital Reputation</td>
+          <td>Hospital Reputation</td>
           <td class="val-you ${cRep1}">${my.rep} / 1000</td>
           <td class="val-opp ${cRep2}">${opp.rep} / 1000</td>
         </tr>
         <tr>
-          <td><svg class="th-icon" aria-hidden="true"><use href="#th-val"/></svg> Overall Valuation</td>
+          <td>Overall Valuation</td>
           <td class="val-you ${cVal1}">$${my.val.toLocaleString()}</td>
           <td class="val-opp ${cVal2}">$${opp.val.toLocaleString()}</td>
         </tr>
@@ -2508,8 +2554,9 @@
       };
     });
 
-    makeDraggable(win, $("#quest-header"), "#quest-close");
-    makeResizable(win, win.querySelector(".win-resize-handle"));
+    makeDraggable(win, $("#quest-header"), "#quest-close", "quests");
+    makeResizable(win, win.querySelector(".win-resize-handle"), "quests");
+    restoreWindowState("quests", win);
 
     if ($("#vic-continue")) {
       $("#vic-continue").onclick = () => {
@@ -2538,7 +2585,7 @@
     const descEl = $("#vic-desc");
     const summaryEl = $("#vic-stats-summary");
 
-    if (iconEl) iconEl.innerHTML = isMe ? '<svg class="th-icon th-icon-hero" aria-hidden="true"><use href="#th-trophy"/></svg>' : '<svg class="th-icon th-icon-hero" aria-hidden="true"><use href="#th-val"/></svg>';
+    if (iconEl) iconEl.innerHTML = "";
     if (titleEl) {
       titleEl.textContent = isMe ? "Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
       titleEl.className = isMe ? "vic-won" : "vic-lost";
@@ -2572,13 +2619,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-room"/></svg> Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-staff"/></svg> Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-death"/></svg> Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-rep"/></svg> Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
-            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-val"/></svg> Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
+            <tr><td>Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
+            <tr><td>Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
+            <tr><td>Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
+            <tr><td>Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
+            <tr><td>Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
+            <tr><td>Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
+            <tr><td>Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
           </tbody>
         </table>
       `;
@@ -2805,7 +2852,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName , saveWindowState, restoreWindowState};
   }
 
   init();

@@ -178,8 +178,9 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   console.log("HUD Timer:", timerText, "Visible:", timerVisible, "HTML:", timerHtml);
   if (!roomText.includes("Room")) throw new Error("FAIL: Room chip missing!");
   if (!playersText.includes("HostDoc") || !playersText.includes("GuestDoc")) throw new Error("FAIL: Players chip missing names!");
-  if (!timerVisible || !timerHtml.includes("#th-time")) throw new Error("FAIL: Timer chip should be visible with Theme Hospital clock icon!");
-  console.log("✓ HUD contains Room, Host/Guest players, and live countdown timer with Theme Hospital clock.");
+  if (!timerVisible) throw new Error("FAIL: Timer chip should be visible!");
+  if (timerHtml.includes("<svg") || timerHtml.includes("#th-")) throw new Error("FAIL: Timer chip must contain NO icons or SVGs!");
+  console.log("✓ HUD contains Room, Host/Guest players, and live countdown timer cleanly without icons.");
 
   // 5. Test Auto-Opened Windows on Game Start & Resizable Windows (Chat and Quests)
   const isChatOpenOnStart = await pHost.isVisible("#chat");

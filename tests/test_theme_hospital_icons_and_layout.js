@@ -47,25 +47,17 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   // Re-restore demo data for subsequent game boot tests
   await loadDemo(pHost);
 
-  // 1. Verify Theme Hospital SVG Spritesheet in DOM
-  console.log("1. Checking Theme Hospital SVG symbols in DOM...");
+  // 1. Verify NO SVG icons or symbols in DOM (clean icon-free / emoji-free design)
+  console.log("1. Checking that SVG spritesheet and icons are completely removed...");
   const symbols = await pHost.$$eval("svg defs symbol", (syms) => syms.map((s) => s.id));
-  console.log("Found SVG symbols:", symbols);
-  const requiredSymbols = ["th-patient", "th-money", "th-time", "th-room", "th-staff", "th-death", "th-rep", "th-val", "th-trophy", "th-chat", "th-cog"];
-  for (const s of requiredSymbols) {
-    if (!symbols.includes(s)) throw new Error(`FAIL: Missing Theme Hospital symbol #${s} in SVG defs!`);
+  if (symbols.length > 0) {
+    throw new Error(`FAIL: Found SVG symbols in DOM: ${symbols.join(", ")}`);
   }
-  console.log("✓ All Theme Hospital symbols present in SVG defs.");
-
-  // Verify Quest Chooser dropdown labels use TH SVGs
-  const chooserIcons = await pHost.$$eval(".quest-chooser-grid label .field-title svg use", (uses) =>
-    uses.map((u) => u.getAttribute("href"))
-  );
-  console.log("Chooser field icon hrefs:", chooserIcons);
-  if (!chooserIcons.includes("#th-patient") || !chooserIcons.includes("#th-money") || !chooserIcons.includes("#th-time")) {
-    throw new Error("FAIL: Quest chooser labels must use Theme Hospital patient, money, and time icons!");
+  const allSvgIcons = await pHost.$$eval(".th-icon, svg", (svgs) => svgs.length);
+  if (allSvgIcons > 0) {
+    throw new Error(`FAIL: Found ${allSvgIcons} SVG elements in page! All icons must be removed.`);
   }
-  console.log("✓ Quest chooser labels use authentic Theme Hospital patient, money, and clock icons.");
+  console.log("✓ Zero SVG icons and zero spritesheet symbols verified in DOM.");
 
   // Verify Header Hosted Lobbies Counter
   const hasHeaderCounter = await pHost.$("#header-lobbies-hosted");
@@ -203,23 +195,21 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   }
   console.log("✓ Lobby chat conversation preserved into in-game chat log.");
 
-  // Verify HUD Timer uses Theme Hospital clock icon
+  // Verify HUD Timer has NO icons
   const hudTimerIcon = await pHost.$eval("#hud-timer", (el) => el.innerHTML);
-  if (!hudTimerIcon.includes("#th-time")) {
-    throw new Error("FAIL: HUD Timer must use Theme Hospital clock icon (#th-time)!");
+  if (hudTimerIcon.includes("<svg") || hudTimerIcon.includes("#th-")) {
+    throw new Error("FAIL: HUD Timer must not contain any icons or SVGs!");
   }
-  console.log("✓ HUD timer features authentic Theme Hospital clock icon.");
+  console.log("✓ HUD timer is clean and icon-free.");
 
-  // Verify Rival Dashboard metrics use Theme Hospital icons
+  // Verify Rival Dashboard metrics have NO icons
   await pHost.click('#quest-tabs button[data-tab="dashboard"]');
   await sleep(200);
-  const dashboardIcons = await pHost.$$eval("#rival-tbody tr td svg use", (uses) => uses.map((u) => u.getAttribute("href")));
-  console.log("Dashboard metric icon hrefs:", dashboardIcons);
-  const expectedDashIcons = ["#th-money", "#th-room", "#th-staff", "#th-patient", "#th-death", "#th-rep", "#th-val"];
-  for (const ic of expectedDashIcons) {
-    if (!dashboardIcons.includes(ic)) throw new Error(`FAIL: Rival dashboard missing Theme Hospital icon ${ic}!`);
+  const dashboardIcons = await pHost.$$eval("#rival-tbody tr td svg", (svgs) => svgs.length);
+  if (dashboardIcons > 0) {
+    throw new Error(`FAIL: Rival dashboard has ${dashboardIcons} icons! Must be 0.`);
   }
-  console.log("✓ Rival Dashboard displays authentic Theme Hospital icons across all hospital metrics!");
+  console.log("✓ Rival Dashboard displays cleanly without icons across all hospital metrics!");
 
   await pHost.screenshot({ path: "tests/out/theme_hospital_icons_host.png" });
   await pGuest.screenshot({ path: "tests/out/theme_hospital_icons_guest.png" });

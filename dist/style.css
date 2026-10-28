@@ -66,7 +66,20 @@ h3 { margin: 0 0 4px; font-size: 15px; }
 .card { background: rgba(21, 38, 47, 0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--line); border-radius: 14px;
   padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35); }
-.card[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.card[aria-disabled="true"] { pointer-events: none; }
+#card-mode { position: relative; }
+.card-mode-inner { transition: opacity .2s ease, filter .2s ease; }
+#card-mode[aria-disabled="true"] .card-mode-inner { opacity: .35; filter: grayscale(40%); pointer-events: none; user-select: none; }
+.card-disabled-notice { display: none; }
+#card-mode[aria-disabled="true"] .card-disabled-notice {
+  display: inline-flex; align-items: center; justify-content: center;
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 10; background: rgba(10, 22, 28, 0.96); border: 1px solid #f59e0b;
+  color: #fbbf24; font-size: 13px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; padding: 10px 22px; border-radius: 999px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), 0 0 14px rgba(245, 158, 11, 0.3);
+  pointer-events: none;
+}
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 8px 0; }
@@ -127,10 +140,6 @@ input, select { background: #0b141a; color: var(--txt); border: 1px solid var(--
   padding: 8px 10px; font-size: 15px; }
 input:focus, select:focus { outline: 2px solid var(--accent); }
 
-/* Theme Hospital Retro SVG Icons */
-.th-icon { display: inline-block; width: 1.25em; height: 1.25em; vertical-align: -0.22em; flex-shrink: 0; }
-.th-icon-lg { width: 1.55em; height: 1.55em; vertical-align: -0.3em; }
-.th-icon-hero { width: 60px; height: 60px; filter: drop-shadow(0 4px 14px rgba(245, 158, 11, 0.45)); }
 
 .lead-pill { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 5px; }
 .lead-pill.lead-you { background: rgba(38, 166, 154, 0.25); color: #26a69a; border: 1px solid rgba(38, 166, 154, 0.5); }
@@ -254,7 +263,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
   animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-#hud { position: absolute; bottom: 54px; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; z-index: 10; opacity: .95; pointer-events: none; max-width: calc(100vw - 16px); }
+#hud { position: absolute; bottom: 8px; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; z-index: 10; opacity: .95; pointer-events: none; max-width: calc(100vw - 16px); }
 #hud:hover { opacity: 1; }
 .chip { background: rgba(10,22,28,.82); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
   font-size: 12px; color: var(--txt); position: relative; pointer-events: none; }
