@@ -335,8 +335,7 @@ function GameUI:updateKeyScroll()
 end
 
 function GameUI:keySpeedUp()
-  self.speed_up_key_pressed = true
-  self.app.world:speedUp()
+  -- Disabled in BTHVS multiplayer: only Normal and Pause are allowed
 end
 
 function GameUI:keyTransparent()
@@ -1319,12 +1318,8 @@ end
 -- NB: overrides UI.quit, do NOT call it from here
 --!param mapeditor (boolean) If the user is quitting the map editor
 function GameUI:quit(mapeditor)
-  local msg = mapeditor and _S.confirmation.quit_mapeditor or _S.confirmation.quit
-  self:addWindow(UIConfirmDialog(self, false, msg, --[[persistable:gameui_confirm_quit]] function()
-    self.app:loadMainMenu()
-    -- Release the mouse regardless of setting
-    self.app.video:setCaptureMouse(false)
-  end))
+  -- In BTHVS, quitting immediately exits to the browser app
+  self.app:exit()
 end
 
 function GameUI:showCheatsWindow()

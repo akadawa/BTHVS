@@ -136,12 +136,13 @@ function UIBottomPanel:registerKeyHandlers()
   else
     ui:addKeyHandler("ingame_panel_casebook_alt02", buttons[3], buttons[3].handleClick, "left") -- casebook
   end
-  ui:addKeyHandler("ingame_loadMenu", self, self.openLoad)  -- load saved game menu
-  ui:addKeyHandler("ingame_saveMenu", self, self.openSave)  -- load create save menu
-  ui:addKeyHandler("ingame_restartLevel", self, self.restart)  -- restart the level
-  ui:addKeyHandler("ingame_quitLevel", self, self.quit)  -- quit the game and return to main menu
-  ui:addKeyHandler("ingame_quickSave", self, self.quickSave)  -- quick save
-  ui:addKeyHandler("ingame_quickLoad", self, self.quickLoad)  -- load last quick save
+  -- Save, load and restart keyhandlers disabled in BTHVS multiplayer
+  -- ui:addKeyHandler("ingame_loadMenu", self, self.openLoad)
+  -- ui:addKeyHandler("ingame_saveMenu", self, self.openSave)
+  -- ui:addKeyHandler("ingame_restartLevel", self, self.restart)
+  -- ui:addKeyHandler("ingame_quitLevel", self, self.quit)
+  -- ui:addKeyHandler("ingame_quickSave", self, self.quickSave)
+  -- ui:addKeyHandler("ingame_quickLoad", self, self.quickLoad)
 
   -- misc. keyhandlers
   ui:addKeyHandler("ingame_openFirstMessage", self, self.openFirstMessage)    -- message
@@ -160,25 +161,11 @@ function UIBottomPanel:openMachineMenu()
   self.ui:addWindow(UIMachineMenu(self.ui))
 end
 
-function UIBottomPanel:openSave()
-  self.ui:addWindow(UISaveGame(self.ui))
-end
-
-function UIBottomPanel:openLoad()
-  self.ui:addWindow(UILoadGame(self.ui, "game"))
-end
-
-function UIBottomPanel:quickSave()
-  self.ui.app:quickSave()
-end
-
-function UIBottomPanel:quickLoad()
-  self.ui.app:quickLoad()
-end
-
-function UIBottomPanel:restart()
-  self.ui.app:restart()
-end
+function UIBottomPanel:openSave() end
+function UIBottomPanel:openLoad() end
+function UIBottomPanel:quickSave() end
+function UIBottomPanel:quickLoad() end
+function UIBottomPanel:restart() end
 
 function UIBottomPanel:quit()
   self.ui:quit()

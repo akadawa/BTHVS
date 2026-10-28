@@ -39,9 +39,9 @@ local label_ttf_col = { -- off white
 local menu_item_height = 40
 
 function UIMainMenu:UIMainMenu(ui)
-
-  -- First define all menu entries with a label, a callback and a tooltip.
-  -- That way we can call the UIResizable constructor with a good height argument.
+  -- In BTHVS, never display the standalone DOS main menu
+  ui.app:exit()
+  if true then return end
   local menu_items = {
     {_S.main_menu.new_game,        self.buttonNewGame,        _S.tooltip.main_menu.new_game},
     {_S.main_menu.custom_campaign, self.buttonCustomCampaign, _S.tooltip.main_menu.custom_campaign},

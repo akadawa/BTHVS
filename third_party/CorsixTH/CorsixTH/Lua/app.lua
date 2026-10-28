@@ -574,33 +574,9 @@ end
 --! Initialise CorsixTH's main menu screen including relevant windows
 --!param message (string) Something to display to the user
 function App:loadMainMenu(message)
-  if self.world then
-    self:worldExited()
-  end
-
-  -- Make sure there is no blue filter active.
-  self.video:setBlueFilterActive(false)
-
-  -- Unload ui, world and map
-  self.ui = nil
-  self.world = nil
-  self.map = nil
-
-  self.ui = UI(self)
-  self.ui:setMenuBackground()
-  self.ui:addWindow(UIMainMenu(self.ui))
-  self.ui:addWindow(UITipOfTheDay(self.ui))
-
-  -- Show update window if there's an update
-  self:checkForUpdates()
-
-  -- If a message was supplied, show it
-  if message then
-    self.ui:addWindow(UIInformation(self.ui, message))
-  end
-
-  -- Reset the idle tick counter
-  self:resetIdle()
+  -- In BTHVS (browser multiplayer), never open the internal CorsixTH standalone menu.
+  -- Exiting always returns directly to the browser application.
+  self:exit()
 end
 
 --! Sets the mouse capture to the state set within

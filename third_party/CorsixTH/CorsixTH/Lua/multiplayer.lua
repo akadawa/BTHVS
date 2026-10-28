@@ -105,6 +105,10 @@ function Multiplayer:installHooks()
   if World and World.setSpeed then
     local orig_setSpeed = World.setSpeed
     World.setSpeed = function(world_self, speed)
+      -- BTHVS: Game speed can only be "Normal" or "Pause"
+      if speed ~= "Pause" and speed ~= "Normal" then
+        speed = "Normal"
+      end
       local res = orig_setSpeed(world_self, speed)
       -- Always guarantee user actions remain allowed in multiplayer
       world_self.user_actions_allowed = true
@@ -265,6 +269,9 @@ function Multiplayer:handleMessage(from, data)
   -- Speed change sync
   if data:sub(1, 6) == "speed:" then
     local speed_name = data:sub(7)
+    if speed_name ~= "Pause" and speed_name ~= "Normal" then
+      speed_name = "Normal"
+    end
     if self.app.world and not self.internal_speed_change then
       self.internal_speed_change = true
       self.app.world:setSpeed(speed_name)
@@ -272,7 +279,11 @@ function Multiplayer:handleMessage(from, data)
       self.internal_speed_change = false
       local p = self:getPlayer(from)
       local name = p and p.name or "Gegner"
-      self.web.call("ui.banner", "oTempo: " .. speed_name .. " (" .. name .. ")")
+      if speed_name == "Pause" then
+        self.web.call("ui.banner", "wPause (" .. name .. ")")
+      else
+        self.web.call("ui.banner", "oNormal (" .. name .. ")")
+      end
     end
     return
   end

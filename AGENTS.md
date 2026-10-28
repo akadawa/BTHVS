@@ -188,12 +188,31 @@ BrowserTHospital/
   - In Quest cards, their row shows `(Left)` and drops to inactive opacity.
   - If all opponents leave, the status banner informs the remaining player: `All rivals have left the match.`
 
+### G. Multiplayer-Only CorsixTH In-Game Menu & Speed Lock
+- **Simulation Speed Enforcement**:
+  - Speed is strictly limited to **Normal** (`app.world:setSpeed("Normal")`) and **Pause** (`app.world:setSpeed("Pause")`).
+  - Speed adjustments in `_S.menu_options.game_speed` (`third_party/CorsixTH/CorsixTH/Lua/dialogs/menu.lua`) were pruned to strictly `pause` and `normal`. Faster/slower presets (`slowest`, `slower`, `max_speed`, `and_then_some_more`) and speed-up key handlers (`GameUI:keySpeedUp`) are disabled.
+  - Simulation netcode in `multiplayer.lua` enforces speed clamping so any out-of-bounds speed defaults to `Normal` and emits `speed:` packets with namespaced banners (`Pause (Player)` / `Normal (Player)`).
+- **File Menu Pruning (Save / Load / Restart / Quit)**:
+  - The File menu (`_S.menu.file`) was removed from the top in-game menu bar (`UIMenuBar:makeGameMenu`).
+  - Bottom panel hotkeys and actions for quicksave, quickload, save, load, restart, and quit in `bottom_panel.lua` are disabled/no-ops.
+- **Audio, Display & Gameplay Options Kept**:
+  - Audio (Sounds, Announcements, Music, Volumes, Jukebox) remain active.
+  - Options kept: `edge_scrolling` ("Am Bildschirmrand scrollen"), `capture_mouse` ("Mauszeiger vereinfachen"), `twentyfour_hour_clock` ("24-Stunden-Uhr"), `adviser_disabled` ("Berater"), `wage_increase` ("Gehaltserhöhung"), `warmth_colors` ("Farben für Wärmedarstellung"), and `charts` ("Statistik").
+  - `lock_windows` ("Fenster festhalten") is removed.
+- **Zero Standalone DOS Menu / Direct Web Exit**:
+  - CorsixTH standalone singleplayer main menu (`UIMainMenu`) is completely blocked.
+  - If `App:loadMainMenu`, `GameUI:quit`, or `UIMainMenu` is invoked, `self:exit()` is executed, cleanly returning the user to the web application (`location.pathname`).
+
 ---
 
 ## 6. Testing Guide
 
 Run tests before committing any changes:
 ```powershell
+# Run CorsixTH menu pruning & speed lock verification
+node tests/test_corsix_menu_and_speed.js
+
 # Run the simplified quests & multi-player leaderboard test
 node tests/test_quests_and_leaderboard_multiplayer.js
 

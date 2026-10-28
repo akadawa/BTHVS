@@ -635,14 +635,6 @@ end
 local function display_options(menu)
   local app = TheApp
 
-  -- Lock windows
-  local function boolean_runtime_config(option)
-    return not not app.runtime_config[option], function(item)
-      app.runtime_config[option] = item.checked
-    end
-  end
-  menu:appendCheckItem(_S.menu_options.lock_windows, boolean_runtime_config("lock_windows"))
-
   -- Edge scrolling
   menu:appendCheckItem(_S.menu_options.edge_scrolling,
     not app.config.prevent_edge_scrolling,
@@ -713,14 +705,7 @@ end
 --! Make a menu for the game.
 --!param app Application.
 function UIMenuBar:makeGameMenu(app)
-  local menu = UIMenu()
   local hotkeys = app.hotkeys
-
-  menu:appendItem(_S.menu_file.load:format(hotkey_value_label("ingame_loadMenu", hotkeys)), function() self.ui:addWindow(UILoadGame(self.ui, "game")) end)
-    :appendItem(_S.menu_file.save:format(hotkey_value_label("ingame_saveMenu", hotkeys)), function() self.ui:addWindow(UISaveGame(self.ui)) end)
-    :appendItem(_S.menu_file.restart:format(hotkey_value_label("ingame_restartLevel", hotkeys)), function() app:restart() end)
-    :appendItem(_S.menu_file.quit:format(hotkey_value_label("ingame_quitLevel", hotkeys)), function() self.ui:quit() end)
-  self:addMenu(_S.menu.file, menu)
 
   local options = UIMenu()
   audio_options(options, true)
@@ -775,12 +760,8 @@ function UIMenuBar:makeGameMenu(app)
   end
 
   options:appendMenu(_S.menu_options.game_speed, UIMenu()
-    :appendCheckItem(_S.menu_options_game_speed.pause:format(hotkey_value_label("ingame_pause", hotkeys)),                          rate("Pause"))
-    :appendCheckItem(_S.menu_options_game_speed.slowest:format(hotkey_value_label("ingame_gamespeed_slowest", hotkeys)),             rate("Slowest"))
-    :appendCheckItem(_S.menu_options_game_speed.slower:format(hotkey_value_label("ingame_gamespeed_slower", hotkeys)),               rate("Slower"))
-    :appendCheckItem(_S.menu_options_game_speed.normal:format(hotkey_value_label("ingame_gamespeed_normal", hotkeys)),               rate("Normal")) -- (default)
-    :appendCheckItem(_S.menu_options_game_speed.max_speed:format(hotkey_value_label("ingame_gamespeed_max", hotkeys)),               rate("Max speed"))
-    :appendCheckItem(_S.menu_options_game_speed.and_then_some_more:format(hotkey_value_label("ingame_gamespeed_thensome", hotkeys)), rate("And then some more"))
+    :appendCheckItem(_S.menu_options_game_speed.pause:format(hotkey_value_label("ingame_pause", hotkeys)), rate("Pause"))
+    :appendCheckItem(_S.menu_options_game_speed.normal:format(hotkey_value_label("ingame_gamespeed_normal", hotkeys)), rate("Normal"))
   )
 
   self:addMenu(_S.menu.options, options)
