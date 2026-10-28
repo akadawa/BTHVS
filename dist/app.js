@@ -264,6 +264,9 @@
       rivalStats: new Map(),
       matchPlayers: new Map(),
       leftPlayerIds: new Set(),
+      continueReadyIds: new Set(),
+      awaitingContinue: false,
+      continuedFreePlay: false,
       winner: null,
       matchRecorded: false,
       tab: "goals",
@@ -2402,7 +2405,7 @@
     }
     const W = Math.max(640, window.innerWidth), H = Math.max(480, window.innerHeight);
     try {
-      let buildHash = "b6b1bf366297";
+      let buildHash = "ca4d39a97113";
       let expectedDataSize = 0;
       try {
         const bRes = await fetch("game/build.json?t=" + Date.now(), { cache: "no-store" });
@@ -2529,9 +2532,43 @@
     window.addEventListener("resize", resize);
     document.addEventListener("fullscreenchange", onFsChange);
     document.addEventListener("webkitfullscreenchange", onFsChange);
-    $("#canvas").addEventListener("mousedown", () => $("#canvas").focus());
+
+    const gameRoot = $("#game");
+    const canvasEl = $("#canvas");
+    // Block native browser HTML5 ghost-image drag and text/DOM selection anywhere inside #game
+    window.addEventListener("dragstart", (e) => {
+      if (gameRoot && !gameRoot.hidden) e.preventDefault();
+    }, true);
+    window.addEventListener("selectstart", (e) => {
+      if (gameRoot && !gameRoot.hidden) {
+        const tag = e.target && e.target.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA") e.preventDefault();
+      }
+    }, true);
+
+    canvasEl.addEventListener("mousedown", (e) => {
+      try {
+        const sel = window.getSelection && window.getSelection();
+        if (sel && sel.rangeCount > 0) sel.removeAllRanges();
+      } catch (_) {}
+      e.preventDefault();
+      canvasEl.focus();
+    });
+    canvasEl.addEventListener("pointerdown", (e) => {
+      if (e.target === canvasEl && typeof canvasEl.setPointerCapture === "function") {
+        try { canvasEl.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    });
+    const releaseCanvasCapture = (e) => {
+      if (typeof canvasEl.hasPointerCapture === "function" && canvasEl.hasPointerCapture(e.pointerId)) {
+        try { canvasEl.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    };
+    canvasEl.addEventListener("pointerup", releaseCanvasCapture);
+    canvasEl.addEventListener("pointercancel", releaseCanvasCapture);
+
     // keep browser shortcuts (F5/F11) usable but swallow game keys that scroll the page
-    $("#canvas").addEventListener("keydown", (e) => {
+    canvasEl.addEventListener("keydown", (e) => {
       if (["Tab", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
     });
   }
@@ -2638,8 +2675,9 @@
         const parts = (arg || "").split("|");
         const winId = parseInt(parts[0], 10);
         const winName = parts[1] || "A Player";
+        const winReason = parts[2] || "";
         state.vs.winner = winName;
-        showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
+        showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1), winReason);
         return null;
       }
       case "fs.sync": {
@@ -2763,8 +2801,18 @@
           const parts = m.d.slice(4).split("|");
           const winId = parseInt(parts[0], 10);
           const winName = parts[1] || "A Player";
+          const winReason = parts[2] || "";
           state.vs.winner = winName;
-          showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
+          showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1), winReason);
+        } else if (typeof m.d === "string" && m.d.startsWith("vs_continue:")) {
+          const rawId = parseInt(m.d.slice(12), 10);
+          const contId = isNaN(rawId) ? m.from : rawId;
+          if (state.vs) {
+            if (!state.vs.continueReadyIds) state.vs.continueReadyIds = new Set();
+            state.vs.continueReadyIds.add(contId);
+            updateVictoryContinueUI();
+            checkContinueBarrier();
+          }
         } else {
           net.inbox.push({ from: m.from, d: m.d });
         }
@@ -2802,6 +2850,8 @@
             state.vs.matchPlayers.get(m.id).left = true;
           }
           updateQuestUI();
+          updateVictoryContinueUI();
+          checkContinueBarrier();
         }
 
         net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") });
@@ -2830,13 +2880,22 @@
         const remSec = rem % 60;
         if (timerEl) {
           timerEl.hidden = false;
-          const timeTxt = `${remMin}:${String(remSec).padStart(2, "0")}`;
-          if (timerEl._lastTxt !== timeTxt) {
-            timerEl._lastTxt = timeTxt;
-            timerEl.textContent = timeTxt;
+          if (state.vs.continuedFreePlay) {
+            const freeTxt = "Free Play";
+            if (timerEl._lastTxt !== freeTxt) {
+              timerEl._lastTxt = freeTxt;
+              timerEl.textContent = freeTxt;
+            }
+            if (timerEl.className !== "chip ok") timerEl.className = "chip ok";
+          } else {
+            const timeTxt = `${remMin}:${String(remSec).padStart(2, "0")}`;
+            if (timerEl._lastTxt !== timeTxt) {
+              timerEl._lastTxt = timeTxt;
+              timerEl.textContent = timeTxt;
+            }
+            const nextCls = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
+            if (timerEl.className !== nextCls) timerEl.className = nextCls;
           }
-          const nextCls = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
-          if (timerEl.className !== nextCls) timerEl.className = nextCls;
         }
         if ($("#quest-win") && !$("#quest-win").hidden) {
           updateQuestUI();
@@ -3115,81 +3174,61 @@
     return (val || 0).toLocaleString() + (unit ? " " + unit : "");
   }
 
+  function rankPlayersForTimeLimit(players, quests) {
+    return [...players].sort((a, b) => {
+      if (a.left !== b.left) return a.left ? 1 : -1;
+      const sa = a.stats || {};
+      const sb = b.stats || {};
+      const aDone = quests.length > 0 && sa.started && quests.every((q) => q.getVal(sa) >= q.target);
+      const bDone = quests.length > 0 && sb.started && quests.every((q) => q.getVal(sb) >= q.target);
+      if (aDone !== bDone) return bDone ? 1 : -1;
+      // Primary tie/win criterion when time runs out: Highest Hospital Value (Krankenhauswert)
+      if ((sb.val || 0) !== (sa.val || 0)) return (sb.val || 0) - (sa.val || 0);
+      // Secondary tie-breakers: Cured Patients -> Cash Balance -> Player ID
+      if ((sb.cured || 0) !== (sa.cured || 0)) return (sb.cured || 0) - (sa.cured || 0);
+      if ((sb.bal || 0) !== (sa.bal || 0)) return (sb.bal || 0) - (sa.bal || 0);
+      return (a.id || 0) - (b.id || 0);
+    });
+  }
+
   function checkWinConditions() {
-    if (state.vs.winner || state.vs.matchRecorded) return; // match already concluded
+    if (!state.vs || state.vs.winner || state.vs.matchRecorded || state.vs.continuedFreePlay) return;
     if (!state.vs.startTime || Date.now() - state.vs.startTime < 4000) return;
     const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
-    const my = state.vs.myStats;
-    const opp = state.vs.oppStats;
     const quests = buildQuestsFromConfig(g);
+    const allPlayers = getAllMatchPlayers();
+    const activePlayers = allPlayers.filter((p) => !p.left);
+    const contenders = activePlayers.length > 0 ? activePlayers : allPlayers;
 
-    // 1. Time limit expired check
+    // 1. Time limit expired check -> Highest Hospital Value wins
     if (g.timeLimit > 0) {
       const elapsedSec = (Date.now() - state.vs.startTime) / 1000;
       const totalSec = g.timeLimit * 60;
-      if (elapsedSec >= totalSec) {
-        let winnerId = null;
-        let winnerName = null;
-        let isMe = false;
-
-        const myQuestsDone = quests.length > 0 && my.started && quests.every((q) => q.getVal(my) >= q.target);
-        const oppQuestsDone = quests.length > 0 && opp.started && quests.every((q) => q.getVal(opp) >= q.target);
-
-        if (myQuestsDone && !oppQuestsDone) {
-          winnerId = state.lobby ? state.lobby.id : 0;
-          winnerName = playerName();
-          isMe = true;
-        } else if (oppQuestsDone && !myQuestsDone) {
-          winnerId = -999;
-          winnerName = opp.name || "Opponent";
-          isMe = false;
-        } else {
-          // Compare cash balance
-          if (my.bal > opp.bal) {
-            winnerId = state.lobby ? state.lobby.id : 0;
-            winnerName = playerName();
-            isMe = true;
-          } else if (opp.bal > my.bal) {
-            winnerId = -999;
-            winnerName = opp.name || "Opponent";
-            isMe = false;
-          } else {
-            // Tie breaker: hospital overall value
-            if (my.val >= opp.val) {
-              winnerId = state.lobby ? state.lobby.id : 0;
-              winnerName = playerName();
-              isMe = true;
-            } else {
-              winnerId = -999;
-              winnerName = opp.name || "Opponent";
-              isMe = false;
-            }
-          }
-        }
+      if (elapsedSec >= totalSec && contenders.length > 0) {
+        const ranked = rankPlayersForTimeLimit(contenders, quests);
+        const top = ranked[0];
+        const winnerId = top.id;
+        const winnerName = top.name || "Player";
+        const isMe = !!top.isMe;
         state.vs.winner = winnerId;
-        if (isMe && state.net) {
-          state.net.sendRaw({ t: "msg", to: "all", d: `win:${winnerId}|${winnerName}` });
+        if ((isMe || (state.lobby && state.lobby.host)) && state.net) {
+          state.net.sendRaw({ t: "msg", to: "all", d: `win:${winnerId}|${winnerName}|time` });
         }
-        showVictoryModal(winnerName, isMe);
+        showVictoryModal(winnerName, isMe, "time");
         return;
       }
     }
 
     // 2. All active non-timed quests check (if any quests are set)
     if (quests.length > 0) {
-      const myMet = my.started && quests.every((q) => q.getVal(my) >= q.target);
-      const oppMet = opp.started && quests.every((q) => q.getVal(opp) >= q.target);
-
-      if (myMet) {
-        state.vs.winner = state.lobby ? state.lobby.id : 1;
-        const myName = playerName();
-        if (state.net) {
-          state.net.sendRaw({ t: "msg", to: "all", d: `win:${state.vs.winner}|${myName}` });
+      const achiever = contenders.find((p) => p.stats && p.stats.started && quests.every((q) => q.getVal(p.stats) >= q.target));
+      if (achiever) {
+        state.vs.winner = achiever.id;
+        const winName = achiever.name || "Player";
+        if (achiever.isMe && state.net) {
+          state.net.sendRaw({ t: "msg", to: "all", d: `win:${achiever.id}|${winName}|quests` });
         }
-        showVictoryModal(myName, true);
-      } else if (oppMet) {
-        state.vs.winner = -999;
-        showVictoryModal(opp.name || "Opponent", false);
+        showVictoryModal(winName, !!achiever.isMe, "quests");
       }
     }
   }
@@ -3257,20 +3296,22 @@
     }
 
     // From rivalStats
-    state.vs.rivalStats.forEach((rStats, rId) => {
-      if (!knownIds.has(rId)) {
-        knownIds.add(rId);
-        const isLeft = leftIds.has(rId) || rStats.left;
-        list.push({
-          id: rId,
-          name: rStats.name || `Player ${rId}`,
-          isMe: false,
-          isHost: false,
-          stats: rStats,
-          left: !!isLeft,
-        });
-      }
-    });
+    if (state.vs && state.vs.rivalStats) {
+      state.vs.rivalStats.forEach((rStats, rId) => {
+        if (!knownIds.has(rId)) {
+          knownIds.add(rId);
+          const isLeft = leftIds.has(rId) || rStats.left;
+          list.push({
+            id: rId,
+            name: rStats.name || `Player ${rId}`,
+            isMe: false,
+            isHost: false,
+            stats: rStats,
+            left: !!isLeft,
+          });
+        }
+      });
+    }
 
     // If opponent is registered in oppStats and not yet in list
     if (list.length === 1 && state.vs.oppStats && state.vs.oppStats.name && state.vs.oppStats.name !== "Opponent") {
@@ -3328,23 +3369,28 @@
         const rem = Math.max(0, g.timeLimit * 60 - elapsed);
         const remMin = Math.floor(rem / 60);
         const remSec = rem % 60;
-        const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
+        const timeStr = state.vs.continuedFreePlay ? "Free Play" : `${remMin}:${String(remSec).padStart(2, "0")}`;
 
-        const sortedByCash = [...allPlayers].sort((a, b) => (b.stats.bal || 0) - (a.stats.bal || 0));
-        const top = sortedByCash[0];
+        const sortedByVal = [...allPlayers].sort((a, b) => {
+          if (a.left !== b.left) return a.left ? 1 : -1;
+          return (b.stats.val || 0) - (a.stats.val || 0);
+        });
+        const top = sortedByVal[0];
         const isMeTop = top && top.isMe;
 
         const activeRivals = allPlayers.filter((p) => !p.isMe && !p.left);
         if (allPlayers.length > 1 && activeRivals.length === 0) {
           nextLeadHtml = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
+        } else if (state.vs.continuedFreePlay) {
+          nextLeadHtml = `<span class="lead-pill lead-you">Free Play</span> <b>Hospital Value: $${(my.val || 0).toLocaleString()}</b>`;
         } else if (allPlayers.length <= 1) {
-          nextLeadHtml = `Time Left: <b>${timeStr}</b> · Cash: <b>$${(my.bal || 0).toLocaleString()}</b>`;
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · Value: <b>$${(my.val || 0).toLocaleString()}</b>`;
         } else if (isMeTop) {
-          const secondCash = sortedByCash[1] ? (sortedByCash[1].stats.bal || 0) : 0;
-          const leadDiff = (my.bal || 0) - secondCash;
-          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-you">Lead</span> <b>You are leading! (+$${leadDiff.toLocaleString()})</b>`;
+          const secondVal = sortedByVal[1] ? (sortedByVal[1].stats.val || 0) : 0;
+          const leadDiff = Math.max(0, (my.val || 0) - secondVal);
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-you">Lead</span> <b>You lead in Value! (+$${leadDiff.toLocaleString()})</b>`;
         } else {
-          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(top.name)} leads ($${(top.stats.bal || 0).toLocaleString()})</b>`;
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(top.name)} leads in Value ($${(top.stats.val || 0).toLocaleString()})</b>`;
         }
       } else if (quests.length === 0) {
         nextLeadHtml = `<b>Free Match</b> · Compare metrics across all ${allPlayers.length} players`;
@@ -3385,48 +3431,48 @@
     if (list) {
       const cardsHtml = [];
 
-      // Time match card
+      // Time match card (ranked by Hospital Value / Krankenhauswert)
       if (g.timeLimit > 0) {
         const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
         const rem = Math.max(0, g.timeLimit * 60 - elapsed);
         const remMin = Math.floor(rem / 60);
         const remSec = rem % 60;
-        const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
+        const timeStr = state.vs.continuedFreePlay ? "Free Play" : `${remMin}:${String(remSec).padStart(2, "0")} left`;
 
-        const sortedByCash = [...allPlayers].sort((a, b) => (b.stats.bal || 0) - (a.stats.bal || 0));
-        const topCash = Math.max(1, sortedByCash[0]?.stats.bal || 0);
+        const sortedByVal = [...allPlayers].sort((a, b) => (b.stats.val || 0) - (a.stats.val || 0));
+        const topVal = Math.max(1, sortedByVal[0]?.stats.val || 0);
 
         let rivalsRows = "";
-        sortedByCash.filter((p) => !p.isMe).forEach((r) => {
-          const rCash = r.stats.bal || 0;
-          const rPct = Math.min(100, Math.max(0, Math.round((rCash / topCash) * 100)));
+        sortedByVal.filter((p) => !p.isMe).forEach((r) => {
+          const rVal = r.stats.val || 0;
+          const rPct = Math.min(100, Math.max(0, Math.round((rVal / topVal) * 100)));
           rivalsRows += `
             <div class="q-player-row rival ${r.left ? 'player-left' : ''}">
               <div class="q-p-stat">
                 <span class="q-p-name">${escapeHtml(r.name)}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
-                <span>$${rCash.toLocaleString()}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
+                <span>Value: $${rVal.toLocaleString()}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
               </div>
               <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%; ${r.left ? 'opacity: 0.35;' : ''}"></div></div>
             </div>
           `;
         });
 
-        const myCash = my.bal || 0;
-        const myPct = Math.min(100, Math.max(0, Math.round((myCash / topCash) * 100)));
+        const myVal = my.val || 0;
+        const myPct = Math.min(100, Math.max(0, Math.round((myVal / topVal) * 100)));
 
         cardsHtml.push(`
           <div class="quest-card simple">
             <div class="quest-card-header">
               <div class="quest-title-wrap">
                 <span class="quest-card-title">Time Match</span>
-                <span class="quest-target-pill">Limit: ${g.timeLimit} Min.</span>
+                <span class="quest-target-pill">Limit: ${g.timeLimit} Min. · Highest Value</span>
               </div>
-              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">${timeStr} left</span>
+              <span class="quest-badge ${state.vs.continuedFreePlay || rem < 120 ? 'done' : 'pending'}">${timeStr}</span>
             </div>
             <div class="q-player-row you">
               <div class="q-p-stat">
                 <span class="q-p-name">You (${playerName()})</span>
-                <span><b>$${myCash.toLocaleString()}</b></span>
+                <span>Value: <b>$${myVal.toLocaleString()}</b></span>
               </div>
               <div class="prog-bar-wrap"><div class="prog-bar-fill you" style="width: ${myPct}%"></div></div>
             </div>
@@ -3508,8 +3554,14 @@
     if (tbody) {
       const sortedPlayers = [...allPlayers].sort((a, b) => {
         if (a.left !== b.left) return a.left ? 1 : -1;
+        if (g.timeLimit > 0 && (b.stats.val || 0) !== (a.stats.val || 0)) {
+          return (b.stats.val || 0) - (a.stats.val || 0);
+        }
         if (g.cured > 0 && (b.stats.cured || 0) !== (a.stats.cured || 0)) {
           return (b.stats.cured || 0) - (a.stats.cured || 0);
+        }
+        if ((b.stats.val || 0) !== (a.stats.val || 0)) {
+          return (b.stats.val || 0) - (a.stats.val || 0);
         }
         if ((b.stats.bal || 0) !== (a.stats.bal || 0)) {
           return (b.stats.bal || 0) - (a.stats.bal || 0);
@@ -3540,6 +3592,7 @@
               ${p.isHost ? '<span class="name-status-pill host">Host</span>' : ''}
               ${p.left ? '<span class="name-status-pill left-tag">Left</span>' : ''}
             </td>
+            <td class="td-val">$${(s.val || 0).toLocaleString()}</td>
             <td class="td-cured">${(s.cured || 0).toLocaleString()}${g.cured > 0 ? ` <span class="muted small">/ ${g.cured}</span>` : ''}</td>
             <td class="td-cash">$${(s.bal || 0).toLocaleString()}</td>
             <td class="td-rooms">${s.rooms || 0} <span class="muted small">(${s.staff || 0} st.)</span></td>
@@ -3585,7 +3638,7 @@
 
     if ($("#vic-continue")) {
       $("#vic-continue").onclick = () => {
-        $("#victory-modal").hidden = true;
+        requestContinuePlaying();
       };
     }
     if ($("#vic-exit")) {
@@ -3602,13 +3655,165 @@
     updateQuestUI();
   }
 
-  function showVictoryModal(winnerName, isMe) {
+  function setMatchEndPause(paused) {
+    if (!state.game || !state.game.mod || typeof state.game.mod.ccall !== "function") return;
+    try {
+      state.game.mod.ccall("th_eval_lua", "string", ["string"], [`
+        if TheApp and TheApp.world then
+          if TheApp.multiplayer then
+            TheApp.multiplayer.match_end_paused = ${paused ? "true" : "false"}
+            TheApp.multiplayer.internal_speed_change = true
+          end
+          TheApp.world:setSpeed("${paused ? "Pause" : "Normal"}")
+          if TheApp.multiplayer then
+            TheApp.multiplayer.internal_speed_change = false
+          end
+          TheApp.world.user_actions_allowed = true
+          if TheApp.world.updateScreenBlueFilter then
+            TheApp.world:updateScreenBlueFilter()
+          end
+        end
+      `]);
+    } catch (_) {}
+  }
+
+  function getLocalMatchPlayerId() {
+    if (state.session && state.session.mp && state.session.mp.id !== undefined) return state.session.mp.id;
+    if (state.lobby && state.lobby.id !== undefined) return state.lobby.id;
+    return 0;
+  }
+
+  function updateVictoryContinueUI() {
+    const statusBox = $("#vic-continue-status");
+    const contBtn = $("#vic-continue");
+    if (!state.vs || !state.vs.awaitingContinue) {
+      if (statusBox) statusBox.hidden = true;
+      return;
+    }
+    if (!state.vs.continueReadyIds) state.vs.continueReadyIds = new Set();
+    const readySet = state.vs.continueReadyIds;
+    const myId = getLocalMatchPlayerId();
+    const allPlayers = getAllMatchPlayers();
+    const activePlayers = allPlayers.filter((p) => !p.left);
+    const totalActive = Math.max(1, activePlayers.length);
+    const readyCount = activePlayers.filter((p) => readySet.has(p.id)).length;
+    const amReady = readySet.has(myId);
+
+    if (contBtn) {
+      if (amReady) {
+        contBtn.disabled = true;
+        contBtn.textContent = `Waiting for Continue (${readyCount}/${totalActive})...`;
+      } else {
+        contBtn.disabled = false;
+        contBtn.textContent = "Continue Playing";
+      }
+    }
+
+    if (statusBox) {
+      statusBox.hidden = false;
+      let headline = "";
+      if (activePlayers.length <= 1) {
+        headline = "Game Paused – All rivals left. Click Continue Playing or Return to Menu.";
+      } else if (amReady) {
+        headline = "Game Paused – Waiting for other players to click Continue or Leave...";
+      } else if (readyCount > 0) {
+        headline = "Game Paused – Waiting for your Continue! Other player(s) want to continue.";
+      } else {
+        headline = "Game Paused – Match continues when all remaining players click Continue.";
+      }
+
+      const rowsHtml = allPlayers.map((p) => {
+        let badge = "";
+        if (p.left) {
+          badge = `<span class="status-pill left">Left Match</span>`;
+        } else if (readySet.has(p.id)) {
+          badge = `<span class="status-pill ok">Continue Ready</span>`;
+        } else {
+          badge = `<span class="status-pill wait">Waiting for Continue...</span>`;
+        }
+        return `
+          <div class="vic-continue-row${p.isMe ? " is-you" : ""}">
+            <span><b>${escapeHtml(p.name)}</b>${p.isMe ? ' <span class="name-status-pill you">You</span>' : ''}</span>
+            ${badge}
+          </div>
+        `;
+      }).join("");
+
+      setHtmlIfChanged(statusBox, `
+        <div class="vic-continue-headline">
+          <span>${headline}</span>
+          <span class="vic-continue-count">${readyCount} / ${totalActive} Continue</span>
+        </div>
+        <div class="vic-continue-players">${rowsHtml}</div>
+      `);
+    }
+  }
+
+  function checkContinueBarrier() {
+    if (!state.vs || !state.vs.awaitingContinue) return false;
+    if (!state.vs.continueReadyIds) state.vs.continueReadyIds = new Set();
+    const activePlayers = getAllMatchPlayers().filter((p) => !p.left);
+    if (activePlayers.length === 0) return false;
+    const allChosenContinue = activePlayers.every((p) => state.vs.continueReadyIds.has(p.id));
+    if (!allChosenContinue) return false;
+
+    state.vs.awaitingContinue = false;
+    state.vs.continuedFreePlay = true;
+    const modal = $("#victory-modal");
+    if (modal) modal.hidden = true;
+    const timerEl = $("#hud-timer");
+    if (timerEl && !timerEl.hidden) {
+      timerEl._lastTxt = "Free Play";
+      timerEl.textContent = "Free Play";
+      timerEl.className = "chip ok";
+    }
+    setMatchEndPause(false);
+    updateQuestUI();
+
+    const banner = $("#net-banner");
+    if (banner) {
+      if (state._bannerTimer) clearTimeout(state._bannerTimer);
+      banner.className = "";
+      banner.textContent = activePlayers.length > 1
+        ? "All remaining players clicked Continue – Match resumed!"
+        : "Continuing hospital in Free Play!";
+      banner.hidden = false;
+      state._bannerTimer = setTimeout(() => {
+        banner.hidden = true;
+        state._bannerTimer = null;
+      }, 3500);
+    }
+    if ($("#canvas") && !($("#game") && $("#game").hidden)) {
+      $("#canvas").focus();
+    }
+    return true;
+  }
+
+  function requestContinuePlaying() {
+    if (!state.vs) return;
+    if (!state.vs.continueReadyIds) state.vs.continueReadyIds = new Set();
+    const myId = getLocalMatchPlayerId();
+    state.vs.continueReadyIds.add(myId);
+    if (state.net) {
+      try { state.net.sendRaw({ t: "msg", to: "all", d: `vs_continue:${myId}` }); } catch (_) {}
+    }
+    updateVictoryContinueUI();
+    checkContinueBarrier();
+  }
+
+  function showVictoryModal(winnerName, isMe, reason) {
     const modal = $("#victory-modal");
     if (!modal) return;
     if (state.vs.matchRecorded) return;
     releasePointerLockSafe();
     state.vs.matchRecorded = true;
     state.vs.winner = winnerName;
+    state.vs.awaitingContinue = true;
+    if (!state.vs.continueReadyIds) state.vs.continueReadyIds = new Set();
+
+    // Immediately pause the simulation when match time/goals conclude
+    setMatchEndPause(true);
+
     const iconEl = $("#vic-icon");
     const titleEl = $("#vic-title");
     const descEl = $("#vic-desc");
@@ -3624,15 +3829,27 @@
       titleEl.textContent = isMe ? "Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
       titleEl.className = isMe ? "vic-won" : "vic-lost";
     }
+
+    const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
+    const quests = buildQuestsFromConfig(g);
+    const allPlayers = getAllMatchPlayers();
+    const ranked = rankPlayersForTimeLimit(allPlayers, quests);
+    const topPlayer = ranked[0] || { name: winnerName, stats: state.vs.myStats || {} };
+    const secondPlayer = ranked[1] || { name: "Rival", stats: state.vs.oppStats || {} };
+    const my = state.vs.myStats || {};
+    const opp = state.vs.oppStats || {};
+
+    const isTimeWin = reason === "time" || (!reason && g.timeLimit > 0 && state.vs.startTime && ((Date.now() - state.vs.startTime) / 1000) >= g.timeLimit * 60);
+
     if (descEl) {
-      const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
       const goalsDesc = formatGoalsList(g).join(" and ");
-      if (g.timeLimit > 0) {
-        const my = state.vs.myStats;
-        const opp = state.vs.oppStats;
+      if (isTimeWin) {
+        const myVal = (my.val || 0).toLocaleString();
+        const winVal = ((topPlayer.stats && topPlayer.stats.val) || opp.val || 0).toLocaleString();
+        const runnerVal = ((secondPlayer.stats && secondPlayer.stats.val) || opp.val || 0).toLocaleString();
         descEl.textContent = isMe
-          ? `Congratulations! After ${g.timeLimit} minutes, you won with a cash balance of $${(my.bal || 0).toLocaleString()} compared to $${(opp.bal || 0).toLocaleString()}! (Goals: ${goalsDesc})`
-          : `Time is up! ${winnerName} won with a cash balance of $${(opp.bal || 0).toLocaleString()} compared to $${(my.bal || 0).toLocaleString()}. (Goals: ${goalsDesc})`;
+          ? `Time is up! After ${g.timeLimit} minutes, you won with the highest Hospital Value of $${myVal} (next best: $${runnerVal}).`
+          : `Time is up! ${winnerName} won with the highest Hospital Value of $${winVal} compared to your Hospital Value of $${myVal}.`;
       } else {
         descEl.textContent = isMe
           ? `Congratulations! You reached all goals (${goalsDesc}) before your rivals!`
@@ -3641,31 +3858,64 @@
     }
 
     if (summaryEl) {
-      const my = state.vs.myStats;
-      const opp = state.vs.oppStats;
-      summaryEl.innerHTML = `
-        <table class="rival-table">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th id="th-you">You (${escapeHtml(playerName())})</th>
-              <th id="th-opp">${escapeHtml(opp.name || "Opponent")}</th>
+      if (allPlayers.length > 2) {
+        const rows = ranked.map((p, idx) => {
+          const s = p.stats || {};
+          return `
+            <tr class="${p.isMe ? "is-you" : ""}${p.left ? " player-left" : ""}">
+              <td class="td-rank ${idx === 0 ? "val-leader" : ""}">#${idx + 1}</td>
+              <td><b>${escapeHtml(p.name)}</b>${p.isMe ? ' <span class="name-status-pill you">You</span>' : ''}${p.left ? ' <span class="name-status-pill left-tag">Left</span>' : ''}</td>
+              <td class="td-val">$${(s.val || 0).toLocaleString()}</td>
+              <td class="td-cured">${(s.cured || 0).toLocaleString()}</td>
+              <td class="td-cash">$${(s.bal || 0).toLocaleString()}</td>
+              <td class="td-rooms">${s.rooms || 0}</td>
             </tr>
-          </thead>
-          <tbody>
-            <tr><td>Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
-            <tr><td>Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
-            <tr><td>Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
-            <tr><td>Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
-            <tr><td>Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
-            <tr><td>Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
-            <tr><td>Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
-          </tbody>
-        </table>
-      `;
+          `;
+        }).join("");
+        summaryEl.innerHTML = `
+          <table class="rival-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Hospital Value</th>
+                <th>Cured</th>
+                <th>Cash</th>
+                <th>Rooms</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } else {
+        const rivalEntry = allPlayers.find((p) => !p.isMe) || { name: opp.name || "Opponent", stats: opp };
+        const rs = rivalEntry.stats || {};
+        summaryEl.innerHTML = `
+          <table class="rival-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th id="th-you">You (${escapeHtml(playerName())})</th>
+                <th id="th-opp">${escapeHtml(rivalEntry.name || "Opponent")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><b>Hospital Value</b></td><td class="td-val">$${(my.val || 0).toLocaleString()}</td><td class="val-opp"><b>$${(rs.val || 0).toLocaleString()}</b></td></tr>
+              <tr><td>Cured Patients</td><td class="val-you">${(my.cured || 0).toLocaleString()}</td><td class="val-opp">${(rs.cured || 0).toLocaleString()}</td></tr>
+              <tr><td>Cash Balance</td><td class="val-you">$${(my.bal || 0).toLocaleString()}</td><td class="val-opp">$${(rs.bal || 0).toLocaleString()}</td></tr>
+              <tr><td>Built Rooms</td><td class="val-you">${my.rooms || 0}</td><td class="val-opp">${rs.rooms || 0}</td></tr>
+              <tr><td>Staff Members</td><td class="val-you">${my.staff || 0}</td><td class="val-opp">${rs.staff || 0}</td></tr>
+              <tr><td>Hospital Reputation</td><td class="val-you">${my.rep || 500} / 1000</td><td class="val-opp">${rs.rep || 500} / 1000</td></tr>
+              <tr><td>Patient Deaths</td><td class="val-you">${my.deaths || 0}</td><td class="val-opp">${rs.deaths || 0}</td></tr>
+            </tbody>
+          </table>
+        `;
+      }
     }
 
     modal.hidden = false;
+    updateVictoryContinueUI();
+    checkContinueBarrier();
   }
 
   // ------------------------------------------------------------ MP startup
@@ -3686,6 +3936,9 @@
       rivalStats: new Map(),
       matchPlayers: new Map(),
       leftPlayerIds: new Set(),
+      continueReadyIds: new Set(),
+      awaitingContinue: false,
+      continuedFreePlay: false,
       winner: null,
       matchRecorded: false,
       tab: "goals",
@@ -3991,7 +4244,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setGameUIScale, computeSafeUIScale, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
+    window.__bth = { state, startGame, setGameUIScale, computeSafeUIScale, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, showVictoryModal, requestContinuePlaying, updateVictoryContinueUI, checkContinueBarrier, setMatchEndPause, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
   }
 
   init();

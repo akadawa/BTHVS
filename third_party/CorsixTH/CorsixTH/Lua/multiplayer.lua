@@ -33,6 +33,7 @@ function Multiplayer:Multiplayer(app)
   self.seed = 12345
   self.rejoin = false
   self.sim_started = false
+  self.match_end_paused = false
   self.internal_speed_change = false
   self.last_stats_send = 0
   self.last_force_send = 0
@@ -132,6 +133,9 @@ function Multiplayer:installHooks()
       -- BTHVS: Game speed can only be "Normal" or "Pause"
       if speed ~= "Pause" and speed ~= "Normal" then
         speed = "Normal"
+      end
+      if mp.match_end_paused then
+        speed = "Pause"
       end
       local res = orig_setSpeed(world_self, speed)
       -- Always guarantee user actions remain allowed and blue pause filter stays off in MP
@@ -308,6 +312,9 @@ function Multiplayer:handleMessage(from, data)
 
   -- Speed change sync
   if data:sub(1, 6) == "speed:" then
+    if self.match_end_paused then
+      return
+    end
     local speed_name = data:sub(7)
     if speed_name ~= "Pause" and speed_name ~= "Normal" then
       speed_name = "Normal"

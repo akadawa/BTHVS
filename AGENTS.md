@@ -124,6 +124,7 @@ BrowserTHospital/
 │       └── web_bridge.cpp      # JS <-> Lua bridge (_th_resize, _th_eval_lua)
 ├── tests/
 │   ├── lib.js                  # Shared Playwright test runner & local server helpers
+│   ├── test_canvas_drag_value_and_continue.js
 │   ├── test_v0702_upgrade_and_perf.js
 │   ├── test_fullscreen_leave.js
 │   ├── test_corsix_menu_and_speed.js
@@ -181,18 +182,25 @@ BrowserTHospital/
 - No Reset, Export, or Import buttons exist in the UI.
 - Single-recording match guard (`state.vs.matchRecorded`) guarantees match statistics are recorded at most once per match, preventing stat runaway.
 
-### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence
+### E. Minimalist In-Game HUD, Leave Match Flow, Canvas Drag Guard & Window Persistence
 - **Minimalist In-Game HUD**: Docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions. Redundant telemetry (ping `- ms`, sync badge, host/player listings) was completely removed to keep the HUD unobtrusive.
   - Visible HUD elements: `[v0.0.1] [Room CODE · Map] [Timer (if timed)] [Quests] [Chat] [FS] [Leave]`
 - **Leave Match Button, Fullscreen Exit & Zero-BeforeUnload Flow**: Inside active matches, the top-right `Leave` chip button (`#hud-exit-btn`) and the `Escape` key open the `#leave-modal` confirmation dialog (automatically releasing any active Pointer Lock and ensuring `default` OS cursor visibility). Confirming calls `gameExit(false)`, which sets `state.isExiting = true` (suppressing both app and SDL2 `beforeunload` prompts via a capture-phase `stopImmediatePropagation` guard), exits HTML5 Fullscreen cleanly before navigation, notifies rivals with `{ t: "leave" }`, and navigates via `window.location.replace(location.pathname)`. All fullscreen requests (HUD `FS` button, `canvas.requestFullscreen`, and CorsixTH `UI:toggleFullscreen` / `Alt+Enter`) target `document.documentElement` so `#hud` and `#leave-modal` always remain visible on top.
 - **Window Persistence**: Quests and Chat windows are draggable and resizable with handles; their positions and dimensions are persisted across sessions in `localStorage` (`bth_win_quests` and `bth_win_chat`).
+- **Canvas Drag & Pointer-Capture Protection**: `#game` and `#canvas` enforce `draggable="false"`, `user-select: none`, `-webkit-user-drag: none`, `touch-action: none`, capture-phase `dragstart`/`selectstart` prevention (preserving `#chat-input`), selection clearing + `e.preventDefault()` on `mousedown`, and `setPointerCapture`/`releasePointerCapture` on `pointerdown`/`pointerup` so holding and dragging the left mouse button (e.g. room blueprints, item placement, staff dragging) never triggers a native browser HTML5 snapshot ghost drag or drops events over overlays.
 
-### F. Simplified In-Game Quests & Multi-Player Rivals Leaderboard
+### F. Simplified In-Game Quests, Hospital Value Timed Wins & Synchronized Post-Match Continue
 - **Glanceable Quest Cards**: Stripped of long explanatory paragraphs. Each card provides instant answers to three vital questions:
-  1. *What is the goal?* (`Goal: 25`, `Goal: $100k`, `Limit: 30m`)
+  1. *What is the goal?* (`Goal: 25`, `Goal: $100k`, `Limit: 30 Min. · Highest Value`)
   2. *What do I still need?* (`Need: 7 more`, `Completed!`) + current progress bar.
   3. *What do rivals have right now?* Compact comparative rows for all opponents.
-- **10-Player Rivals Leaderboard Table**: The Leaderboard tab (`#quest-view-dashboard`) renders a full ranking table supporting up to 10 players with Rank, Player, Cured, Cash, Rooms, Reputation, and Status, perfectly proportioned for 1080p and 720p screens.
+- **Highest Hospital Value ("Krankenhauswert") Wins Timed Matches**:
+  - When a timed match expires (`g.timeLimit > 0`), `rankPlayersForTimeLimit()` ranks active contenders by completed non-timed quests first and **Hospital Value (`stats.val` / `hosp.value`)** second (ahead of cured patients and unspent cash balance), rewarding active builders who invest cash into rooms, plots, and equipment over idle players sitting on starting cash.
+- **10-Player Rivals Leaderboard Table**: The Leaderboard tab (`#quest-view-dashboard`) renders a full ranking table supporting up to 10 players with Rank, Player, Value, Cured, Cash, Rooms, Reputation, and Status, perfectly proportioned for 1080p and 720p screens.
+- **Match-End Pause & Synchronized Multi-Player Continue Barrier**:
+  - When a match concludes (`showVictoryModal`), `setMatchEndPause(true)` immediately pauses the simulation (`Pause`, locked via `TheApp.multiplayer.match_end_paused = true` so background keys or `speed:` packets cannot unpause early).
+  - Clicking `Continue Playing` (`#vic-continue`) broadcasts `vs_continue:<playerId>` to all peers, disabling the local button as `Waiting for Continue (X/N)...` and displaying per-player readiness pills (`Continue Ready`, `Waiting for Continue...`, `Left Match`) on `#vic-continue-status` while other players see `Waiting for your Continue! Other player(s) want to continue.` or can leave via `Return to Menu` (`#vic-exit`).
+  - Once all remaining active (non-left) players have clicked `Continue Playing` (`checkContinueBarrier()`), `#victory-modal` closes automatically, `setMatchEndPause(false)` resumes `Normal` speed, and `#hud-timer` switches to `Free Play`.
 - **Disconnected / Left Player Tracking**: When a player disconnects or leaves the game (`net.on("left")`), they are registered in `state.vs.leftPlayerIds`:
   - In the Rivals Leaderboard table, their status pill renders as `<span class="status-pill left">Left</span>`, and their row is dimmed with `.player-left`.
   - In Quest cards, their row shows `(Left)` and drops to inactive opacity.
@@ -244,6 +252,9 @@ BrowserTHospital/
 
 Run tests before committing any changes:
 ```powershell
+# Run Canvas left-drag protection, Hospital Value timed victory & synchronized multi-player Continue barrier verification
+node tests/test_canvas_drag_value_and_continue.js
+
 # Run CorsixTH v0.70.2 upgrade, High-DPI scale clamp, gzip, and runtime performance verification
 node tests/test_v0702_upgrade_and_perf.js
 
@@ -285,4 +296,4 @@ node tests/test_map_preview_modal.js
 
 - Upgraded `third_party/CorsixTH` from `v0.69.2` (`SAVEGAME_VERSION = 222`) to `v0.70.2` (`release/v0.70` hotfix commit `22040b6`, `SAVEGAME_VERSION = 254`, Lua API `2717`).
 - Migrated C++/WASM mainloop (`sdl_core.cpp`, `web_loop.h`, `web_main.cpp`) from coroutine yield/resume to direct C++ `push_app_dispatch` + `lua_pcall` execution (including `v0.70.2` `SDL_KEYUP` modifier table hotfix #3535 and root `"/"` VFS path normalization in `utility.lua` / `app.lua`).
-- Verified across 12 automated Playwright suites with zero regressions.
+- Verified across 13 automated Playwright suites with zero regressions.

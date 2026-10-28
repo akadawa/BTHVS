@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=b6b1bf366297">
+  <link rel="stylesheet" href="style.css?v=ca4d39a97113">
 </head>
 <body>
   <!-- ======================= Landing / Lobby ======================= -->
@@ -201,7 +201,7 @@
 
       <div id="host-options">
         <h3>Versus Goals (Quest Chooser)</h3>
-        <p class="muted small">Configure match win conditions. All active goals must be achieved!</p>
+        <p class="muted small">Configure match win conditions. All active goals must be achieved! When time runs out, the highest Hospital Value wins.</p>
 
         <div class="quest-chooser-grid">
           <label class="field"><span class="field-title">Cured Patients</span>
@@ -257,7 +257,7 @@
         <div class="guest-info-box">
           <div><b>Versus Goals:</b></div>
           <div id="guest-goal-summary" class="guest-goals-list">...</div>
-          <div class="muted small" style="margin-top: 4px;">The first player to achieve all active goals wins! When time runs out, the highest cash balance wins.</div>
+          <div class="muted small" style="margin-top: 4px;">The first player to achieve all active goals wins! When time runs out, the highest Hospital Value wins.</div>
           <div style="margin-top: 8px;" class="guest-map-line">
             <b>Map:</b> <span id="guest-level-val">Level 1</span>
             <button type="button" id="btn-map-preview-guest" class="btn-help-inline btn-map-preview" title="Preview Maps">?</button>
@@ -288,8 +288,8 @@
   </main>
 
   <!-- ============================ Game ============================ -->
-  <div id="game" hidden>
-    <canvas id="canvas" tabindex="1" oncontextmenu="event.preventDefault()"></canvas>
+  <div id="game" hidden draggable="false">
+    <canvas id="canvas" tabindex="1" draggable="false" oncontextmenu="event.preventDefault()" ondragstart="event.preventDefault()"></canvas>
     <div id="loading">
       <div class="spinner"></div>
       <div id="loading-text">Loading game …</div>
@@ -330,6 +330,7 @@
               <tr>
                 <th style="width: 38px; text-align: center;">Rank</th>
                 <th>Player</th>
+                <th>Value</th>
                 <th>Cured</th>
                 <th>Cash</th>
                 <th>Rooms</th>
@@ -354,6 +355,7 @@
         <h2 id="vic-title">Match Finished!</h2>
         <p id="vic-desc" class="vic-desc"></p>
         <div id="vic-stats-summary" class="vic-summary"></div>
+        <div id="vic-continue-status" class="vic-continue-status"></div>
         <div class="row victory-actions">
           <button id="vic-continue" class="btn secondary">Continue Playing</button>
           <button id="vic-exit" class="btn primary">Return to Menu</button>
@@ -512,6 +514,6 @@
 
   <script src="vendor/peerjs.min.js"></script>
   <script src="vendor/fflate.js"></script>
-  <script src="app.js?v=b6b1bf366297"></script>
+  <script src="app.js?v=ca4d39a97113"></script>
 </body>
 </html>
