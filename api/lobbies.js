@@ -3,6 +3,8 @@
 
 // Module-level in-memory cache for warm lambda executions
 const lobbies = new Map();
+const hostedCodes = new Set();
+let totalHosted = 0;
 const TTL_MS = 60000; // 60 seconds TTL
 
 function prune() {
@@ -43,7 +45,7 @@ module.exports = (req, res) => {
     }
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(JSON.stringify({ ok: true, lobbies: list }));
+    res.end(JSON.stringify({ ok: true, lobbies: list, totalHosted }));
     return;
   }
 
@@ -65,6 +67,10 @@ module.exports = (req, res) => {
     }
 
     // Add or update room
+    if (!hostedCodes.has(code)) {
+      hostedCodes.add(code);
+      totalHosted++;
+    }
     lobbies.set(code, {
       code,
       hostName: String(data.hostName || "Host").slice(0, 24),
@@ -78,7 +84,7 @@ module.exports = (req, res) => {
 
     res.statusCode = 200;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ ok: true, registered: code }));
+    res.end(JSON.stringify({ ok: true, registered: code, totalHosted }));
   };
 
   if (req.method === "POST") {

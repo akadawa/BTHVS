@@ -96,10 +96,15 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   });
   await sleep(400);
 
-  let hostSummary = await pHost.textContent("#goal-summary-text");
-  console.log("Host Goal Summary:", hostSummary);
-  if (!hostSummary.includes("25 patients") || !hostSummary.includes("30 Min")) {
-    throw new Error(`FAIL: Host summary should show 25 patients and 30 min, got: ${hostSummary}`);
+  const hostSummaryBox = await pHost.$("#goal-summary-box");
+  if (hostSummaryBox !== null) {
+    throw new Error("FAIL: #goal-summary-box should be removed to prevent layout shifts as requested!");
+  }
+  const hostCured = await pHost.$eval("#goal-cured", (el) => el.value);
+  const hostTime = await pHost.$eval("#goal-time", (el) => el.value);
+  console.log("Host selected goals:", { cured: hostCured, time: hostTime });
+  if (hostCured !== "25" || hostTime !== "30") {
+    throw new Error(`FAIL: Host dropdowns should show 25 and 30, got: cured=${hostCured}, time=${hostTime}`);
   }
 
   let guestSummary = await pGuest.textContent("#guest-goal-summary");

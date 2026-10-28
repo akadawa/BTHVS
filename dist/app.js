@@ -1225,6 +1225,9 @@
       history.replaceState(null, "", "?join=" + m.code);
       if (m.host) {
         state.lobby.goals = getGoalsFromUI();
+        const curTotal = (parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0) + 1;
+        localStorage.setItem("bth_total_lobbies", String(curTotal));
+        updateTotalHostedUI(curTotal);
         if (isPublic) {
           registerPublicLobby(state.lobby);
           if (_lobbyHeartbeatTimer) clearInterval(_lobbyHeartbeatTimer);
@@ -1420,6 +1423,11 @@
     } catch (e) {}
   }
 
+  function updateTotalHostedUI(count) {
+    const el = $("#count-lobbies-hosted");
+    if (el) el.textContent = (count || 0).toLocaleString();
+  }
+
   async function refreshPublicLobbies() {
     const container = $("#lobbies-container");
     if (!container) return;
@@ -1428,7 +1436,15 @@
       const res = await fetch(apiUrl);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
+      if (typeof data.totalHosted === "number") {
+        const cur = Math.max(data.totalHosted, parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0);
+        localStorage.setItem("bth_total_lobbies", String(cur));
+        updateTotalHostedUI(cur);
+      }
       const lobbies = data.lobbies || [];
+      const newKey = lobbies.map((l) => `${l.code}:${l.players || 1}:${l.hostName}:${l.level}`).join("|");
+      if (container._lastLobbiesKey === newKey) return;
+      container._lastLobbiesKey = newKey;
       if (lobbies.length === 0) {
         container.innerHTML = '<div class="lobbies-empty">No active public lobbies found right now. Check "List in Public Lobby Browser" when creating a room above!</div>';
         return;
@@ -1476,7 +1492,9 @@
         };
       });
     } catch (e) {
-      container.innerHTML = '<div class="lobbies-empty">No active public lobbies found right now. Check "List in Public Lobby Browser" when creating a room above!</div>';
+      if (!container._lastLobbiesKey) {
+        container.innerHTML = '<div class="lobbies-empty">No active public lobbies found right now. Check "List in Public Lobby Browser" when creating a room above!</div>';
+      }
     }
   }
 
@@ -2534,58 +2552,6 @@
       btnRefreshLobbies.onclick = () => refreshPublicLobbies();
     }
 
-    const updateRelayDisplay = () => {
-      const el = $("#current-relay-host");
-      if (!el) return;
-      const mode = getNetworkMode();
-      const saved = localStorage.getItem("bth-relay-url");
-      const param = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay");
-      if (mode === "p2p") {
-        el.textContent = "WebRTC P2P (Serverless)";
-      } else if (param) {
-        el.textContent = "WebSocket: " + param;
-      } else if (saved) {
-        el.textContent = "WebSocket: " + saved;
-      } else {
-        el.textContent = "WebSocket (" + location.host + ")";
-      }
-    };
-    updateRelayDisplay();
-
-    const btnServer = $("#btn-server-settings");
-    if (btnServer) {
-      btnServer.onclick = () => {
-        const currentMode = getNetworkMode();
-        const currentUrl = localStorage.getItem("bth-relay-url") || "";
-        const input = prompt(
-          "Choose multiplayer network mode:\n\n" +
-          "• Enter 'p2p' for WebRTC direct connection (Serverless – ideal for Vercel!)\n" +
-          "• Or enter a WebSocket relay server URL (e.g. wss://my-hospital.onrender.com/ws)\n\n" +
-          "Leave blank for automatic default:",
-          currentMode === "p2p" ? "p2p" : currentUrl
-        );
-        if (input !== null) {
-          const trimmed = input.trim();
-          if (trimmed.toLowerCase() === "p2p") {
-            localStorage.setItem("bth-net-mode", "p2p");
-            localStorage.removeItem("bth-relay-url");
-          } else if (trimmed) {
-            let u = trimmed;
-            if (!u.startsWith("ws://") && !u.startsWith("wss://")) {
-              u = (location.protocol === "https:" ? "wss://" : "ws://") + u;
-            }
-            if (!u.includes("/ws") && !u.endsWith("/")) u += "/ws";
-            localStorage.setItem("bth-relay-url", u);
-            localStorage.setItem("bth-net-mode", "ws");
-          } else {
-            localStorage.removeItem("bth-net-mode");
-            localStorage.removeItem("bth-relay-url");
-          }
-          updateRelayDisplay();
-        }
-      };
-    }
-
     const lobbyChatForm = $("#lobby-chat-form");
     const lobbyChatInput = $("#lobby-chat-input");
     if (lobbyChatForm && lobbyChatInput) {
@@ -2599,6 +2565,7 @@
       };
     }
 
+    updateTotalHostedUI(parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0);
     refreshLevelOptions();
     refreshPublicLobbies();
     setInterval(() => {
@@ -2606,13 +2573,13 @@
       if (setupView && !setupView.hidden && !state.lobby && !state.game) {
         refreshPublicLobbies();
       }
-    }, 8000);
+    }, 4000);
 
     const join = new URLSearchParams(location.search).get("join");
     if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI };
   }
 
   init();

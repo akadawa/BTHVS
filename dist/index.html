@@ -164,9 +164,13 @@
   <main id="menu">
     <header>
       <div class="logo">✚</div>
-      <div>
+      <div class="header-main">
         <h1>Browser Theme Hospital – Versus</h1>
         <p class="sub">CorsixTH in Browser – Real-Time Multiplayer Versus Competition</p>
+      </div>
+      <div class="header-stats-badge" id="header-lobbies-hosted" title="Total multiplayer versus lobbies hosted so far">
+        <span class="stats-label">Lobbies Hosted:</span>
+        <span class="stats-count" id="count-lobbies-hosted">0</span>
       </div>
     </header>
 
@@ -187,6 +191,27 @@
         </div>
         <input type="file" id="file-zip" accept=".zip" hidden>
         <input type="file" id="file-folder" webkitdirectory directory multiple hidden>
+
+        <div class="data-project-notes">
+          <div class="project-note-item">
+            <div class="note-title"><svg class="th-icon" aria-hidden="true"><use href="#th-chat"/></svg> GitHub & Community Feedback</div>
+            <div class="note-desc">
+              This open-source project is hosted on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a>. You are warmly welcome to submit bug reports, issues, ideas, or feature requests there — community suggestions and improvements will gladly be implemented!
+            </div>
+          </div>
+          <div class="project-note-item">
+            <div class="note-title"><svg class="th-icon" aria-hidden="true"><use href="#th-cog"/></svg> Serverless Testing & Dedicated Server Roadmap</div>
+            <div class="note-desc">
+              Currently running serverless on Vercel with WebRTC peer signaling for lightweight prototype testing. A dedicated high-performance multiplayer server is in development to provide persistent game sessions, authoritative state synchronization, and ultra-low latency matchmaking in future releases.
+            </div>
+          </div>
+          <div class="project-note-item">
+            <div class="note-title"><svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> Mandatory In-Game Choices & Pause Notice</div>
+            <div class="note-desc">
+              During essential in-game decisions where user input is required (such as incoming fax messages, salary reviews, or modal dialogs), the game engine momentarily pauses the simulation for all players. This is standard, intended CorsixTH engine behavior and cannot be removed.
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="card" id="card-mode" aria-disabled="true">
@@ -334,16 +359,14 @@
           </label>
         </div>
 
-        <div id="goal-summary-box" class="goal-summary-card">
-          <div class="goal-summary-title">Active Match Conditions:</div>
-          <div id="goal-summary-text" class="goal-summary-content">...</div>
-          <div class="goal-summary-rule muted small">The first player to achieve <b>all</b> active goals wins! When time runs out, the player with the highest cash balance wins.</div>
-        </div>
-
         <label class="field" id="mp-level-wrap">Map / Level
           <select id="mp-level"></select>
         </label>
         <p id="level-compat-hint" class="status warn small" hidden></p>
+
+        <div class="match-notice-banner muted small" style="margin-top: 10px;">
+          Note: Mandatory simulation dialogs (such as incoming faxes) temporarily pause the game for all players.
+        </div>
       </div>
 
       <div id="guest-options" hidden>
@@ -353,6 +376,9 @@
           <div id="guest-goal-summary" class="guest-goals-list">...</div>
           <div class="muted small" style="margin-top: 4px;">The first player to achieve all active goals wins! When time runs out, the highest cash balance wins.</div>
           <div style="margin-top: 8px;"><b>Map:</b> <span id="guest-level-val">Level 1</span></div>
+        </div>
+        <div class="match-notice-banner muted small" style="margin-top: 8px;">
+          Note: Mandatory simulation dialogs (such as incoming faxes) temporarily pause the game for all players.
         </div>
         <p id="guest-wait" class="muted">Waiting for the host to start the game …</p>
       </div>
@@ -365,12 +391,18 @@
       <p id="lobby-hint" class="muted small"></p>
     </section>
 
-    <footer class="muted small">
-      <div>Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License). Theme Hospital © Bullfrog / EA.</div>
-      <div style="margin-top: 6px;">
-        <button id="btn-server-settings" class="btn ghost small" type="button" title="Configure Network / Multiplayer Mode">
-          <svg class="th-icon" aria-hidden="true"><use href="#th-cog"/></svg> Network: <span id="current-relay-host">Automatic</span>
-        </button>
+    <footer class="card footer-card">
+      <div class="footer-network-line">
+        <span class="network-badge">
+          <svg class="th-icon" aria-hidden="true"><use href="#th-cog"/></svg> Network: WebSockets & Serverless (Vercel)
+        </span>
+        <span class="network-status-indicator ok">Online</span>
+      </div>
+      <div class="footer-links-line muted small">
+        Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License). Theme Hospital © Bullfrog / EA.
+      </div>
+      <div class="footer-links-line muted small">
+        Have feedback, issues or feature ideas? Join us on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a>.
       </div>
     </footer>
   </main>

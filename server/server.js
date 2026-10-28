@@ -40,6 +40,8 @@ const MIME = {
 };
 
 const externalLobbies = new Map();
+const allHostedCodes = new Set();
+let totalHosted = 0;
 const LOBBY_TTL = 60000;
 
 function pruneExternal() {
@@ -103,7 +105,7 @@ const server = http.createServer((req, res) => {
         "access-control-allow-origin": "*",
         "cache-control": "no-cache",
       });
-      res.end(JSON.stringify({ ok: true, lobbies: list }));
+      res.end(JSON.stringify({ ok: true, lobbies: list, totalHosted }));
       return;
     }
     if (req.method === "POST") {
@@ -124,6 +126,10 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: true, closed: code }));
           return;
         }
+        if (!allHostedCodes.has(code)) {
+          allHostedCodes.add(code);
+          totalHosted++;
+        }
         externalLobbies.set(code, {
           code,
           hostName: String(data.hostName || "Host").slice(0, 24),
@@ -135,7 +141,7 @@ const server = http.createServer((req, res) => {
           updatedAt: Date.now(),
         });
         res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
-        res.end(JSON.stringify({ ok: true, registered: code }));
+        res.end(JSON.stringify({ ok: true, registered: code, totalHosted }));
       });
       return;
     }
@@ -273,6 +279,10 @@ function handle(ws, msg) {
       const isPublic = msg.isPublic !== undefined ? !!msg.isPublic : true;
       const room = new Room(newCode(), max, isPublic);
       rooms.set(room.code, room);
+      if (!allHostedCodes.has(room.code)) {
+        allHostedCodes.add(room.code);
+        totalHosted++;
+      }
       const p = { id: room.nextId++, name: String(msg.name || "Host").slice(0, 24), demo: !!msg.demo, ready: false, token: String(msg.token || ""), ws };
       room.players.set(p.id, p);
       room.hostId = p.id;

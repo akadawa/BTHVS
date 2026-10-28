@@ -32,11 +32,60 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   }
   console.log("✓ Quest chooser labels use authentic Theme Hospital patient, money, and clock icons.");
 
+  // Verify Header Hosted Lobbies Counter
+  const hasHeaderCounter = await pHost.$("#header-lobbies-hosted");
+  const initialHostedText = await pHost.textContent("#count-lobbies-hosted");
+  console.log("Header lobbies hosted element present, initial count:", initialHostedText);
+  if (!hasHeaderCounter || initialHostedText === null) {
+    throw new Error("FAIL: Missing #header-lobbies-hosted counter in header!");
+  }
+  console.log("✓ Header features Total Hosted Lobbies counter in bottom-right corner.");
+
+  // Verify Game Data Notes (GitHub, Serverless / Roadmap, Pause Notice)
+  const notesText = await pHost.textContent(".data-project-notes");
+  console.log("Game Data notes preview:", notesText.slice(0, 120));
+  if (!notesText.includes("github.com/akadawa/BTHVS") && !notesText.includes("GitHub (akadawa/BTHVS)")) {
+    throw new Error("FAIL: Missing GitHub repository link in Game Data!");
+  }
+  if (!notesText.includes("serverless") && !notesText.includes("Serverless")) {
+    throw new Error("FAIL: Missing serverless on Vercel notice in Game Data!");
+  }
+  if (!notesText.includes("dedicated") && !notesText.includes("Dedicated")) {
+    throw new Error("FAIL: Missing future dedicated server roadmap description!");
+  }
+  if (!notesText.includes("pause") && !notesText.includes("fax")) {
+    throw new Error("FAIL: Missing notice that game briefly pauses during dialogs/choices/faxes!");
+  }
+  console.log("✓ Game Data notes contain GitHub link, serverless testing & dedicated server roadmap, and dialog pause notice.");
+
+  // Verify Footer Card design and static Network info
+  const footerCard = await pHost.$("footer.card.footer-card");
+  if (!footerCard) throw new Error("FAIL: Footer must have .card.footer-card class to match other cards!");
+  const footerWidthMatch = await pHost.evaluate(() => {
+    const cardData = document.querySelector("#card-data");
+    const footer = document.querySelector("footer.footer-card");
+    return cardData && footer && Math.abs(cardData.offsetWidth - footer.offsetWidth) < 4;
+  });
+  if (!footerWidthMatch) throw new Error("FAIL: Footer card should have the same width as the other cards!");
+  const networkText = await pHost.textContent(".footer-network-line");
+  console.log("Footer network display:", networkText);
+  if (!networkText.includes("WebSockets") || !networkText.includes("Serverless")) {
+    throw new Error("FAIL: Footer must show static 'WebSockets & Serverless (Vercel)' info!");
+  }
+  console.log("✓ Footer is styled as a full-width card matching other cards with static network display.");
+
   // 2. Test Lobby Chat Height Alignment with Left Column
   console.log("2. Checking Lobby Chat height alignment...");
   await pHost.click("#btn-create");
   await pHost.waitForSelector("#card-lobby:not([hidden])");
   const roomCode = (await pHost.textContent("#room-code")).trim();
+
+  // Verify #goal-summary-box is removed from lobby to prevent layout jumping
+  const goalSummaryBox = await pHost.$("#goal-summary-box");
+  if (goalSummaryBox !== null) {
+    throw new Error("FAIL: #goal-summary-box must be removed to avoid layout shifting on dropdown change!");
+  }
+  console.log("✓ Active match conditions summary box removed for stable, static layout.");
 
   await pGuest.fill("#join-code", roomCode);
   await pGuest.click("#btn-join");
