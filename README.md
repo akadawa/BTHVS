@@ -1,8 +1,8 @@
-# Browser Theme Hospital – Versus
+# BTHVS – Browser THospital Versus
 
 A web-based port of the open-source CorsixTH engine (compiled to WebAssembly) designed for real-time multiplayer versus matches directly in the web browser.
 
-![Browser Theme Hospital Versus](screenshot.png)
+![BTHVS Browser THospital Versus](screenshot.png)
 
 ## Live Demo
 
@@ -11,7 +11,7 @@ https://bthvs.vercel.app
 
 ## About the Project
 
-Browser Theme Hospital Versus allows players to compete head-to-head on the same hospital map in real time. Rather than running a traditional singleplayer hospital, players face off to reach customizable win conditions or hold the highest hospital value and cash balance before time expires.
+BTHVS (Browser THospital Versus) allows players to compete head-to-head on the same hospital map in real time. Rather than running a traditional singleplayer hospital, players face off to reach customizable win conditions or hold the highest hospital value and cash balance before time expires.
 
 The multiplayer networking operates serverless via WebRTC P2P DataChannels directly between browser sessions, with an optional WebSocket relay fallback for restrictive networks. No local server installation or browser plugins are required.
 
