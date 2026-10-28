@@ -171,11 +171,11 @@ BrowserTHospital/
 - Initial state starts completely clean at zero (`DEFAULT_LEADERBOARD = []`, all stats start at 0).
 - JSON Export/Import buttons ("Export Stats" / "Import Stats") allow players to backup and restore their records.
 
-### E. In-Game HUD & Window Persistence
-- In-game HUD (`#hud`) is docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions.
-- For lobbies with > 2 players (up to 10 players), the HUD players chip condenses to `Host: Name · X Players` to remain clean and compact.
-- Quests and Chat windows are draggable and resizable with handles.
-- Positions and dimensions are persisted in `localStorage` (`bth_win_quests` and `bth_win_chat`).
+### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence
+- **Minimalist In-Game HUD**: Docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions. Redundant telemetry (ping `- ms`, sync badge, host/player listings) was completely removed to keep the HUD unobtrusive.
+  - Visible HUD elements: `[v0.0.1] [Room CODE · Map] [Timer (if timed)] [Quests] [Chat] [FS] [Leave]`
+- **Leave Match Button & Confirmation Modal**: Inside active matches, the top-right `Leave` chip button (`#hud-exit-btn`) and the `Escape` key open the `#leave-modal` confirmation dialog. Confirming cleanly terminates the peer connection and returns the player to the BTHVS main lobby/menu (`gameExit(false)` -> `location.href = location.pathname`), eliminating the issue of getting stranded in CorsixTH's internal DOS menu.
+- **Window Persistence**: Quests and Chat windows are draggable and resizable with handles; their positions and dimensions are persisted across sessions in `localStorage` (`bth_win_quests` and `bth_win_chat`).
 
 ### F. Simplified In-Game Quests & Multi-Player Rivals Leaderboard
 - **Glanceable Quest Cards**: Stripped of long explanatory paragraphs. Each card provides instant answers to three vital questions:
@@ -183,6 +183,10 @@ BrowserTHospital/
   2. *What do I still need?* (`Need: 7 more`, `Completed!`) + current progress bar.
   3. *What do rivals have right now?* Compact comparative rows for all opponents.
 - **10-Player Rivals Leaderboard Table**: The Leaderboard tab (`#quest-view-dashboard`) renders a full ranking table supporting up to 10 players with Rank, Player, Cured, Cash, Rooms, Reputation, and Status, perfectly proportioned for 1080p and 720p screens.
+- **Disconnected / Left Player Tracking**: When a player disconnects or leaves the game (`net.on("left")`), they are registered in `state.vs.leftPlayerIds`:
+  - In the Rivals Leaderboard table, their status pill renders as `<span class="status-pill left">Left</span>`, and their row is dimmed with `.player-left`.
+  - In Quest cards, their row shows `(Left)` and drops to inactive opacity.
+  - If all opponents leave, the status banner informs the remaining player: `All rivals have left the match.`
 
 ---
 

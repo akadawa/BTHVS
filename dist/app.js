@@ -261,6 +261,8 @@
       myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
       oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: "Opponent" },
       rivalStats: new Map(),
+      matchPlayers: new Map(),
+      leftPlayerIds: new Set(),
       winner: null,
       tab: "goals",
     },
@@ -2393,6 +2395,14 @@
     // keep browser shortcuts (F5/F11) usable but swallow game keys that scroll the page
     $("#canvas").addEventListener("keydown", (e) => {
       if (["Tab", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
+      if (e.key === "Escape") {
+        const leaveModal = $("#leave-modal");
+        if (leaveModal) {
+          e.preventDefault();
+          e.stopPropagation();
+          leaveModal.hidden = !leaveModal.hidden;
+        }
+      }
     });
   }
 
@@ -2482,9 +2492,11 @@
       }
       case "ui.sync": {
         const el = $("#hud-sync");
-        const [kind, text] = [arg.charAt(0), arg.slice(1)];
-        el.className = "chip " + (kind === "o" ? "ok" : kind === "w" ? "warn" : "err");
-        el.textContent = text;
+        if (el) {
+          const [kind, text] = [arg.charAt(0), arg.slice(1)];
+          el.className = "chip " + (kind === "o" ? "ok" : kind === "w" ? "warn" : "err");
+          el.textContent = text;
+        }
         return null;
       }
       case "time.now":
@@ -2549,8 +2561,10 @@
     if (net) {
       net.on("ping", (ms) => {
         const el = $("#hud-ping");
-        el.textContent = ms + " ms";
-        el.className = "chip " + (ms < 120 ? "ok" : ms < 300 ? "warn" : "err");
+        if (el) {
+          el.textContent = ms + " ms";
+          el.className = "chip " + (ms < 120 ? "ok" : ms < 300 ? "warn" : "err");
+        }
       });
       net.on("msg", (m) => {
         if (typeof m.d === "string" && m.d.startsWith("vstats:")) {
@@ -2578,6 +2592,15 @@
         updateHudPlayers();
       });
       net.on("left", (m) => {
+        let leftName = "A Player";
+        if (state.lobby && Array.isArray(state.lobby.players)) {
+          const lp = state.lobby.players.find((p) => p.id === m.id);
+          if (lp && lp.name) leftName = lp.name;
+        }
+        if (state.vs && state.vs.matchPlayers && state.vs.matchPlayers.has(m.id)) {
+          leftName = state.vs.matchPlayers.get(m.id).name || leftName;
+        }
+
         if (state.lobby) {
           state.lobby.players = m.players;
           if (m.host !== null && m.host !== undefined) {
@@ -2585,8 +2608,21 @@
             if (state.session && state.session.mp) state.session.mp.host = m.host;
           }
         }
+
+        if (state.vs) {
+          if (!state.vs.leftPlayerIds) state.vs.leftPlayerIds = new Set();
+          state.vs.leftPlayerIds.add(m.id);
+          if (state.vs.rivalStats && state.vs.rivalStats.has(m.id)) {
+            state.vs.rivalStats.get(m.id).left = true;
+          }
+          if (state.vs.matchPlayers && state.vs.matchPlayers.has(m.id)) {
+            state.vs.matchPlayers.get(m.id).left = true;
+          }
+          updateQuestUI();
+        }
+
         net.inbox.push({ from: -1, d: "peers:" + peersString(m.players) + (m.host !== null && m.host !== undefined ? "|host=" + m.host : "") });
-        chatSys(`${((state.lobby && state.lobby.players || []).find(p=>p.id===m.id)||{name:"A Player"}).name} disconnected.`);
+        chatSys(`${leftName} left the match.`);
         updateHudPlayers();
       });
       net.on("start_sim", () => {
@@ -2628,6 +2664,26 @@
     setupChat();
     setupQuests();
     $("#hud-fs-btn").onclick = toggleFullscreen;
+    const exitBtn = $("#hud-exit-btn");
+    const leaveModal = $("#leave-modal");
+    const leaveCancel = $("#leave-cancel");
+    const leaveConfirm = $("#leave-confirm");
+    if (exitBtn && leaveModal) {
+      exitBtn.onclick = () => { leaveModal.hidden = false; };
+    }
+    if (leaveCancel && leaveModal) {
+      leaveCancel.onclick = () => { leaveModal.hidden = true; };
+    }
+    if (leaveModal) {
+      leaveModal.onclick = (e) => {
+        if (e.target === leaveModal) leaveModal.hidden = true;
+      };
+    }
+    if (leaveConfirm) {
+      leaveConfirm.onclick = () => {
+        gameExit(false);
+      };
+    }
 
     // Automatically open Chat and Quests on match start
     if ($("#chat")) {
@@ -2943,6 +2999,7 @@
     const myName = playerName();
     const myId = (state.session && state.session.mp && state.session.mp.id !== undefined) ? state.session.mp.id : 0;
     const isHost = state.session && state.session.mp ? (state.session.mp.id === (state.lobby ? state.lobby.hostId : 0) || state.session.mp.host) : true;
+    const leftIds = (state.vs && state.vs.leftPlayerIds) || new Set();
 
     // Local player
     list.push({
@@ -2950,10 +3007,32 @@
       name: myName,
       isMe: true,
       isHost: !!isHost,
-      stats: myStats
+      stats: myStats,
+      left: false,
     });
 
     const knownIds = new Set([myId]);
+
+    // From state.vs.matchPlayers (persists all players who started the match)
+    if (state.vs && state.vs.matchPlayers && state.vs.matchPlayers.size > 0) {
+      state.vs.matchPlayers.forEach((mp, pid) => {
+        if (!knownIds.has(pid)) {
+          knownIds.add(pid);
+          const rStats = state.vs.rivalStats.get(pid) || {
+            bal: 0, cured: 0, rep: 500, rooms: 0, staff: 0, deaths: 0, val: 0, started: false
+          };
+          const isLeft = leftIds.has(pid) || mp.left || rStats.left || mp.connected === false;
+          list.push({
+            id: pid,
+            name: mp.name || `Player ${pid}`,
+            isMe: false,
+            isHost: !!mp.host,
+            stats: rStats,
+            left: !!isLeft,
+          });
+        }
+      });
+    }
 
     // From state.lobby.players
     if (state.lobby && Array.isArray(state.lobby.players)) {
@@ -2963,12 +3042,14 @@
           const rStats = state.vs.rivalStats.get(p.id) || {
             bal: 0, cured: 0, rep: 500, rooms: 0, staff: 0, deaths: 0, val: 0, started: false
           };
+          const isLeft = leftIds.has(p.id) || p.left || rStats.left || p.connected === false;
           list.push({
             id: p.id,
             name: p.name || `Player ${p.id}`,
             isMe: false,
             isHost: !!p.host,
-            stats: rStats
+            stats: rStats,
+            left: !!isLeft,
           });
         }
       });
@@ -2978,24 +3059,28 @@
     state.vs.rivalStats.forEach((rStats, rId) => {
       if (!knownIds.has(rId)) {
         knownIds.add(rId);
+        const isLeft = leftIds.has(rId) || rStats.left;
         list.push({
           id: rId,
           name: rStats.name || `Player ${rId}`,
           isMe: false,
           isHost: false,
-          stats: rStats
+          stats: rStats,
+          left: !!isLeft,
         });
       }
     });
 
     // If opponent is registered in oppStats and not yet in list
     if (list.length === 1 && state.vs.oppStats && state.vs.oppStats.name && state.vs.oppStats.name !== "Opponent") {
+      const isLeft = !!state.vs.oppStats.left;
       list.push({
         id: -999,
         name: state.vs.oppStats.name,
         isMe: false,
         isHost: false,
-        stats: state.vs.oppStats
+        stats: state.vs.oppStats,
+        left: isLeft,
       });
     }
 
@@ -3033,7 +3118,10 @@
         const top = sortedByCash[0];
         const isMeTop = top && top.isMe;
 
-        if (allPlayers.length <= 1) {
+        const activeRivals = allPlayers.filter((p) => !p.isMe && !p.left);
+        if (allPlayers.length > 1 && activeRivals.length === 0) {
+          leadText.innerHTML = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
+        } else if (allPlayers.length <= 1) {
           leadText.innerHTML = `Time Left: <b>${timeStr}</b> · Cash: <b>$${(my.bal || 0).toLocaleString()}</b>`;
         } else if (isMeTop) {
           const secondCash = sortedByCash[1] ? (sortedByCash[1].stats.bal || 0) : 0;
@@ -3056,8 +3144,11 @@
 
         const leader = playerScores[0];
         const meScore = (playerScores.find((p) => p.isMe) || {}).score || 0;
+        const activeRivals = allPlayers.filter((p) => !p.isMe && !p.left);
 
-        if (allPlayers.length <= 1) {
+        if (allPlayers.length > 1 && activeRivals.length === 0) {
+          leadText.innerHTML = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
+        } else if (allPlayers.length <= 1) {
           leadText.innerHTML = `Progress: <b>${meScore}%</b> towards match victory`;
         } else if (leader.isMe) {
           const second = playerScores[1];
@@ -3093,12 +3184,12 @@
           const rCash = r.stats.bal || 0;
           const rPct = Math.min(100, Math.max(0, Math.round((rCash / topCash) * 100)));
           rivalsRows += `
-            <div class="q-player-row rival">
+            <div class="q-player-row rival ${r.left ? 'player-left' : ''}">
               <div class="q-p-stat">
-                <span class="q-p-name">${escapeHtml(r.name)}</span>
-                <span>$${rCash.toLocaleString()}</span>
+                <span class="q-p-name">${escapeHtml(r.name)}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
+                <span>$${rCash.toLocaleString()}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
               </div>
-              <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%"></div></div>
+              <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%; ${r.left ? 'opacity: 0.35;' : ''}"></div></div>
             </div>
           `;
         });
@@ -3142,14 +3233,14 @@
             const rPct = Math.min(100, Math.max(0, Math.round((rVal / q.target) * 100)));
             const rDone = rVal >= q.target;
             const rNeed = Math.max(0, q.target - rVal);
-            const needText = rDone ? "Done" : `Need: ${formatVal(rNeed, q.unit)}`;
+            const needText = r.left ? "Left" : (rDone ? "Done" : `Need: ${formatVal(rNeed, q.unit)}`);
             rivalsHtml += `
-              <div class="q-player-row rival">
+              <div class="q-player-row rival ${r.left ? 'player-left' : ''}">
                 <div class="q-p-stat">
-                  <span class="q-p-name">${escapeHtml(r.name)}</span>
+                  <span class="q-p-name">${escapeHtml(r.name)}${r.left ? ' <span class="q-p-left">(Left)</span>' : ''}</span>
                   <span>${formatVal(rVal, q.unit)} / ${formatVal(q.target, q.unit)} <span class="q-p-need">(${needText})</span></span>
                 </div>
-                <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%"></div></div>
+                <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%; ${r.left ? 'opacity: 0.35;' : ''}"></div></div>
               </div>
             `;
           });
@@ -3199,6 +3290,7 @@
     const tbody = $("#rival-tbody");
     if (tbody) {
       const sortedPlayers = [...allPlayers].sort((a, b) => {
+        if (a.left !== b.left) return a.left ? 1 : -1;
         if (g.cured > 0 && (b.stats.cured || 0) !== (a.stats.cured || 0)) {
           return (b.stats.cured || 0) - (a.stats.cured || 0);
         }
@@ -3211,21 +3303,25 @@
       tbody.innerHTML = sortedPlayers.map((p, idx) => {
         const rank = idx + 1;
         const s = p.stats || {};
-        const isFinished = quests.length > 0 && quests.every((q) => q.getVal(s) >= q.target);
-        const statusHtml = isFinished ?
-          `<span class="status-pill ok">Finished!</span>` :
-          (s.started ? `<span class="status-pill active">Active</span>` : `<span class="status-pill wait">Waiting</span>`);
+        const isFinished = !p.left && quests.length > 0 && quests.every((q) => q.getVal(s) >= q.target);
+        const statusHtml = p.left ?
+          `<span class="status-pill left">Left</span>` :
+          (isFinished ?
+            `<span class="status-pill ok">Finished!</span>` :
+            (s.started ? `<span class="status-pill active">Active</span>` : `<span class="status-pill wait">Waiting</span>`));
 
         const isMeClass = p.isMe ? " is-you" : "";
-        const rankClass = rank === 1 ? " val-leader" : "";
+        const leftClass = p.left ? " player-left" : "";
+        const rankClass = rank === 1 && !p.left ? " val-leader" : "";
 
         return `
-          <tr class="${isMeClass}">
+          <tr class="${isMeClass}${leftClass}">
             <td class="td-rank ${rankClass}">#${rank}</td>
             <td class="td-player">
               <b>${escapeHtml(p.name)}</b>
               ${p.isMe ? '<span class="name-status-pill you">You</span>' : ''}
               ${p.isHost ? '<span class="name-status-pill host">Host</span>' : ''}
+              ${p.left ? '<span class="name-status-pill left-tag">Left</span>' : ''}
             </td>
             <td class="td-cured">${(s.cured || 0).toLocaleString()}${g.cured > 0 ? ` <span class="muted small">/ ${g.cured}</span>` : ''}</td>
             <td class="td-cash">$${(s.bal || 0).toLocaleString()}</td>
@@ -3366,9 +3462,16 @@
       myStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false },
       oppStats: { bal: 0, rep: 500, rooms: 0, staff: 0, cured: 0, deaths: 0, val: 0, started: false, name: opp ? opp.name : "Opponent" },
       rivalStats: new Map(),
+      matchPlayers: new Map(),
+      leftPlayerIds: new Set(),
       winner: null,
       tab: "goals",
     };
+    if (Array.isArray(players)) {
+      players.forEach((p) => {
+        if (p) state.vs.matchPlayers.set(p.id, { id: p.id, name: p.name, host: !!p.host });
+      });
+    }
 
     const mp = {
       id: L.id,
@@ -3623,6 +3726,12 @@
 
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
+        const leaveModal = $("#leave-modal");
+        if (leaveModal && !leaveModal.hidden) {
+          e.preventDefault();
+          leaveModal.hidden = true;
+          return;
+        }
         if (mapModal && !mapModal.hidden) closeMapModal();
         const patchDrawer = $("#patchnotes-drawer");
         if (patchDrawer && patchDrawer.classList.contains("open")) closePatchNotes();

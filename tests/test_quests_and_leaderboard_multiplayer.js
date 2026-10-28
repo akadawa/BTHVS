@@ -38,23 +38,47 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     if (svgCount !== 0) throw new Error(`FAIL: Expected 0 SVG elements, got ${svgCount}`);
     console.log("✓ Zero SVG elements found across document.");
 
-    // 2. Verify In-Game HUD position: top: 8px, right: 8px
+    // 2. Verify In-Game HUD position: top: 8px, right: 8px & Minimalist HUD
     const hudBox = await p1.evaluate(() => {
       const el = document.querySelector("#hud");
       const r = el.getBoundingClientRect();
       return {
         topOffset: r.top,
         rightOffset: window.innerWidth - r.right,
+        hasSync: !!document.querySelector("#hud #hud-sync"),
+        hasPing: !!document.querySelector("#hud #hud-ping"),
+        hasPlayers: !!document.querySelector("#hud #hud-players"),
+        hasExitBtn: !!document.querySelector("#hud #hud-exit-btn"),
+        exitBtnText: document.querySelector("#hud #hud-exit-btn")?.textContent.trim(),
       };
     });
-    console.log("HUD Position:", hudBox);
+    console.log("HUD Position & Chips:", hudBox);
     if (hudBox.topOffset > 15) {
       throw new Error(`FAIL: HUD is not at top right! topOffset=${hudBox.topOffset}px (must be <= 15px)`);
     }
     if (hudBox.rightOffset > 15) {
       throw new Error(`FAIL: HUD is not at top right! rightOffset=${hudBox.rightOffset}px (must be <= 15px)`);
     }
-    console.log("✓ HUD successfully docked in the top-right corner!");
+    if (hudBox.hasSync || hudBox.hasPing || hudBox.hasPlayers) {
+      throw new Error("FAIL: HUD should not contain sync, ping, or players chips!");
+    }
+    if (!hudBox.hasExitBtn || hudBox.exitBtnText !== "Leave") {
+      throw new Error(`FAIL: HUD missing Leave button! hasExitBtn=${hudBox.hasExitBtn}, text=${hudBox.exitBtnText}`);
+    }
+    console.log("✓ HUD successfully docked in the top-right corner with minimal chips and Leave button!");
+
+    // 2b. Test Leave Match Confirmation Modal
+    await p1.click("#hud-exit-btn");
+    await sleep(200);
+    const isLeaveModalOpen = await p1.evaluate(() => !document.querySelector("#leave-modal").hidden);
+    if (!isLeaveModalOpen) throw new Error("FAIL: #leave-modal should open when #hud-exit-btn is clicked!");
+    console.log("✓ #leave-modal opened upon clicking Leave button.");
+
+    await p1.click("#leave-cancel");
+    await sleep(200);
+    const isLeaveModalClosed = await p1.evaluate(() => document.querySelector("#leave-modal").hidden);
+    if (!isLeaveModalClosed) throw new Error("FAIL: #leave-modal should close when #leave-cancel is clicked!");
+    console.log("✓ #leave-modal closed upon clicking Stay.");
 
     // 3. Quests window is opened automatically when game starts
     await p1.waitForSelector("#quest-win:not([hidden])");
@@ -143,6 +167,34 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
       throw new Error(`FAIL: Expected table to render all players, got ${tenPlayersResult.rowsCount} rows`);
     }
     console.log("✓ Leaderboard table cleanly accommodates all players up to 10 in a compact layout.");
+
+    // 6b. Test Player Leaving / Disconnected Display
+    const leftPlayerResult = await p1.evaluate(() => {
+      const vsState = window.__bth.state.vs;
+      // Mark Doctor_1 (id: 11) as left
+      vsState.leftPlayerIds.add(11);
+      if (vsState.rivalStats.has(11)) {
+        vsState.rivalStats.get(11).left = true;
+      }
+      if (typeof window.__bth.updateQuestUI === "function") {
+        window.__bth.updateQuestUI();
+      }
+
+      // Check row for Doctor_1
+      const rows = Array.from(document.querySelectorAll("#rival-tbody tr"));
+      const doc1Row = rows.find((r) => r.querySelector(".td-player")?.textContent.includes("Doctor_1"));
+      return {
+        hasRow: !!doc1Row,
+        isPlayerLeftClass: doc1Row ? doc1Row.classList.contains("player-left") : false,
+        statusText: doc1Row?.querySelector(".td-status .status-pill")?.textContent.trim(),
+        hasLeftTag: !!doc1Row?.querySelector(".name-status-pill.left-tag"),
+      };
+    });
+    console.log("Left Player Display Result:", leftPlayerResult);
+    if (!leftPlayerResult.hasRow || !leftPlayerResult.isPlayerLeftClass || leftPlayerResult.statusText !== "Left") {
+      throw new Error(`FAIL: Left player not correctly displayed in Rivals Leaderboard! ${JSON.stringify(leftPlayerResult)}`);
+    }
+    console.log("✓ Disconnected / left player correctly displays 'Left' status and dimmed row styling in Leaderboard.");
 
     // 7. Strict Zero Emoji check
     const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}\u{1F680}-\u{1F6FF}]/u;
