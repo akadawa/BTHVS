@@ -523,6 +523,193 @@
     });
   }
 
+  // ------------------------------------------------------------- patchnotes
+  const FALLBACK_PATCHNOTES = [
+    {
+      sha: "736895a",
+      date: "2026-10-28T10:08:41Z",
+      msg: "docs: clean repository README with Vercel link and screenshot, support up to 10 players"
+    },
+    {
+      sha: "a850473",
+      date: "2026-10-28T09:51:16Z",
+      msg: "feat: complete removal of icons, add Game Files Needed notice, align bottom HUD, and persist window state"
+    },
+    {
+      sha: "481196e",
+      date: "2026-10-28T01:02:05Z",
+      msg: "feat: direct lobby landing via invite link, goal query params, and player status LEDs"
+    },
+    {
+      sha: "020bca6",
+      date: "2026-10-28T00:43:49Z",
+      msg: "feat: add map preview question mark button and modal with original map images and layouts"
+    },
+    {
+      sha: "e736679",
+      date: "2026-10-28T00:34:20Z",
+      msg: "clean: remove network websockets line from footer and clean up unicode symbols"
+    },
+    {
+      sha: "a709bde",
+      date: "2026-10-28T00:31:51Z",
+      msg: "refactor: consolidate project notices into unified summary without icons or emojis"
+    },
+    {
+      sha: "431021b",
+      date: "2026-10-28T00:24:55Z",
+      msg: "feat: display checkmark with exact folder or zip file path in game data status"
+    },
+    {
+      sha: "33007de",
+      date: "2026-10-28T00:17:29Z",
+      msg: "feat: add total lobbies hosted counter, serverless notes, pause dialog notice, static layout, and auto-refresh"
+    },
+    {
+      sha: "3f88aae",
+      date: "2026-10-28T00:10:05Z",
+      msg: "feat: replace emojis with Theme Hospital retro SVG icons, stretch lobby chat, and auto-open in-game windows"
+    },
+    {
+      sha: "a5bafa0",
+      date: "2026-10-27T23:46:18Z",
+      msg: "feat: add Vercel serverless /api/lobbies endpoint and P2P lobby registration"
+    }
+  ];
+
+  function formatPatchDate(dateStr) {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return String(dateStr);
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (_) {
+      return String(dateStr);
+    }
+  }
+
+  function cleanPatchMsg(msg) {
+    if (!msg) return "";
+    const firstLine = String(msg).split("\n")[0];
+    return firstLine.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}\u{1F680}-\u{1F6FF}]/gu, "").trim();
+  }
+
+  function renderPatchNotes(commits, statusText) {
+    const listEl = $("#patchnotes-list");
+    const statusEl = $("#patchnotes-status");
+    if (!listEl) return;
+    if (statusEl) {
+      statusEl.textContent = statusText || "";
+      statusEl.hidden = !statusText;
+    }
+    listEl.innerHTML = "";
+    if (!commits || !commits.length) {
+      listEl.innerHTML = '<div class="patchnotes-empty muted">No patchnotes available.</div>';
+      return;
+    }
+    commits.forEach((c) => {
+      const sha = c.sha ? c.sha.slice(0, 7) : "";
+      const commitUrl = c.html_url || `https://github.com/akadawa/BTHVS/commit/${sha}`;
+      const dateFormatted = formatPatchDate(c.date || (c.commit && c.commit.author && c.commit.author.date));
+      const msg = cleanPatchMsg(c.msg || (c.commit && c.commit.message));
+
+      const item = document.createElement("div");
+      item.className = "patchnotes-item";
+
+      const header = document.createElement("div");
+      header.className = "patchnotes-item-header";
+
+      const dateSpan = document.createElement("span");
+      dateSpan.className = "patchnotes-date";
+      dateSpan.textContent = dateFormatted;
+
+      const shaLink = document.createElement("a");
+      shaLink.className = "patchnotes-sha";
+      shaLink.href = commitUrl;
+      shaLink.target = "_blank";
+      shaLink.rel = "noopener";
+      shaLink.textContent = sha;
+      shaLink.title = "View commit on GitHub";
+
+      header.appendChild(dateSpan);
+      header.appendChild(shaLink);
+
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "patchnotes-item-msg";
+      msgDiv.textContent = msg;
+
+      item.appendChild(header);
+      item.appendChild(msgDiv);
+      listEl.appendChild(item);
+    });
+  }
+
+  let patchNotesFetched = false;
+  async function fetchPatchNotes(force = false) {
+    if (patchNotesFetched && !force) return;
+
+    let cached = null;
+    try {
+      const raw = localStorage.getItem("bth_patchnotes_cache");
+      if (raw) cached = JSON.parse(raw);
+    } catch (_) {}
+
+    const initialList = cached && Array.isArray(cached) && cached.length ? cached : FALLBACK_PATCHNOTES;
+    renderPatchNotes(initialList, "Connecting to GitHub for latest updates...");
+
+    try {
+      const res = await fetch("https://api.github.com/repos/akadawa/BTHVS/commits?per_page=15", {
+        headers: { Accept: "application/vnd.github.v3+json" }
+      });
+      if (!res.ok) {
+        if (res.status === 403) {
+          renderPatchNotes(initialList, "GitHub API rate limit reached. Showing recent cached updates.");
+        } else {
+          renderPatchNotes(initialList, `GitHub status ${res.status}. Showing recent cached updates.`);
+        }
+        return;
+      }
+      const data = await res.json();
+      if (Array.isArray(data) && data.length) {
+        patchNotesFetched = true;
+        try {
+          localStorage.setItem("bth_patchnotes_cache", JSON.stringify(data));
+        } catch (_) {}
+        renderPatchNotes(data, "Live from GitHub (latest updates)");
+      } else {
+        renderPatchNotes(initialList, "");
+      }
+    } catch (err) {
+      console.warn("[bth] Failed to fetch patchnotes from GitHub:", err);
+      renderPatchNotes(initialList, "Offline or unreachable. Showing recent cached updates.");
+    }
+  }
+
+  function openPatchNotes() {
+    const drawer = $("#patchnotes-drawer");
+    const backdrop = $("#patchnotes-backdrop");
+    if (drawer) drawer.classList.add("open");
+    if (backdrop) backdrop.hidden = false;
+    fetchPatchNotes();
+  }
+
+  function closePatchNotes() {
+    const drawer = $("#patchnotes-drawer");
+    const backdrop = $("#patchnotes-backdrop");
+    if (drawer) drawer.classList.remove("open");
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  function togglePatchNotes() {
+    const drawer = $("#patchnotes-drawer");
+    if (drawer && drawer.classList.contains("open")) {
+      closePatchNotes();
+    } else {
+      openPatchNotes();
+    }
+  }
+
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
@@ -2807,9 +2994,27 @@
         if (e.target === mapModal) closeMapModal();
       };
     }
+    // Patchnotes drawer wiring
+    const patchBtn = $("#patchnotes-btn");
+    if (patchBtn) patchBtn.onclick = (e) => {
+      e.preventDefault();
+      togglePatchNotes();
+    };
+    const patchClose = $("#patchnotes-close");
+    if (patchClose) patchClose.onclick = closePatchNotes;
+    const patchBackdrop = $("#patchnotes-backdrop");
+    if (patchBackdrop) patchBackdrop.onclick = closePatchNotes;
+    const patchRefresh = $("#patchnotes-refresh");
+    if (patchRefresh) patchRefresh.onclick = (e) => {
+      e.preventDefault();
+      fetchPatchNotes(true);
+    };
+
     window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && mapModal && !mapModal.hidden) {
-        closeMapModal();
+      if (e.key === "Escape") {
+        if (mapModal && !mapModal.hidden) closeMapModal();
+        const patchDrawer = $("#patchnotes-drawer");
+        if (patchDrawer && patchDrawer.classList.contains("open")) closePatchNotes();
       }
     });
 
@@ -2852,7 +3057,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName , saveWindowState, restoreWindowState};
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES };
   }
 
   init();

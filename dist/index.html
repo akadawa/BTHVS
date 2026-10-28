@@ -363,6 +363,31 @@
     </div>
   </div>
 
+  <!-- Patchnotes Button on Far Left -->
+  <button id="patchnotes-btn" class="patchnotes-toggle" type="button" title="View Patchnotes">
+    <span class="patchnotes-toggle-text">Patchnotes</span>
+  </button>
+
+  <!-- Patchnotes Side Drawer -->
+  <div id="patchnotes-backdrop" class="patchnotes-backdrop" hidden></div>
+  <aside id="patchnotes-drawer" class="patchnotes-drawer" aria-label="Patchnotes">
+    <div class="patchnotes-header">
+      <div class="patchnotes-title-wrap">
+        <h2 class="patchnotes-title">Patchnotes</h2>
+        <span class="patchnotes-subtitle">Recent Updates &amp; Commits</span>
+      </div>
+      <button id="patchnotes-close" type="button" class="btn-chip modal-close-btn" title="Close">&times;</button>
+    </div>
+    <div class="patchnotes-source-bar">
+      <span class="patchnotes-source-repo">GitHub: <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">akadawa/BTHVS</a></span>
+      <button id="patchnotes-refresh" type="button" class="patchnotes-refresh-btn" title="Refresh from GitHub">Refresh</button>
+    </div>
+    <div class="patchnotes-body">
+      <div id="patchnotes-status" class="patchnotes-status muted">Loading updates...</div>
+      <div id="patchnotes-list" class="patchnotes-list"></div>
+    </div>
+  </aside>
+
   <script src="vendor/peerjs.min.js"></script>
   <script src="vendor/fflate.js"></script>
   <script src="app.js"></script>
