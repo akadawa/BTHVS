@@ -1,90 +1,33 @@
-# Browser Theme Hospital – Versus (1v1 Wettkampf)
+# Browser Theme Hospital – Versus
 
-Portierung der Open-Source-Engine **[CorsixTH](https://corsixth.com)** für den Webbrowser (WebAssembly / SDL2 / Lua) mit integriertem **1v1-Versus-Multiplayer**, Quest-Chooser, Echtzeit-Statistik-Dashboard, Chat und Live-Timer.
+A web-based port of the open-source CorsixTH engine (compiled to WebAssembly) designed for real-time multiplayer versus matches directly in the web browser.
 
----
+![Browser Theme Hospital Versus](screenshot.png)
 
-## ⚖️ Copyright & Rechtliches (Wichtig)
+## Live Demo
 
-- Dieses Repository enthält **keinerlei urheberrechtlich geschützte Daten von Theme Hospital (Bullfrog / Electronic Arts)**.
-- Es werden weder originale Spieldateien, Grafiken, Animationen, Level noch Audio- oder Musikdateien bereitgestellt oder gespeichert.
-- Enthalten ist ausschließlich die quelloffene, unter der **MIT-Lizenz** stehende CorsixTH-Engine, kompiliert nach WebAssembly.
-- Spieler laden ihre eigenen Spieldaten (z. B. aus der Theme-Hospital-Demo oder der Vollversion von GOG/EA) lokal im Browser per Drag & Drop (`.zip` oder entpackter Ordner). Die Spieldaten verbleiben vollständig im Browser (IndexedDB) und verlassen niemals den eigenen Rechner.
+Play the live demo directly in your browser:  
+https://bthvs.vercel.app
 
----
+## About the Project
 
-## 🎮 Features
+Browser Theme Hospital Versus allows players to compete head-to-head on the same hospital map in real time. Rather than running a traditional singleplayer hospital, players face off to reach customizable win conditions or hold the highest hospital value and cash balance before time expires.
 
-1. **1v1 Versus-Wettkampf**:
-   - Beide Spieler treten auf derselben Karte in Echtzeit gegeneinander an.
-   - **Modularer Quest-Chooser**: Der Host kann beliebige Zielbedingungen kombinieren (z. B. *25 Patienten heilen* AND *$100.000 Barvermögen* AND *30 Minuten Zeitlimit*).
-   - Wer zuerst alle gesetzten Ziele erreicht, gewinnt! Bei Ablauf des Zeitlimits gewinnt das höchste Barvermögen.
-2. **Rivalen-Dashboard & Quests-Block**:
-   - Live-Vergleich von Barvermögen, geheilten Patienten, Räumen, Mitarbeitern und Krankenhaus-Gesamtwert.
-   - Freie Größenanpassung (Resizable) und Verschiebbarkeit von Quest- und Chat-Fenstern.
-3. **Plattformunabhängig**:
-   - Läuft in jedem modernen Browser ohne Plugins oder lokale Installation.
+The multiplayer networking operates serverless via WebRTC P2P DataChannels directly between browser sessions, with an optional WebSocket relay fallback for restrictive networks. No local server installation or browser plugins are required.
 
----
+## What It Does
 
-## 🚀 Deployment-Anleitung
+- Real-Time Versus Competition: Create open or private rooms for up to 10 players.
+- Customizable Win Conditions: Configure match goals combining cured patients, cash balance targets, and countdown timers.
+- Direct Lobby Invite Links: Share instant join links that automatically configure goal settings and connect guests directly into the lobby.
+- In-Game HUD and Rival Dashboard: Monitor live statistics, hospital reputation, patient cure rates, and rival metrics side-by-side.
+- In-Game Chat and Quests: Resizable and draggable in-game windows that automatically persist size and position across sessions.
+- Map Selector with Visual Previews: Explore original level layouts and plots via an integrated preview modal before launching.
 
-### 1. Auf GitHub hochladen
+## Game Data and Legal Notice
 
-```bash
-# Falls noch kein GitHub-Remote hinterlegt ist:
-git remote add github https://github.com/DEIN-BENUTZERNAME/browser-theme-hospital.git
+This repository contains only open-source code and does not distribute any copyrighted Theme Hospital assets, audio, graphics, or level files (Bullfrog / Electronic Arts).
 
-# Änderungen stagen und committen
-git add .
-git commit -m "feat: Versus mode with Quest-Chooser, resizable HUD and Vercel support"
+Players load their own original game data files (Theme Hospital demo or full version from GOG or EA) directly in the browser via ZIP archive or folder selection. All game assets are stored locally in the browser's IndexedDB and never uploaded to any external server.
 
-# Auf GitHub pushen
-git push -u github main
-```
-
-*(Hinweis: Durch die `.gitignore` ist sichergestellt, dass keine ZIP-Dateien oder Spieldaten hochgeladen werden!)*
-
----
-
-### 2. Frontend auf Vercel deployen (Serverless Multiplayer)
-
-1. Melde dich bei [vercel.com](https://vercel.com) an.
-2. Klicke auf **"Add New Project"** und importiere dein GitHub-Repository.
-3. Vercel erkennt automatisch die beiliegende `vercel.json` (Output Directory: `dist`).
-4. Klicke auf **"Deploy"**.
-
-> [!TIP]
-> **Zero-Setup Multiplayer auf Vercel:**
-> Das Spiel verfügt über eine **voll integrierte WebRTC P2P-Direktverbindung**!
-> Auf Vercel verbindet sich das Spiel automatisch direkt Browser-zu-Browser (Host ↔ Gast) über WebRTC DataChannels mit extrem niedriger Latenz.
-> **Du musst keinen externen Server aufsetzen!**
-> Einfach Raum erstellen, Einladungslink an deinen Freund senden und sofort loslegen.
-
----
-
-### 3. Optional: Eigener WebSocket-Relay-Server (z. B. auf Render.com)
-
-Falls du statt WebRTC lieber einen zentralen WebSocket-Server nutzen möchtest (z. B. bei extrem restriktiven Firmen-Firewalls):
-
-1. Melde dich bei [render.com](https://render.com) an (kostenloser Account).
-2. Klicke auf **New +** -> **Web Service**.
-3. Wähle dasselbe GitHub-Repository aus (`render.yaml` ist bereits enthalten).
-4. Nach dem Deployment erhältst du deine URL: `wss://mein-hospital-relay.onrender.com/ws`.
-5. Klicke auf der Webseite unten auf **⚙️ Netzwerk** und trage die WebSocket-URL ein.
-
----
-
-## 💻 Lokaler Start
-
-```bash
-npm install
-npm start
-```
-Öffne danach `http://localhost:8085` im Browser.
-
----
-
-## 📜 Lizenz
-- CorsixTH-Engine & Web-Code: [MIT-Lizenz](third_party/CorsixTH/LICENSE.txt)
-- Theme Hospital Spiel-Assets: © Bullfrog / Electronic Arts
+CorsixTH is licensed under the MIT License. Theme Hospital is a trademark of Electronic Arts.

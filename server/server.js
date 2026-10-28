@@ -20,7 +20,7 @@ function arg(name, def) {
 const PORT = parseInt(process.env.PORT || arg("port", "8085"), 10);
 const HOST = process.env.HOST || arg("host", "0.0.0.0");
 const ROOT = path.resolve(__dirname, "..", "dist");
-const MAX_PLAYERS = 5;
+const MAX_PLAYERS = 10;
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 const MIME = {
@@ -134,7 +134,7 @@ const server = http.createServer((req, res) => {
           code,
           hostName: String(data.hostName || "Host").slice(0, 24),
           players: Math.max(1, parseInt(data.players, 10) || 1),
-          max: Math.max(2, Math.min(5, parseInt(data.max, 10) || 5)),
+          max: Math.max(2, Math.min(MAX_PLAYERS, parseInt(data.max, 10) || 10)),
           level: String(data.level || "demo"),
           goals: data.goals || { cured: 25, money: 100000, timeLimit: 30 },
           netMode: data.netMode || "p2p",
@@ -275,7 +275,7 @@ function handle(ws, msg) {
   switch (msg.t) {
     case "create": {
       if (ws.room) return;
-      const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 5));
+      const max = Math.max(2, Math.min(MAX_PLAYERS, msg.max | 0 || 10));
       const isPublic = msg.isPublic !== undefined ? !!msg.isPublic : true;
       const room = new Room(newCode(), max, isPublic);
       rooms.set(room.code, room);

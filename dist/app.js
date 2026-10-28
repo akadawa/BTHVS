@@ -705,7 +705,7 @@
               this.roomCode = c;
               this.room = {
                 code: c,
-                max: 5,
+                max: parseInt($("#max-players") ? $("#max-players").value : "10", 10) || 10,
                 started: false,
                 config: {
                   mode: "versus",
@@ -963,7 +963,7 @@
             connected: true,
             host: true
           };
-          this.room.max = Math.min(5, Math.max(2, o.max || 5));
+          this.room.max = Math.min(10, Math.max(2, o.max || 10));
           this.room.players.set(0, hostPlayer);
           setTimeout(() => {
             this.emit("joined", {
@@ -1213,7 +1213,7 @@
       btnLeave.textContent = "Leave Room";
     }
 
-    const max = L.max || 5;
+    const max = L.max || 10;
     if ($("#players-header")) $("#players-header").textContent = `Players in Room (${connectedCount}/${max})`;
     $("#host-options").hidden = !L.host;
     $("#guest-options").hidden = !!L.host;
@@ -1351,7 +1351,7 @@
         id: m.id,
         host: m.host,
         players: m.players,
-        max: m.max || 5,
+        max: m.max || 10,
         isPublic,
         mode: "versus",
         goals: (m.config && m.config.goals) ? m.config.goals : getGoalsFromUI(),
@@ -1474,7 +1474,7 @@
         t: "create",
         name,
         demo: false,
-        max: parseInt($("#max-players") ? $("#max-players").value : "5", 10),
+        max: parseInt($("#max-players") ? $("#max-players").value : "10", 10),
         isPublic,
         token: token()
       });
@@ -1546,7 +1546,7 @@
       code: room.code,
       hostName: playerName(),
       players: room.players ? room.players.filter((p) => p.connected !== false).length : 1,
-      max: room.max || 5,
+      max: room.max || 10,
       level: room.config ? room.config.level : (room.level || "demo"),
       goals: room.config ? room.config.goals : room.goals,
       netMode: getNetworkMode(),
@@ -1621,7 +1621,7 @@
         const lObj = LEVELS.find((x) => x.id === lob.level);
         const mapName = lObj ? lObj.label.split(" (")[0].split(" –")[0] : (lob.level || "Town 1");
         const count = lob.players || lob.playerCount || 1;
-        const max = lob.max || 5;
+        const max = lob.max || 10;
         html += `
           <tr>
             <td><span class="room-code-badge">${escapeHtml(lob.code)}</span></td>
