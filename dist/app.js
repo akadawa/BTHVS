@@ -712,16 +712,24 @@
   }
 
   // ------------------------------------------------------------- leaderboard & username
-  const DEFAULT_LEADERBOARD = [
-    { name: "Dr. Kilroy", cured: 384, cash: 420000, playtime: 512, lobbies: 28, wins: 22, games: 31 },
-    { name: "Sister Grace", cured: 326, cash: 365000, playtime: 468, lobbies: 19, wins: 18, games: 25 },
-    { name: "Dr. Sinister", cured: 295, cash: 310000, playtime: 420, lobbies: 15, wins: 15, games: 22 },
-    { name: "Matron", cured: 252, cash: 280000, playtime: 375, lobbies: 14, wins: 13, games: 19 },
-    { name: "Doctor Matthews", cured: 218, cash: 245000, playtime: 330, lobbies: 11, wins: 10, games: 16 },
-    { name: "Dr. Albright", cured: 184, cash: 210000, playtime: 280, lobbies: 9, wins: 8, games: 14 },
-    { name: "Dr. Bradley", cured: 150, cash: 175000, playtime: 225, lobbies: 7, wins: 6, games: 11 },
-    { name: "Dr. Evans", cured: 115, cash: 140000, playtime: 170, lobbies: 5, wins: 4, games: 8 }
-  ];
+  const DEFAULT_LEADERBOARD = [];
+
+  // Reset leaderboard stats to clean zero state if not yet migrated
+  if (localStorage.getItem("bth_lb_clean_v1") !== "true") {
+    localStorage.setItem("bth_lb_clean_v1", "true");
+    localStorage.removeItem("bth_custom_leaderboard");
+    try {
+      localStorage.setItem("bth_player_stats", JSON.stringify({
+        cured: 0,
+        cash: 0,
+        playtime: 0,
+        lobbies: 0,
+        wins: 0,
+        games: 0
+      }));
+      localStorage.setItem("bth_total_lobbies", "0");
+    } catch (_) {}
+  }
 
   let currentLeaderboardTab = "cured";
 
@@ -736,7 +744,7 @@
         cured: 0,
         cash: 0,
         playtime: 0,
-        lobbies: parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0,
+        lobbies: 0,
         wins: 0,
         games: 0
       };
@@ -744,7 +752,7 @@
     stats.cured = stats.cured || 0;
     stats.cash = stats.cash || 0;
     stats.playtime = stats.playtime || 0;
-    stats.lobbies = Math.max(stats.lobbies || 0, parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0);
+    stats.lobbies = stats.lobbies || 0;
     stats.wins = stats.wins || 0;
     stats.games = stats.games || 0;
     return stats;
@@ -3278,7 +3286,10 @@
       btnUserHelp.onclick = (e) => {
         e.preventDefault();
         const hintBox = $("#username-info-box");
-        if (hintBox) hintBox.hidden = !hintBox.hidden;
+        if (hintBox) {
+          hintBox.classList.add("highlight");
+          setTimeout(() => hintBox.classList.remove("highlight"), 1200);
+        }
       };
     }
     $("#language").value = localStorage.getItem("bth-lang") || "English";

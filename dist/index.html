@@ -66,15 +66,16 @@
           <label class="field" id="field-player-name">
             <span class="field-title">
               Your Name
-              <button type="button" id="btn-username-info" class="btn-help-inline" title="Username notice for leaderboard">?</button>
+              <span id="btn-username-info" class="btn-help-inline" title="Notice: Username reserved for the Leaderboard in browser cache">?</span>
               <span id="player-name-lock-badge" class="name-status-pill" hidden>Reserved</span>
             </span>
             <div class="player-name-wrap-input">
               <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
               <button type="button" id="btn-lock-name" class="btn-name-action" title="Lock in your doctor name for the leaderboard">Lock In</button>
             </div>
-            <div id="username-info-box" class="field-hint-card" hidden>
-              Notice: Your username is permanently stored in your browser cache and reserved for the Leaderboard. If you clear your browser cache or site data, your username and recorded leaderboard statistics will be reset.
+            <div id="username-info-box" class="field-hint-card">
+              <span class="hint-mark-pill">?</span>
+              <span class="hint-mark-text">Notice: Your username is permanently stored in your browser cache and reserved for the Leaderboard. If you clear your browser cache or site data, your username and recorded leaderboard statistics will be reset.</span>
             </div>
           </label>
           <label class="field">Language

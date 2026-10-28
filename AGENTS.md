@@ -144,7 +144,7 @@ BrowserTHospital/
 ### B. Fixed Username & Leaderboard Reservation
 - Usernames are locked via the **Lock In** button or automatically upon entering a room.
 - State is stored in `localStorage`: `bth-name` and `bth-name-locked`.
-- The `?` button (`#btn-username-info`) displays the notice informing players that the name is reserved in the browser cache for the Leaderboard and lost if the cache is cleared.
+- The `?` indicator mark (`#btn-username-info`) visually references the permanently visible notice card below the input (`#username-info-box`), informing players that their name is stored in browser cache and reserved for the Leaderboard. Clicking the mark highlights the card.
 - A "Change" button allows unlocking the name if needed.
 
 ### C. Patchnotes Drawer (Left)
@@ -164,6 +164,7 @@ BrowserTHospital/
   3. `playtime`: Longest Games & Session Duration
   4. `lobbies`: Lobbies Hosted
   5. `wins`: Versus Match Victories
+- Initial state starts completely clean at zero (`DEFAULT_LEADERBOARD = []`, all stats start at 0).
 - JSON Export/Import buttons ("Export Stats" / "Import Stats") allow players to backup and restore their records.
 
 ### E. In-Game HUD & Window Persistence

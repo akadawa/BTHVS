@@ -18,7 +18,7 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     }
     console.log("✓ Zero SVG elements found across document.");
 
-    // 2. Verify Username Info button '?' and notice
+    // 2. Verify Username Info indicator '?' and permanently visible notice
     const btnUserHelp = await p1.$("#btn-username-info");
     if (!btnUserHelp) throw new Error("FAIL: #btn-username-info not found!");
     const btnUserHelpText = (await btnUserHelp.textContent()).trim();
@@ -26,18 +26,23 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
       throw new Error(`FAIL: #btn-username-info text should be '?', got '${btnUserHelpText}'`);
     }
 
-    // Toggle info notice
-    let hintVisible = await p1.isVisible("#username-info-box");
-    if (hintVisible) throw new Error("FAIL: #username-info-box should be hidden by default!");
-    await p1.click("#btn-username-info");
-    await sleep(150);
-    hintVisible = await p1.isVisible("#username-info-box");
-    if (!hintVisible) throw new Error("FAIL: #username-info-box should be visible after clicking '?'!");
+    // Info notice should be permanently visible (does not collapse/unfold)
+    const hintVisible = await p1.isVisible("#username-info-box");
+    if (!hintVisible) throw new Error("FAIL: #username-info-box should be permanently visible!");
     const hintText = await p1.textContent("#username-info-box");
     if (!hintText.includes("Leaderboard") || !hintText.includes("cache")) {
       throw new Error(`FAIL: #username-info-box text missing key notice, got: ${hintText}`);
     }
-    console.log("✓ Username info '?' button toggles leaderboard notice successfully.");
+    // Verify question mark icon/pill inside the hint card
+    const hintPill = await p1.$("#username-info-box .hint-mark-pill");
+    if (!hintPill) throw new Error("FAIL: .hint-mark-pill not found inside #username-info-box!");
+
+    // Clicking '?' highlights the card without collapsing it
+    await p1.click("#btn-username-info");
+    await sleep(150);
+    const stillVisible = await p1.isVisible("#username-info-box");
+    if (!stillVisible) throw new Error("FAIL: #username-info-box should remain visible after clicking '?'!");
+    console.log("✓ Username notice is permanently visible with '?' indicator mark.");
 
     // 3. Test Username Input & Locking
     await p1.fill("#player-name", "Dr. House");
@@ -94,7 +99,7 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     if (!isDrawerOpen) throw new Error("FAIL: #leaderboard-drawer does not have class 'open'!");
     console.log("✓ #leaderboard-drawer opened successfully.");
 
-    // 6. Verify Player Card & Overview
+    // 6. Verify Player Card & Overview (starts at clean 0 state)
     const playerCardData = await p1.evaluate(() => {
       return {
         name: document.querySelector("#lb-my-name")?.textContent.trim(),
@@ -109,7 +114,10 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     if (playerCardData.name !== "Dr. House") {
       throw new Error(`FAIL: Expected Dr. House on player card, got: '${playerCardData.name}'`);
     }
-    console.log("✓ Player Card accurately reflects locked doctor name.");
+    if (playerCardData.cured !== "0" || playerCardData.games !== "0") {
+      throw new Error(`FAIL: Expected leaderboard stats to start at 0, got: cured=${playerCardData.cured}, games=${playerCardData.games}`);
+    }
+    console.log("✓ Player Card accurately reflects locked doctor name and clean zero start state.");
 
     // 7. Verify Tabs and Rankings
     const tabs = ["cured", "cash", "playtime", "lobbies", "wins"];
@@ -117,14 +125,14 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
       await p1.click(`.lb-tab[data-tab="${tab}"]`);
       await sleep(150);
       const itemsCount = await p1.$$eval(".lb-item", (els) => els.length);
-      if (itemsCount < 5) {
-        throw new Error(`FAIL: Tab '${tab}' has fewer than 5 leaderboard items (got ${itemsCount})!`);
+      if (itemsCount < 1) {
+        throw new Error(`FAIL: Tab '${tab}' has fewer than 1 leaderboard items (got ${itemsCount})!`);
       }
       const topName = await p1.evaluate(() => document.querySelector(".lb-item .lb-item-name")?.textContent.trim());
       const topVal = await p1.evaluate(() => document.querySelector(".lb-item .lb-item-val")?.textContent.trim());
       console.log(`Tab '${tab}': ${itemsCount} doctors, Top 1: ${topName} (${topVal})`);
     }
-    console.log("✓ All 5 Leaderboard categories verified with sorted doctor rankings.");
+    console.log("✓ All 5 Leaderboard categories verified with clean zero ranking.");
 
     // 8. Strict Zero Emojis check in Leaderboard Drawer
     const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F000}-\u{1F2FF}\u{1F680}-\u{1F6FF}]/u;
