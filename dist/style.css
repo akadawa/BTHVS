@@ -74,6 +74,39 @@ h3 { margin: 0 0 4px; font-size: 15px; }
 .status.ok { background: rgba(59,194,106,.15); color: var(--ok); }
 .status.warn { background: rgba(224,165,38,.15); color: var(--warn); }
 .status.err { background: rgba(224,82,74,.15); color: var(--err); }
+.data-status-check {
+  display: inline-block;
+  margin-right: 5px;
+  color: #3bc26a;
+  font-weight: 900;
+  font-size: 1.15em;
+  vertical-align: baseline;
+}
+.data-source-type {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.data-path-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.88em;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(59, 194, 106, 0.35);
+  border-radius: 5px;
+  padding: 2px 7px;
+  color: #86efac;
+  max-width: 420px;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.data-size {
+  font-size: 0.86em;
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 4px;
+}
 
 #dropzone { border: 2px dashed var(--line); border-radius: 12px; padding: 14px; transition: .15s; }
 #dropzone.drag { border-color: var(--accent); background: rgba(25,181,165,.08); }

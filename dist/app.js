@@ -37,6 +37,10 @@
     }
   }
 
+  function escapeHtml(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
   // ----------------------------------------------------------- IndexedDB kv
   const DB_NAME = "bth", STORE = "kv";
   function idb() {
@@ -263,7 +267,7 @@
   window.__bth = state;
 
   /** entries: Array<[relativePath, Uint8Array]> -> normalised data set or throws. */
-  function normaliseEntries(entries, name) {
+  function normaliseEntries(entries, name, sourceType = "folder", sourcePath = "") {
     const norm = entries
       .map(([p, d]) => [p.replace(/\\/g, "/").replace(/^\.\//, ""), d])
       .filter(([p]) => !p.endsWith("/"));
@@ -287,13 +291,43 @@
     if (demo && !window.__ALLOW_DEMO_FOR_TESTS) {
       throw new Error("Demo version detected! Only the full version of Theme Hospital is supported. Please upload your full game files (e.g. from GOG.com or EA).");
     }
-    return { files, demo, name, bytes };
+    return { files, demo, name, bytes, sourceType, sourcePath: sourcePath || name };
+  }
+
+  function extractFolderSourcePath(fileList) {
+    if (!fileList || !fileList.length) return "Folder";
+    const markerFile = fileList.find((f) => {
+      const p = (f.webkitRelativePath || f.name || "").replace(/\\/g, "/");
+      return /(^|\/)data\/vspr-0\.tab$/i.test(p);
+    }) || fileList[0];
+
+    // If running in Chromium desktop / Electron or environment that provides file.path
+    if (markerFile && markerFile.path) {
+      const full = markerFile.path;
+      const stripped = full.replace(/[\\/]data[\\/]vspr-0\.tab$/i, "");
+      if (stripped && stripped !== full) return stripped;
+      const lastSlash = Math.max(full.lastIndexOf("/"), full.lastIndexOf("\\"));
+      if (lastSlash > 0) return full.slice(0, lastSlash);
+      return full;
+    }
+
+    // From webkitRelativePath
+    const rel = markerFile && markerFile.webkitRelativePath ? markerFile.webkitRelativePath : (fileList[0].webkitRelativePath || "");
+    if (rel) {
+      const stripped = rel.replace(/[\\/]data[\\/]vspr-0\.tab$/i, "");
+      if (stripped && stripped !== rel) return stripped;
+      const parts = rel.split(/[\\/]/);
+      if (parts.length > 1) return parts[0];
+    }
+
+    return fileList[0].name ? fileList[0].name.replace(/[\\/][^\\/]+$/, "") : "Folder";
   }
 
   async function importZip(file) {
     const buf = new Uint8Array(await file.arrayBuffer());
     const unz = fflate.unzipSync(buf, { filter: (f) => !/\.(exe|dll|bat)$/i.test(f.name) && f.size > 0 || f.name.endsWith("/") });
-    return normaliseEntries(Object.entries(unz), file.name);
+    const sourcePath = file.path || file.name || "Theme Hospital.zip";
+    return normaliseEntries(Object.entries(unz), file.name, "zip", sourcePath);
   }
   async function importFolder(fileList) {
     const entries = [];
@@ -302,7 +336,9 @@
       if (/\.(exe|dll|bat)$/i.test(p)) continue;
       entries.push([p, new Uint8Array(await f.arrayBuffer())]);
     }
-    return normaliseEntries(entries, (fileList[0].webkitRelativePath || "Folder").split("/")[0]);
+    const folderPath = extractFolderSourcePath(fileList);
+    const folderName = (fileList[0].webkitRelativePath || "Folder").split(/[\\/]/)[0];
+    return normaliseEntries(entries, folderName, "folder", folderPath);
   }
   async function readDropped(items) {
     // Files or directories from a drag & drop operation.
@@ -326,11 +362,15 @@
     }
     if (out.length === 1 && /\.zip$/i.test(out[0][0])) return importZip(out[0][1]);
     const entries = [];
+    const filesList = [];
     for (const [p, f] of out) {
       if (/\.(exe|dll|bat)$/i.test(p)) continue;
+      filesList.push(f);
       entries.push([p, new Uint8Array(await f.arrayBuffer())]);
     }
-    return normaliseEntries(entries, out.length ? out[0][0].split("/")[0] : "Folder");
+    const folderPath = extractFolderSourcePath(filesList);
+    const folderName = out.length ? out[0][0].split(/[\\/]/)[0] : "Folder";
+    return normaliseEntries(entries, folderName, "folder", folderPath);
   }
 
   function fmtMB(b) { return (b / 1048576).toFixed(1) + " MB"; }
@@ -340,7 +380,13 @@
     const d = state.data;
     if (d) {
       st.className = "status ok";
-      st.textContent = `Full version files ready (${d.name}, ${fmtMB(d.bytes)})`;
+      const isZip = d.sourceType === "zip" || (!d.sourceType && (d.name || "").toLowerCase().endsWith(".zip"));
+      const typeLabel = isZip ? "ZIP File" : "Folder";
+      const pathLabel = d.sourcePath || d.name || (isZip ? "ZIP Archive" : "Theme Hospital Folder");
+      st.innerHTML = `<span class="data-status-check" aria-hidden="true">✔</span> ` +
+        `<b>Full version ready</b> · <span class="data-source-type">${escapeHtml(typeLabel)}:</span> ` +
+        `<code class="data-path-code" title="${escapeHtml(pathLabel)}">${escapeHtml(pathLabel)}</code> ` +
+        `<span class="data-size">(${fmtMB(d.bytes)})</span>`;
     } else {
       st.className = "status warn";
       st.textContent = "No game files found";
@@ -2496,7 +2542,14 @@
     $("#btn-folder").onclick = () => $("#file-folder").click();
     $("#btn-forget").onclick = async () => { await kvDel("thdata"); state.data = null; renderDataStatus(); };
     $("#file-zip").onchange = (e) => { const f = e.target.files[0]; if (f) withBusy("Unpacking " + f.name + " …", () => importZip(f)); e.target.value = ""; };
-    $("#file-folder").onchange = (e) => { const fl = [...e.target.files]; if (fl.length) withBusy("Reading folder …", () => importFolder(fl)); e.target.value = ""; };
+    $("#file-folder").onchange = (e) => {
+      const fl = [...e.target.files];
+      if (fl.length) {
+        const folderName = (fl[0].webkitRelativePath || "Folder").split(/[\\/]/)[0];
+        withBusy("Reading folder '" + folderName + "' …", () => importFolder(fl));
+      }
+      e.target.value = "";
+    };
 
     const dz = $("#dropzone");
     ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));

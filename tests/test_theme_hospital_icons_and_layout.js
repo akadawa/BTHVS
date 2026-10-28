@@ -12,6 +12,41 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   await pHost.fill("#player-name", "DrBullfrog");
   await pGuest.fill("#player-name", "NurseRetro");
 
+  // 0. Verify Game Data status displays checkmark and exact source path for ZIP and Folder
+  console.log("0. Checking Game Data status display (Checkmark, Folder vs ZIP, and Path)...");
+  const zipStatusHtml = await pHost.innerHTML("#data-status");
+  const zipStatusText = await pHost.textContent("#data-status");
+  console.log("ZIP Status rendered:", zipStatusText);
+  if (!zipStatusText.includes("✔") || !zipStatusText.includes("ready")) {
+    throw new Error("FAIL: #data-status must display the checkmark ✔ and 'ready'!");
+  }
+  if (!zipStatusText.includes("ZIP File:")) {
+    throw new Error("FAIL: #data-status must indicate 'ZIP File:' for ZIP uploads!");
+  }
+  const hasPathCode = await pHost.$("#data-status code.data-path-code");
+  if (!hasPathCode) throw new Error("FAIL: #data-status must render code.data-path-code!");
+
+  // Now test Folder import status rendering (e.g. Origin / EA installation path)
+  await pHost.evaluate(() => {
+    window.__bth.setData({
+      files: [],
+      demo: false,
+      name: "Theme Hospital",
+      bytes: 149200000,
+      sourceType: "folder",
+      sourcePath: "C:\\Program Files (x86)\\Origin Games\\Theme Hospital"
+    });
+  });
+  const folderStatusText = await pHost.textContent("#data-status");
+  console.log("Folder Status rendered:", folderStatusText);
+  if (!folderStatusText.includes("✔") || !folderStatusText.includes("Folder:") || !folderStatusText.includes("Origin Games\\Theme Hospital")) {
+    throw new Error("FAIL: #data-status must show checkmark ✔, 'Folder:', and exact EA/Origin path!");
+  }
+  console.log("✓ Game Data status correctly displays ✔ checkmark, Folder vs ZIP File, and exact source path.");
+
+  // Re-restore demo data for subsequent game boot tests
+  await loadDemo(pHost);
+
   // 1. Verify Theme Hospital SVG Spritesheet in DOM
   console.log("1. Checking Theme Hospital SVG symbols in DOM...");
   const symbols = await pHost.$$eval("svg defs symbol", (syms) => syms.map((s) => s.id));
