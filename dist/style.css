@@ -352,7 +352,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
   animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-#hud { position: absolute; bottom: 8px; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; z-index: 10; opacity: .95; pointer-events: none; max-width: calc(100vw - 16px); }
+#hud { position: absolute; top: 8px; right: 8px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; z-index: 20; opacity: .95; pointer-events: none; max-width: calc(100vw - 16px); }
 #hud:hover { opacity: 1; }
 .chip { background: rgba(10,22,28,.82); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
   font-size: 12px; color: var(--txt); position: relative; pointer-events: none; }
@@ -373,8 +373,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
 #net-banner.err { border-color: var(--err); color: var(--err); }
 
 /* Quest Window (Quest-Block) */
-#quest-win { position: absolute; left: 14px; top: 40px; width: 440px; min-width: 320px; max-width: min(720px, 94vw);
-  height: 480px; min-height: 260px; max-height: min(850px, 88vh); resize: both; overflow: hidden;
+#quest-win { position: absolute; left: 14px; top: 40px; width: 440px; min-width: 300px; max-width: min(720px, 94vw);
+  height: 440px; min-height: 220px; max-height: min(850px, 86vh); resize: both; overflow: hidden;
   z-index: 15; background: rgba(10,22,28,.95); border: 1px solid var(--line); border-radius: 12px; padding: 10px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   display: flex; flex-direction: column; font-size: 13px; }
@@ -395,37 +395,55 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
 
 .quest-view { flex: 1 1 auto; min-height: 100px; overflow-y: auto; padding-right: 2px; }
 
-/* Quest Cards */
+/* Simplified, Glanceable Quest Cards */
 #quest-list { display: flex; flex-direction: column; gap: 8px; }
-.quest-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px; }
+.quest-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 10px; }
 .quest-card-header { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
-.quest-card-title { display: flex; align-items: center; gap: 6px; color: var(--txt); }
-.quest-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+.quest-title-wrap { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.quest-card-title { color: var(--txt); font-weight: 700; font-size: 12.5px; }
+.quest-target-pill { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: var(--txt); font-weight: 600; }
+.quest-badge { font-size: 10.5px; padding: 2px 7px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
 .quest-badge.done { background: rgba(38,166,154,0.2); color: #26a69a; border: 1px solid rgba(38,166,154,0.4); }
+.quest-badge.need { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); }
 .quest-badge.lead { background: rgba(255,209,102,0.2); color: #ffd166; border: 1px solid rgba(255,209,102,0.4); }
 .quest-badge.pending { background: rgba(255,255,255,0.05); color: var(--muted); }
 
-.prog-row { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 11px; }
-.prog-label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
-.prog-bar-wrap { width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+.q-player-row { display: flex; flex-direction: column; gap: 2px; margin-top: 5px; font-size: 11px; }
+.q-player-row.you .q-p-stat { color: #19b5a5; font-weight: 600; }
+.q-player-row.rival { opacity: 0.92; margin-top: 4px; }
+.q-player-row.rival .q-p-stat { color: #f77f00; font-weight: 500; font-size: 10.5px; }
+.q-rivals-list { margin-top: 6px; padding-top: 5px; border-top: 1px dashed rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; gap: 4px; }
+.q-p-name { font-weight: 600; color: var(--txt); font-size: 11.5px; }
+.q-p-stat { font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 2px; }
+.q-p-need { color: var(--muted); font-size: 10.5px; }
+.q-p-pct { color: var(--muted); font-size: 10.5px; }
+
+.prog-bar-wrap { width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
 .prog-bar-fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
 .prog-bar-fill.you { background: linear-gradient(90deg, #19b5a5, #48cae4); }
 .prog-bar-fill.opp { background: linear-gradient(90deg, #f77f00, #fcbf49); }
 
-/* Rival Dashboard Table */
-.rival-table-wrap { overflow-x: auto; }
-.rival-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.rival-table th { text-align: left; padding: 4px 6px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 600; }
-.rival-table th#th-you { color: #70d6ff; text-align: right; }
-.rival-table th#th-opp { color: #ffd166; text-align: right; }
-.rival-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-.rival-table td.val-you { text-align: right; font-weight: 600; color: #70d6ff; }
-.rival-table td.val-opp { text-align: right; font-weight: 600; color: #ffd166; }
-.rival-table tr.winner-row td { background: rgba(255,209,102,0.08); }
-.status-pill { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 10px; font-weight: 700; }
-.status-pill.active { background: rgba(38,166,154,0.2); color: #26a69a; border: 1px solid rgba(38,166,154,0.4); }
+/* Multi-Player Rivals Leaderboard Table (Up to 10 players) */
+.rival-table-wrap { overflow-x: auto; border-radius: 6px; }
+.rival-table { width: 100%; border-collapse: collapse; font-size: 11.5px; line-height: 1.35; }
+.rival-table th { text-align: left; padding: 5px 6px; color: var(--muted); border-bottom: 1px solid var(--line); font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.rival-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,0.04); white-space: nowrap; }
+.rival-table tr.is-you td { background: rgba(25, 181, 165, 0.08); }
+.rival-table tr:hover td { background: rgba(255, 255, 255, 0.03); }
+.td-rank { font-weight: 700; color: var(--muted); text-align: center; }
+.td-rank.val-leader { color: #ffd166; font-weight: 800; }
+.td-player { font-size: 11.5px; font-weight: 600; color: var(--txt); }
+.td-cured { color: #19b5a5; font-weight: 600; }
+.td-cash { color: #70d6ff; font-weight: 600; }
+.td-rooms, .td-rep { color: var(--muted); font-size: 11px; }
+.td-status { text-align: right; }
+.name-status-pill.you { background: rgba(25, 181, 165, 0.2); color: #19b5a5; border: 1px solid rgba(25, 181, 165, 0.4); font-size: 9.5px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+.name-status-pill.host { background: rgba(255, 209, 102, 0.15); color: #ffd166; border: 1px solid rgba(255, 209, 102, 0.3); font-size: 9.5px; padding: 1px 5px; border-radius: 4px; margin-left: 3px; }
+
+.status-pill { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 9.5px; font-weight: 700; }
+.status-pill.ok { background: rgba(38,166,154,0.25); color: #26a69a; border: 1px solid rgba(38,166,154,0.45); }
+.status-pill.active { background: rgba(38,166,154,0.18); color: #26a69a; border: 1px solid rgba(38,166,154,0.35); }
 .status-pill.wait { background: rgba(255,209,102,0.15); color: #ffd166; border: 1px solid rgba(255,209,102,0.3); }
-.val-leader { font-weight: 700; text-shadow: 0 0 6px rgba(255,209,102,0.4); }
 
 #quest-footer { font-size: 11px; color: var(--muted); border-top: 1px solid rgba(255,255,255,0.08);
   padding-top: 6px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; }

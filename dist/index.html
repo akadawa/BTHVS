@@ -310,17 +310,17 @@
 
     <div id="quest-win" hidden>
       <div id="quest-header">
-        <span id="quest-title">Versus Goals & Quests</span>
+        <span id="quest-title">Match Goals &amp; Leaderboard</span>
         <div class="win-actions">
           <button id="quest-close" type="button" class="btn-chip" title="Close">&times;</button>
         </div>
       </div>
       <div id="quest-lead-banner">
-        <span id="quest-lead-text">Match in progress – Be the first to reach the goal!</span>
+        <span id="quest-lead-text">Match in progress</span>
       </div>
       <div id="quest-tabs">
-        <button type="button" class="quest-tab-btn active" data-tab="goals">Active Quests</button>
-        <button type="button" class="quest-tab-btn" data-tab="dashboard">Rivals Leaderboard</button>
+        <button type="button" class="quest-tab-btn active" data-tab="goals" id="tab-btn-goals">Goals &amp; Progress</button>
+        <button type="button" class="quest-tab-btn" data-tab="dashboard" id="tab-btn-dashboard">Leaderboard</button>
       </div>
       <div id="quest-view-goals" class="quest-view">
         <div id="quest-list"></div>
@@ -330,11 +330,12 @@
           <table class="rival-table">
             <thead>
               <tr>
-                <th>Rank</th>
+                <th style="width: 38px; text-align: center;">Rank</th>
                 <th>Player</th>
-                <th>Cash</th>
                 <th>Cured</th>
-                <th>Value</th>
+                <th>Cash</th>
+                <th>Rooms</th>
+                <th>Rep</th>
                 <th>Status</th>
               </tr>
             </thead>

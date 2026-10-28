@@ -2512,22 +2512,27 @@
     const hostP = players.find((p) => p.id === hostId || p.host) || players[0];
     const guestPs = players.filter((p) => p && p !== hostP);
 
-    const parts = [];
-    if (hostP) {
-      const isMe = hostP.id === myId;
-      const offline = hostP.connected === false ? " (offline)" : "";
-      parts.push(`<span class="hud-role-host" title="Game Host">Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
-    }
-    if (guestPs.length > 0) {
-      for (const gp of guestPs) {
-        const isMe = gp.id === myId;
-        const offline = gp.connected === false ? " (offline)" : "";
-        parts.push(`<span class="hud-role-guest" title="Connected Player">Player: <b>${escapeHtml(gp.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
+    if (players.length <= 2) {
+      const parts = [];
+      if (hostP) {
+        const isMe = hostP.id === myId;
+        const offline = hostP.connected === false ? " (offline)" : "";
+        parts.push(`<span class="hud-role-host" title="Game Host">Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
       }
+      if (guestPs.length > 0) {
+        for (const gp of guestPs) {
+          const isMe = gp.id === myId;
+          const offline = gp.connected === false ? " (offline)" : "";
+          parts.push(`<span class="hud-role-guest" title="Connected Player">Player: <b>${escapeHtml(gp.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
+        }
+      } else {
+        parts.push(`<span class="hud-role-guest muted">Player: (waiting …)</span>`);
+      }
+      el.innerHTML = parts.join(' <span class="hud-sep">·</span> ');
     } else {
-      parts.push(`<span class="hud-role-guest muted">Player: (waiting …)</span>`);
+      const hostIsMe = hostP && hostP.id === myId;
+      el.innerHTML = `<span class="hud-role-host">Host: <b>${escapeHtml(hostP ? hostP.name : "Host")}</b>${hostIsMe ? " (You)" : ""}</span> <span class="hud-sep">·</span> <span class="hud-role-guest"><b>${players.length} Players</b></span>`;
     }
-    el.innerHTML = parts.join(' <span class="hud-sep">·</span> ');
     el.hidden = false;
   }
 
@@ -2609,7 +2614,7 @@
           timerEl.innerHTML = `<span>${remMin}:${String(remSec).padStart(2, "0")}</span>`;
           timerEl.className = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
         }
-        if (!$("#quest-win").hidden && state.vs.tab === "goals") {
+        if (!$("#quest-win").hidden) {
           updateQuestUI();
         }
         checkWinConditions();
@@ -2932,23 +2937,89 @@
     }
   }
 
+  function getAllMatchPlayers() {
+    const list = [];
+    const myStats = state.vs.myStats || {};
+    const myName = playerName();
+    const myId = (state.session && state.session.mp && state.session.mp.id !== undefined) ? state.session.mp.id : 0;
+    const isHost = state.session && state.session.mp ? (state.session.mp.id === (state.lobby ? state.lobby.hostId : 0) || state.session.mp.host) : true;
+
+    // Local player
+    list.push({
+      id: myId,
+      name: myName,
+      isMe: true,
+      isHost: !!isHost,
+      stats: myStats
+    });
+
+    const knownIds = new Set([myId]);
+
+    // From state.lobby.players
+    if (state.lobby && Array.isArray(state.lobby.players)) {
+      state.lobby.players.forEach((p) => {
+        if (p && !knownIds.has(p.id)) {
+          knownIds.add(p.id);
+          const rStats = state.vs.rivalStats.get(p.id) || {
+            bal: 0, cured: 0, rep: 500, rooms: 0, staff: 0, deaths: 0, val: 0, started: false
+          };
+          list.push({
+            id: p.id,
+            name: p.name || `Player ${p.id}`,
+            isMe: false,
+            isHost: !!p.host,
+            stats: rStats
+          });
+        }
+      });
+    }
+
+    // From rivalStats
+    state.vs.rivalStats.forEach((rStats, rId) => {
+      if (!knownIds.has(rId)) {
+        knownIds.add(rId);
+        list.push({
+          id: rId,
+          name: rStats.name || `Player ${rId}`,
+          isMe: false,
+          isHost: false,
+          stats: rStats
+        });
+      }
+    });
+
+    // If opponent is registered in oppStats and not yet in list
+    if (list.length === 1 && state.vs.oppStats && state.vs.oppStats.name && state.vs.oppStats.name !== "Opponent") {
+      list.push({
+        id: -999,
+        name: state.vs.oppStats.name,
+        isMe: false,
+        isHost: false,
+        stats: state.vs.oppStats
+      });
+    }
+
+    return list;
+  }
+
   function updateQuestUI() {
     const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
-    const my = state.vs.myStats;
-    const opp = state.vs.oppStats;
+    const my = state.vs.myStats || {};
     const quests = buildQuestsFromConfig(g);
-
-    // Header names
-    const thYou = $("#th-you");
-    if (thYou) thYou.textContent = "You (" + playerName() + ")";
-    const thOpp = $("#th-opp");
-    if (thOpp) thOpp.textContent = opp.name || "Opponent";
+    const allPlayers = getAllMatchPlayers();
 
     // Match Goal footer
     const goalFooter = $("#quest-match-goal");
-    if (goalFooter) goalFooter.textContent = "Goals: " + formatGoalsList(g).join(" + ");
+    if (goalFooter) {
+      const gList = formatGoalsList(g);
+      goalFooter.textContent = gList.length ? "Goal: " + gList.join(" · ") : "Free Match";
+    }
 
-    // Lead Banner
+    // Tab button: Leaderboard (X)
+    const dashTabBtn = $("#tab-btn-dashboard");
+    if (dashTabBtn) dashTabBtn.textContent = `Leaderboard (${allPlayers.length})`;
+
+    // Lead banner (compact status line)
     const leadText = $("#quest-lead-text");
     if (leadText) {
       if (g.timeLimit > 0) {
@@ -2957,126 +3028,166 @@
         const remMin = Math.floor(rem / 60);
         const remSec = rem % 60;
         const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
-        const diff = (my.bal || 0) - (opp.bal || 0);
 
-        if (diff > 500) {
-          leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You are in the lead! (+$${diff.toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
-        } else if (diff < -500) {
-          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(opp.name || "Opponent")} is leading! (+$${Math.abs(diff).toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
+        const sortedByCash = [...allPlayers].sort((a, b) => (b.stats.bal || 0) - (a.stats.bal || 0));
+        const top = sortedByCash[0];
+        const isMeTop = top && top.isMe;
+
+        if (allPlayers.length <= 1) {
+          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · Cash: <b>$${(my.bal || 0).toLocaleString()}</b>`;
+        } else if (isMeTop) {
+          const secondCash = sortedByCash[1] ? (sortedByCash[1].stats.bal || 0) : 0;
+          const leadDiff = (my.bal || 0) - secondCash;
+          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-you">Lead</span> <b>You are leading! (+$${leadDiff.toLocaleString()})</b>`;
         } else {
-          leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Tied cash balance!</b> · Time left: <b>${timeStr}</b>`;
+          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(top.name)} leads ($${(top.stats.bal || 0).toLocaleString()})</b>`;
         }
       } else if (quests.length === 0) {
-        leadText.innerHTML = "<b>Free Versus</b> – Compare your live metrics!";
+        leadText.innerHTML = `<b>Free Match</b> · Compare metrics across all ${allPlayers.length} players`;
       } else {
-        let myPctSum = 0, oppPctSum = 0;
-        for (const q of quests) {
-          myPctSum += Math.min(100, Math.max(0, (q.getVal(my) / q.target) * 100));
-          oppPctSum += Math.min(100, Math.max(0, (q.getVal(opp) / q.target) * 100));
-        }
-        const myAvg = Math.round(myPctSum / quests.length);
-        const oppAvg = Math.round(oppPctSum / quests.length);
+        const playerScores = allPlayers.map((p) => {
+          let pctSum = 0;
+          quests.forEach((q) => {
+            pctSum += Math.min(100, Math.max(0, (q.getVal(p.stats) / q.target) * 100));
+          });
+          const avg = Math.round(pctSum / quests.length);
+          return { ...p, score: avg };
+        }).sort((a, b) => b.score - a.score);
 
-        if (myAvg > oppAvg + 5) {
-          leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You are leading the race!</b> (${myAvg}% vs. ${oppAvg}%)`;
-        } else if (oppAvg > myAvg + 5) {
-          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(opp.name || "Opponent")} is leading!</b> (${oppAvg}% vs. ${myAvg}%)`;
+        const leader = playerScores[0];
+        const meScore = (playerScores.find((p) => p.isMe) || {}).score || 0;
+
+        if (allPlayers.length <= 1) {
+          leadText.innerHTML = `Progress: <b>${meScore}%</b> towards match victory`;
+        } else if (leader.isMe) {
+          const second = playerScores[1];
+          if (second && second.score === leader.score) {
+            leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Head-to-head race at ${leader.score}%!</b>`;
+          } else {
+            leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You lead the race (${leader.score}%)!</b>`;
+          }
         } else {
-          leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Head-to-head race!</b> (${myAvg}% vs. ${oppAvg}%)`;
+          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(leader.name)} leads (${leader.score}%) · You: ${meScore}%</b>`;
         }
       }
     }
 
-    // Quest Cards list
+    // 1. Render Quest Cards List
     const list = $("#quest-list");
     if (list) {
       const cardsHtml = [];
 
-      // If time limit is set, show a timer countdown card
+      // Time match card
       if (g.timeLimit > 0) {
         const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
         const rem = Math.max(0, g.timeLimit * 60 - elapsed);
         const remMin = Math.floor(rem / 60);
         const remSec = rem % 60;
         const timeStr = `${remMin}:${String(remSec).padStart(2, "0")}`;
-        const totalCash = Math.max(1, Math.max(0, my.bal || 0) + Math.max(0, opp.bal || 0));
-        const myPct = Math.min(100, Math.max(0, Math.round(((my.bal || 0) / totalCash) * 100)));
-        const oppPct = Math.min(100, Math.max(0, Math.round(((opp.bal || 0) / totalCash) * 100)));
-        const diff = (my.bal || 0) - (opp.bal || 0);
+
+        const sortedByCash = [...allPlayers].sort((a, b) => (b.stats.bal || 0) - (a.stats.bal || 0));
+        const topCash = Math.max(1, sortedByCash[0]?.stats.bal || 0);
+
+        let rivalsRows = "";
+        sortedByCash.filter((p) => !p.isMe).forEach((r) => {
+          const rCash = r.stats.bal || 0;
+          const rPct = Math.min(100, Math.max(0, Math.round((rCash / topCash) * 100)));
+          rivalsRows += `
+            <div class="q-player-row rival">
+              <div class="q-p-stat">
+                <span class="q-p-name">${escapeHtml(r.name)}</span>
+                <span>$${rCash.toLocaleString()}</span>
+              </div>
+              <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%"></div></div>
+            </div>
+          `;
+        });
+
+        const myCash = my.bal || 0;
+        const myPct = Math.min(100, Math.max(0, Math.round((myCash / topCash) * 100)));
 
         cardsHtml.push(`
-          <div class="quest-card">
+          <div class="quest-card simple">
             <div class="quest-card-header">
-              <span class="quest-card-title">Time Challenge (${g.timeLimit} Min.)</span>
+              <div class="quest-title-wrap">
+                <span class="quest-card-title">Time Match</span>
+                <span class="quest-target-pill">Limit: ${g.timeLimit} Min.</span>
+              </div>
               <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">${timeStr} left</span>
             </div>
-            <p class="muted small" style="margin: 4px 0 8px;">
-              Whoever reaches the goals or holds the most cash when time runs out wins!
-            </p>
-            <div class="prog-row">
-              <div class="prog-label">
-                <span>You: $${(my.bal || 0).toLocaleString()}</span>
-                <span>${diff >= 0 ? '+' : ''}$${diff.toLocaleString()} (${myPct}%)</span>
+            <div class="q-player-row you">
+              <div class="q-p-stat">
+                <span class="q-p-name">You (${playerName()})</span>
+                <span><b>$${myCash.toLocaleString()}</b></span>
               </div>
-              <div class="prog-bar-wrap">
-                <div class="prog-bar-fill you" style="width: ${myPct}%"></div>
-              </div>
+              <div class="prog-bar-wrap"><div class="prog-bar-fill you" style="width: ${myPct}%"></div></div>
             </div>
-            <div class="prog-row">
-              <div class="prog-label">
-                <span>${escapeHtml(opp.name || "Opponent")}: $${(opp.bal || 0).toLocaleString()}</span>
-                <span>${oppPct}%</span>
-              </div>
-              <div class="prog-bar-wrap">
-                <div class="prog-bar-fill opp" style="width: ${oppPct}%"></div>
-              </div>
-            </div>
+            ${rivalsRows ? `<div class="q-rivals-list">${rivalsRows}</div>` : ''}
           </div>
         `);
       }
 
       for (const q of quests) {
         const myVal = q.getVal(my);
-        const oppVal = q.getVal(opp);
         const myPct = Math.min(100, Math.max(0, Math.round((myVal / q.target) * 100)));
-        const oppPct = Math.min(100, Math.max(0, Math.round((oppVal / q.target) * 100)));
         const myDone = myVal >= q.target;
-        const oppDone = oppVal >= q.target;
+        const myNeed = Math.max(0, q.target - myVal);
+
+        const rivals = allPlayers.filter((p) => !p.isMe).sort((a, b) => q.getVal(b.stats) - q.getVal(a.stats));
+
+        let rivalsHtml = "";
+        if (rivals.length > 0) {
+          rivals.forEach((r) => {
+            const rVal = q.getVal(r.stats);
+            const rPct = Math.min(100, Math.max(0, Math.round((rVal / q.target) * 100)));
+            const rDone = rVal >= q.target;
+            const rNeed = Math.max(0, q.target - rVal);
+            const needText = rDone ? "Done" : `Need: ${formatVal(rNeed, q.unit)}`;
+            rivalsHtml += `
+              <div class="q-player-row rival">
+                <div class="q-p-stat">
+                  <span class="q-p-name">${escapeHtml(r.name)}</span>
+                  <span>${formatVal(rVal, q.unit)} / ${formatVal(q.target, q.unit)} <span class="q-p-need">(${needText})</span></span>
+                </div>
+                <div class="prog-bar-wrap"><div class="prog-bar-fill opp" style="width: ${rPct}%"></div></div>
+              </div>
+            `;
+          });
+        }
+
+        const myNeedBadge = myDone ?
+          `<span class="quest-badge done">Completed!</span>` :
+          `<span class="quest-badge need">Need: <b>${formatVal(myNeed, q.unit)}</b></span>`;
+
         cardsHtml.push(`
-          <div class="quest-card">
+          <div class="quest-card simple">
             <div class="quest-card-header">
-              <span class="quest-card-title">${escapeHtml(q.name)}</span>
-              <span class="quest-badge ${myDone ? "done" : "pending"}">Goal: ${formatVal(q.target, q.unit)}</span>
+              <div class="quest-title-wrap">
+                <span class="quest-card-title">${escapeHtml(q.name)}</span>
+                <span class="quest-target-pill">Goal: ${formatVal(q.target, q.unit)}</span>
+              </div>
+              ${myNeedBadge}
             </div>
-            <div class="prog-row">
-              <div class="prog-label">
-                <span>You: ${formatVal(myVal, q.unit)}</span>
-                <span>${myPct}%${myDone ? " (Done)" : ""}</span>
+            <div class="q-player-row you">
+              <div class="q-p-stat">
+                <span class="q-p-name">You (${playerName()})</span>
+                <span><b>${formatVal(myVal, q.unit)}</b> / ${formatVal(q.target, q.unit)} <span class="q-p-pct">(${myPct}%)</span></span>
               </div>
-              <div class="prog-bar-wrap">
-                <div class="prog-bar-fill you" style="width: ${myPct}%"></div>
-              </div>
+              <div class="prog-bar-wrap"><div class="prog-bar-fill you" style="width: ${myPct}%"></div></div>
             </div>
-            <div class="prog-row">
-              <div class="prog-label">
-                <span>${escapeHtml(opp.name || "Opponent")}: ${formatVal(oppVal, q.unit)}</span>
-                <span>${oppPct}%${oppDone ? " (Done)" : ""}</span>
-              </div>
-              <div class="prog-bar-wrap">
-                <div class="prog-bar-fill opp" style="width: ${oppPct}%"></div>
-              </div>
-            </div>
+            ${rivalsHtml ? `<div class="q-rivals-list">${rivalsHtml}</div>` : ''}
           </div>
         `);
       }
 
       if (cardsHtml.length === 0) {
         cardsHtml.push(`
-          <div class="quest-card">
+          <div class="quest-card simple">
             <div class="quest-card-header">
-              <span class="quest-card-title">Free Versus Match</span>
+              <span class="quest-card-title">Free Match</span>
+              <span class="quest-badge pending">No Goals Set</span>
             </div>
-            <p class="muted small" style="margin: 6px 0 0;">There is no fixed victory condition in this mode. Compare metrics in real time under the <b>Rivals Dashboard</b> tab!</p>
+            <p class="muted small" style="margin: 4px 0 0;">Check the <b>Leaderboard</b> tab to compare real-time metrics across all players.</p>
           </div>
         `);
       }
@@ -3084,73 +3195,49 @@
       list.innerHTML = cardsHtml.join("");
     }
 
-    // Rivalen-Dashboard table
+    // 2. Render Multi-player Rivals Leaderboard Table (Up to 10 players)
     const tbody = $("#rival-tbody");
     if (tbody) {
-      const myStarted = my.started;
-      const oppStarted = opp.started;
+      const sortedPlayers = [...allPlayers].sort((a, b) => {
+        if (g.cured > 0 && (b.stats.cured || 0) !== (a.stats.cured || 0)) {
+          return (b.stats.cured || 0) - (a.stats.cured || 0);
+        }
+        if ((b.stats.bal || 0) !== (a.stats.bal || 0)) {
+          return (b.stats.bal || 0) - (a.stats.bal || 0);
+        }
+        return (b.stats.cured || 0) - (a.stats.cured || 0);
+      });
 
-      const myStatus = myStarted ? '<span class="status-pill active">Active</span>' : '<span class="status-pill wait">Waiting</span>';
-      const oppStatus = oppStarted ? '<span class="status-pill active">Active</span>' : '<span class="status-pill wait">Waiting</span>';
+      tbody.innerHTML = sortedPlayers.map((p, idx) => {
+        const rank = idx + 1;
+        const s = p.stats || {};
+        const isFinished = quests.length > 0 && quests.every((q) => q.getVal(s) >= q.target);
+        const statusHtml = isFinished ?
+          `<span class="status-pill ok">Finished!</span>` :
+          (s.started ? `<span class="status-pill active">Active</span>` : `<span class="status-pill wait">Waiting</span>`);
 
-      const cmp = (v1, v2, higherIsBetter = true) => {
-        if (v1 === v2) return ["", ""];
-        if ((v1 > v2) === higherIsBetter) return ['val-leader', ''];
-        return ['', 'val-leader'];
-      };
+        const isMeClass = p.isMe ? " is-you" : "";
+        const rankClass = rank === 1 ? " val-leader" : "";
 
-      const [cBal1, cBal2] = cmp(my.bal, opp.bal);
-      const [cRooms1, cRooms2] = cmp(my.rooms, opp.rooms);
-      const [cStaff1, cStaff2] = cmp(my.staff, opp.staff);
-      const [cCured1, cCured2] = cmp(my.cured, opp.cured);
-      const [cDeaths1, cDeaths2] = cmp(my.deaths, opp.deaths, false);
-      const [cRep1, cRep2] = cmp(my.rep, opp.rep);
-      const [cVal1, cVal2] = cmp(my.val, opp.val);
-
-      tbody.innerHTML = `
-        <tr>
-          <td>Hospital Status</td>
-          <td class="val-you">${myStatus}</td>
-          <td class="val-opp">${oppStatus}</td>
-        </tr>
-        <tr>
-          <td>Cash Balance</td>
-          <td class="val-you ${cBal1}">$${my.bal.toLocaleString()}</td>
-          <td class="val-opp ${cBal2}">$${opp.bal.toLocaleString()}</td>
-        </tr>
-        <tr>
-          <td>Built Rooms</td>
-          <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Room" : "Rooms"}</td>
-          <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Room" : "Rooms"}</td>
-        </tr>
-        <tr>
-          <td>Staff Members</td>
-          <td class="val-you ${cStaff1}">${my.staff} Staff</td>
-          <td class="val-opp ${cStaff2}">${opp.staff} Staff</td>
-        </tr>
-        <tr>
-          <td>Cured Patients</td>
-          <td class="val-you ${cCured1}">${my.cured}</td>
-          <td class="val-opp ${cCured2}">${opp.cured}</td>
-        </tr>
-        <tr>
-          <td>Patient Deaths</td>
-          <td class="val-you ${cDeaths1}">${my.deaths}</td>
-          <td class="val-opp ${cDeaths2}">${opp.deaths}</td>
-        </tr>
-        <tr>
-          <td>Hospital Reputation</td>
-          <td class="val-you ${cRep1}">${my.rep} / 1000</td>
-          <td class="val-opp ${cRep2}">${opp.rep} / 1000</td>
-        </tr>
-        <tr>
-          <td>Overall Valuation</td>
-          <td class="val-you ${cVal1}">$${my.val.toLocaleString()}</td>
-          <td class="val-opp ${cVal2}">$${opp.val.toLocaleString()}</td>
-        </tr>
-      `;
+        return `
+          <tr class="${isMeClass}">
+            <td class="td-rank ${rankClass}">#${rank}</td>
+            <td class="td-player">
+              <b>${escapeHtml(p.name)}</b>
+              ${p.isMe ? '<span class="name-status-pill you">You</span>' : ''}
+              ${p.isHost ? '<span class="name-status-pill host">Host</span>' : ''}
+            </td>
+            <td class="td-cured">${(s.cured || 0).toLocaleString()}${g.cured > 0 ? ` <span class="muted small">/ ${g.cured}</span>` : ''}</td>
+            <td class="td-cash">$${(s.bal || 0).toLocaleString()}</td>
+            <td class="td-rooms">${s.rooms || 0} <span class="muted small">(${s.staff || 0} st.)</span></td>
+            <td class="td-rep">${s.rep || 500}</td>
+            <td class="td-status">${statusHtml}</td>
+          </tr>
+        `;
+      }).join("");
     }
   }
+  state.updateQuestUI = updateQuestUI;
 
   function setupQuests() {
     const win = $("#quest-win");
@@ -3174,6 +3261,7 @@
         state.vs.tab = tab;
         $("#quest-view-goals").hidden = tab !== "goals";
         $("#quest-view-dashboard").hidden = tab !== "dashboard";
+        updateQuestUI();
       };
     });
 

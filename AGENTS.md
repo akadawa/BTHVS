@@ -122,6 +122,7 @@ BrowserTHospital/
 ├── tests/
 │   ├── lib.js                  # Shared Playwright test runner & local server helpers
 │   ├── test_game_language_and_notes.js
+│   ├── test_quests_and_leaderboard_multiplayer.js
 │   ├── test_patchnotes_drawer.js
 │   ├── test_leaderboard_and_username.js
 │   ├── test_ui_improvements_oct28.js
@@ -171,9 +172,17 @@ BrowserTHospital/
 - JSON Export/Import buttons ("Export Stats" / "Import Stats") allow players to backup and restore their records.
 
 ### E. In-Game HUD & Window Persistence
-- In-game HUD (`#hud`) is docked at `bottom: 8px; right: 8px` level with the bottom menu bar.
+- In-game HUD (`#hud`) is docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions.
+- For lobbies with > 2 players (up to 10 players), the HUD players chip condenses to `Host: Name · X Players` to remain clean and compact.
 - Quests and Chat windows are draggable and resizable with handles.
 - Positions and dimensions are persisted in `localStorage` (`bth_win_quests` and `bth_win_chat`).
+
+### F. Simplified In-Game Quests & Multi-Player Rivals Leaderboard
+- **Glanceable Quest Cards**: Stripped of long explanatory paragraphs. Each card provides instant answers to three vital questions:
+  1. *What is the goal?* (`Goal: 25`, `Goal: $100k`, `Limit: 30m`)
+  2. *What do I still need?* (`Need: 7 more`, `Completed!`) + current progress bar.
+  3. *What do rivals have right now?* Compact comparative rows for all opponents.
+- **10-Player Rivals Leaderboard Table**: The Leaderboard tab (`#quest-view-dashboard`) renders a full ranking table supporting up to 10 players with Rank, Player, Cured, Cash, Rooms, Reputation, and Status, perfectly proportioned for 1080p and 720p screens.
 
 ---
 
@@ -181,6 +190,9 @@ BrowserTHospital/
 
 Run tests before committing any changes:
 ```powershell
+# Run the simplified quests & multi-player leaderboard test
+node tests/test_quests_and_leaderboard_multiplayer.js
+
 # Run the game language & collapsible notes verification
 node tests/test_game_language_and_notes.js
 
@@ -190,7 +202,7 @@ node tests/test_patchnotes_drawer.js
 # Run the leaderboard & locked username verification (checks 5 tabs, '?' hint, locking)
 node tests/test_leaderboard_and_username.js
 
-# Run the UI improvements regression test (checks HUD docking, window persistence, play badge)
+# Run the UI improvements regression test (checks top-right HUD, window persistence, play badge)
 node tests/test_ui_improvements_oct28.js
 ```
 

@@ -97,26 +97,26 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     await p1.waitForSelector("#hud:not([hidden])", { timeout: 15000 });
     await sleep(1000);
 
-    // Verify HUD position: bottom: 8px, right: 8px
+    // Verify HUD position: top: 8px, right: 8px (to avoid bottom toolbar overlap at 1080p and 720p)
     const hudBox = await p1.evaluate(() => {
       const el = document.querySelector("#hud");
       const r = el.getBoundingClientRect();
       return {
-        bottomOffset: window.innerHeight - r.bottom,
+        topOffset: r.top,
         rightOffset: window.innerWidth - r.right,
         height: r.height,
-        bottom: r.bottom,
+        top: r.top,
         windowHeight: window.innerHeight,
       };
     });
     console.log("In-Game HUD Position:", hudBox);
-    if (hudBox.bottomOffset > 15) {
-      throw new Error(`FAIL: HUD is not at the very bottom! bottomOffset=${hudBox.bottomOffset}px (must be <= 15px)`);
+    if (hudBox.topOffset > 15) {
+      throw new Error(`FAIL: HUD is not at the top! topOffset=${hudBox.topOffset}px (must be <= 15px)`);
     }
     if (hudBox.rightOffset > 15) {
       throw new Error(`FAIL: HUD is not at the very right! rightOffset=${hudBox.rightOffset}px (must be <= 15px)`);
     }
-    console.log("✓ In-Game HUD is docked right down at the bottom-right corner, on level with the menu bar!");
+    console.log("✓ In-Game HUD is docked at the top-right corner, free from gameplay toolbar overlap!");
 
     // 3. Test Window Size & Position Persistence in localStorage
     console.log("\nTesting window resizing, dragging, and persistence...");
