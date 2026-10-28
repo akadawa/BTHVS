@@ -169,7 +169,8 @@ BrowserTHospital/
   4. `lobbies`: Lobbies Hosted
   5. `wins`: Versus Match Victories
 - Initial state starts completely clean at zero (`DEFAULT_LEADERBOARD = []`, all stats start at 0).
-- JSON Export/Import buttons ("Export Stats" / "Import Stats") allow players to backup and restore their records.
+- JSON Export/Import and Reset buttons ("Export Stats", "Import Stats", "Reset Stats") allow players to backup, restore, or wipe their records.
+- Single-recording match guard (`state.vs.matchRecorded`) guarantees match statistics are recorded at most once per match, preventing stat runaway.
 
 ### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence
 - **Minimalist In-Game HUD**: Docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions. Redundant telemetry (ping `- ms`, sync badge, host/player listings) was completely removed to keep the HUD unobtrusive.

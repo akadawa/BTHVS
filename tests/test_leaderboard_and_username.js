@@ -152,6 +152,64 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     // 10. Re-open and close via Escape
     await p1.click("#leaderboard-btn");
     await sleep(200);
+
+    // 11. Test Reset Stats Button and Single-Recording Guard
+    console.log("Testing Reset Stats button & single-recording victory guard...");
+    const resetBtn = await p1.$("#btn-reset-stats");
+    if (!resetBtn) throw new Error("FAIL: #btn-reset-stats not found!");
+
+    // Simulate accumulated stats
+    await p1.evaluate(() => {
+      window.__bth.recordMatchStats(true, 12, 45000, 25);
+      window.__bth.renderLeaderboard("cured");
+    });
+    const statsBeforeReset = await p1.evaluate(() => window.__bth.getPlayerStats());
+    console.log("Stats before reset:", statsBeforeReset);
+    if (statsBeforeReset.cured !== 12 || statsBeforeReset.games !== 1) {
+      throw new Error(`FAIL: Stats were not simulated properly: ${JSON.stringify(statsBeforeReset)}`);
+    }
+
+    // Click Reset Stats
+    await p1.click("#btn-reset-stats");
+    await sleep(200);
+
+    const statsAfterReset = await p1.evaluate(() => window.__bth.getPlayerStats());
+    console.log("Stats after reset:", statsAfterReset);
+    if (statsAfterReset.cured !== 0 || statsAfterReset.cash !== 0 || statsAfterReset.games !== 0 || statsAfterReset.wins !== 0) {
+      throw new Error(`FAIL: Stats were not cleanly reset to zero! Got: ${JSON.stringify(statsAfterReset)}`);
+    }
+    const resetBtnTxt = await p1.$eval("#btn-reset-stats", (el) => el.textContent.trim());
+    if (resetBtnTxt !== "Stats Reset!") {
+      throw new Error(`FAIL: Expected 'Stats Reset!' button feedback, got '${resetBtnTxt}'`);
+    }
+    console.log("✓ #btn-reset-stats cleanly wiped all stats to 0 and showed confirmation feedback.");
+
+    // Verify victory modal guard: multiple calls must not inflate stats
+    await p1.evaluate(() => {
+      // Simulate state.vs
+      window.__bth.state.vs = {
+        goals: { cured: 25, money: 100000, timeLimit: 30 },
+        startTime: Date.now() - 60000,
+        myStats: { cured: 5, bal: 30000 },
+        oppStats: { cured: 2, bal: 20000 },
+        winner: null,
+        matchRecorded: false
+      };
+      // Simulate 10 rapid triggers
+      for (let i = 0; i < 10; i++) {
+        window.__bth.checkWinConditions();
+      }
+    });
+    const guardedStats = await p1.evaluate(() => window.__bth.getPlayerStats());
+    console.log("Stats after 10 rapid victory triggers:", guardedStats);
+    if (guardedStats.games > 1) {
+      throw new Error(`FAIL: Victory guard failed! Games count inflated to ${guardedStats.games}`);
+    }
+    console.log("✓ Single-recording victory guard verified: stats cannot run away in rapid loops.");
+
+    // Clean reset back to 0
+    await p1.evaluate(() => window.__bth.resetAllStats());
+
     await p1.keyboard.press("Escape");
     await sleep(200);
     const isClosedByEsc = await p1.evaluate(() => !document.querySelector("#leaderboard-drawer").classList.contains("open"));

@@ -264,6 +264,7 @@
       matchPlayers: new Map(),
       leftPlayerIds: new Set(),
       winner: null,
+      matchRecorded: false,
       tab: "goals",
     },
   };
@@ -777,10 +778,9 @@
 
   // ------------------------------------------------------------- leaderboard & username
   const DEFAULT_LEADERBOARD = [];
+  let currentLeaderboardTab = "cured";
 
-  // Reset leaderboard stats to clean zero state if not yet migrated
-  if (localStorage.getItem("bth_lb_clean_v1") !== "true") {
-    localStorage.setItem("bth_lb_clean_v1", "true");
+  function resetAllStats() {
     localStorage.removeItem("bth_custom_leaderboard");
     try {
       localStorage.setItem("bth_player_stats", JSON.stringify({
@@ -793,9 +793,19 @@
       }));
       localStorage.setItem("bth_total_lobbies", "0");
     } catch (_) {}
+    if (typeof renderLeaderboard === "function") {
+      renderLeaderboard(currentLeaderboardTab);
+    }
+    if (typeof updateTotalHostedUI === "function") {
+      updateTotalHostedUI(0);
+    }
   }
 
-  let currentLeaderboardTab = "cured";
+  // Reset leaderboard stats to clean zero state if not yet migrated or if v3 reset needed
+  if (localStorage.getItem("bth_lb_reset_v3") !== "true") {
+    localStorage.setItem("bth_lb_reset_v3", "true");
+    resetAllStats();
+  }
 
   function getPlayerStats() {
     let stats = null;
@@ -2515,6 +2525,7 @@
         const parts = (arg || "").split("|");
         const winId = parseInt(parts[0], 10);
         const winName = parts[1] || "A Player";
+        state.vs.winner = winName;
         showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
         return null;
       }
@@ -2622,6 +2633,7 @@
           const parts = m.d.slice(4).split("|");
           const winId = parseInt(parts[0], 10);
           const winName = parts[1] || "A Player";
+          state.vs.winner = winName;
           showVictoryModal(winName, winId === (state.lobby ? state.lobby.id : -1));
         } else {
           net.inbox.push({ from: m.from, d: m.d });
@@ -2956,7 +2968,7 @@
   }
 
   function checkWinConditions() {
-    if (state.vs.winner) return; // match already concluded
+    if (state.vs.winner || state.vs.matchRecorded) return; // match already concluded
     if (!state.vs.startTime || Date.now() - state.vs.startTime < 4000) return;
     const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
     const my = state.vs.myStats;
@@ -3428,6 +3440,9 @@
   function showVictoryModal(winnerName, isMe) {
     const modal = $("#victory-modal");
     if (!modal) return;
+    if (state.vs.matchRecorded) return;
+    state.vs.matchRecorded = true;
+    state.vs.winner = winnerName;
     const iconEl = $("#vic-icon");
     const titleEl = $("#vic-title");
     const descEl = $("#vic-desc");
@@ -3506,6 +3521,7 @@
       matchPlayers: new Map(),
       leftPlayerIds: new Set(),
       winner: null,
+      matchRecorded: false,
       tab: "goals",
     };
     if (Array.isArray(players)) {
@@ -3756,6 +3772,16 @@
       };
     }
 
+    const btnResetStats = $("#btn-reset-stats");
+    if (btnResetStats) {
+      btnResetStats.onclick = () => {
+        resetAllStats();
+        const oldTxt = btnResetStats.textContent;
+        btnResetStats.textContent = "Stats Reset!";
+        setTimeout(() => { btnResetStats.textContent = oldTxt; }, 1500);
+      };
+    }
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const leaveModal = $("#leave-modal");
@@ -3811,7 +3837,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
   }
 
   init();
