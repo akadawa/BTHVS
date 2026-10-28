@@ -437,6 +437,84 @@
     { id: "level1", label: "Level 1 – Original Campaign" },
   ];
 
+  const MAP_PREVIEWS = [
+    { id: "demo", name: "Town 1 (Oxpond)", desc: "Original starter hospital. Compact grounds with starting plot and helipad.", plotsCount: 1, hospitalTiles: 776, image: "assets/maps/demo.png" },
+    { id: "avatar", name: "Avatar", desc: "Large metropolitan healthcare campus featuring 5 separate hospital plots.", plotsCount: 4, hospitalTiles: 756, image: "assets/maps/avatar.png" },
+    { id: "confined_v5", name: "Confined", desc: "Challenging tight grounds across 4 compact plots requiring efficient layout.", plotsCount: 3, hospitalTiles: 300, image: "assets/maps/confined_v5.png" },
+    { id: "finisham", name: "Finisham", desc: "Expansive hospital complex divided by a river with connecting bridges across 7 plots.", plotsCount: 6, hospitalTiles: 1943, image: "assets/maps/finisham.png" },
+    { id: "st.peter's", name: "St. Peter's", desc: "Sprawling classic compound with 7 distinct building wings and garden paths.", plotsCount: 6, hospitalTiles: 1712, image: "assets/maps/st_peter_s.png" },
+    { id: "level1", name: "Level 1 – Original Campaign", desc: "The original Theme Hospital campaign level with standard town boundaries.", plotsCount: 1, hospitalTiles: 776, image: "assets/maps/level1.png" },
+    { id: "four_corners", name: "Four Corners", desc: "4 large building quadrants separated by cross roads across 9 plots.", plotsCount: 9, hospitalTiles: 3600, image: "assets/maps/four_corners.png" },
+    { id: "greyham_gardens", name: "Greyham Gardens", desc: "Scenic parkland hospital surrounded by gardens across 7 plots.", plotsCount: 7, hospitalTiles: 1656, image: "assets/maps/greyham_gardens.png" },
+    { id: "royal_hospital", name: "Royal Hospital", desc: "Massive royal healthcare facility spanning 21 separate hospital plots.", plotsCount: 21, hospitalTiles: 4634, image: "assets/maps/royal_hospital.png" },
+    { id: "snuffit_sands", name: "Snuffit Sands", desc: "Desert oasis regional hospital with 5 open plots.", plotsCount: 5, hospitalTiles: 1414, image: "assets/maps/snuffit_sands.png" },
+    { id: "upper_pukington", name: "Upper Pukington", desc: "Suburban medical district with 7 spacious plots.", plotsCount: 7, hospitalTiles: 2308, image: "assets/maps/upper_pukington.png" },
+    { id: "wishinwell", name: "Wishinwell", desc: "Mountain valley hospital complex with 7 plots.", plotsCount: 7, hospitalTiles: 2556, image: "assets/maps/wishinwell.png" },
+    { id: "tufflook", name: "Tufflook", desc: "Industrial sector high-capacity medical center across 11 plots.", plotsCount: 11, hospitalTiles: 5376, image: "assets/maps/tufflook.png" },
+  ];
+
+  function openMapModal() {
+    const modal = $("#map-modal");
+    if (!modal) return;
+    renderMapModalGrid();
+    modal.hidden = false;
+  }
+
+  function closeMapModal() {
+    const modal = $("#map-modal");
+    if (modal) modal.hidden = true;
+  }
+
+  function renderMapModalGrid() {
+    const grid = $("#map-grid");
+    if (!grid) return;
+    const isHost = state.lobby ? !!state.lobby.host : true;
+    const curLevel = ($("#mp-level") && $("#mp-level").value) || (state.lobby && state.lobby.level) || "demo";
+
+    grid.innerHTML = MAP_PREVIEWS.map((m) => {
+      const isSelected = m.id === curLevel;
+      const isSelectable = LEVELS.some((l) => l.id === m.id);
+      let actionHtml = "";
+      if (isSelected) {
+        actionHtml = '<span class="map-card-selected-badge">Current Map</span>';
+      } else if (isHost && isSelectable) {
+        actionHtml = `<button type="button" class="btn primary btn-sm btn-select-map" data-level="${escapeHtml(m.id)}" style="width: 100%;">Select Map</button>`;
+      } else if (!isSelectable) {
+        actionHtml = '<span class="muted small" style="display: block; text-align: center;">Campaign Preview</span>';
+      }
+
+      return `
+        <div class="map-card ${isSelected ? "active-map" : ""}" data-level="${escapeHtml(m.id)}">
+          <div class="map-card-thumb">
+            <img src="${escapeHtml(m.image)}" alt="${escapeHtml(m.name)}" loading="lazy">
+          </div>
+          <div class="map-card-info">
+            <div class="map-card-header-row">
+              <span class="map-card-name">${escapeHtml(m.name)}</span>
+              <span class="map-card-plots-pill">${m.plotsCount} Plot${m.plotsCount > 1 ? "s" : ""}</span>
+            </div>
+            <div class="map-card-desc">${escapeHtml(m.desc)}</div>
+            <div class="map-card-action">${actionHtml}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    grid.querySelectorAll(".btn-select-map").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const levelId = btn.getAttribute("data-level");
+        if ($("#mp-level")) {
+          $("#mp-level").value = levelId;
+          if (state.lobby && state.lobby.host) {
+            broadcastLobbyConfig();
+          }
+        }
+        closeMapModal();
+      };
+    });
+  }
+
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
@@ -2621,6 +2699,28 @@
     updateTotalHostedUI(parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0);
     refreshLevelOptions();
     refreshPublicLobbies();
+
+    // Map previews modal wiring
+    document.querySelectorAll(".btn-map-preview, #btn-map-preview-host, #btn-map-preview-guest").forEach((btn) => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        openMapModal();
+      };
+    });
+    const mapModalClose = $("#map-modal-close");
+    if (mapModalClose) mapModalClose.onclick = closeMapModal;
+    const mapModal = $("#map-modal");
+    if (mapModal) {
+      mapModal.onclick = (e) => {
+        if (e.target === mapModal) closeMapModal();
+      };
+    }
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && mapModal && !mapModal.hidden) {
+        closeMapModal();
+      }
+    });
+
     setInterval(() => {
       const setupView = $("#view-setup");
       if (setupView && !setupView.hidden && !state.lobby && !state.game) {
@@ -2632,7 +2732,7 @@
     if (join) $("#join-code").value = join.toUpperCase().slice(0, 5);
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS };
   }
 
   init();

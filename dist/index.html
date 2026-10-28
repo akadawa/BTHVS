@@ -350,7 +350,11 @@
           </label>
         </div>
 
-        <label class="field" id="mp-level-wrap">Map / Level
+        <label class="field" id="mp-level-wrap">
+          <span class="field-title">
+            Map / Level
+            <button type="button" id="btn-map-preview-host" class="btn-help-inline btn-map-preview" title="Preview Maps">?</button>
+          </span>
           <select id="mp-level"></select>
         </label>
         <p id="level-compat-hint" class="status warn small" hidden></p>
@@ -366,7 +370,10 @@
           <div><b>Versus Goals:</b></div>
           <div id="guest-goal-summary" class="guest-goals-list">...</div>
           <div class="muted small" style="margin-top: 4px;">The first player to achieve all active goals wins! When time runs out, the highest cash balance wins.</div>
-          <div style="margin-top: 8px;"><b>Map:</b> <span id="guest-level-val">Level 1</span></div>
+          <div style="margin-top: 8px;" class="guest-map-line">
+            <b>Map:</b> <span id="guest-level-val">Level 1</span>
+            <button type="button" id="btn-map-preview-guest" class="btn-help-inline btn-map-preview" title="Preview Maps">?</button>
+          </div>
         </div>
         <div class="match-notice-banner muted small" style="margin-top: 8px;">
           Note: Mandatory simulation dialogs (such as incoming faxes) temporarily pause the game for all players.
@@ -481,6 +488,22 @@
         <h2>The game was terminated</h2>
         <pre id="fatal-text"></pre>
         <div class="row"><button id="fatal-reload" class="btn primary">Return to Menu</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Previews Modal -->
+  <div id="map-modal" class="modal-backdrop" hidden>
+    <div class="modal-box map-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2 class="modal-title">Theme Hospital Maps &amp; Layouts</h2>
+          <span class="modal-subtitle">Browse layout previews, building plots, and grounds</span>
+        </div>
+        <button id="map-modal-close" type="button" class="btn-chip modal-close-btn" title="Close">&times;</button>
+      </div>
+      <div class="map-modal-body">
+        <div id="map-grid" class="map-grid"></div>
       </div>
     </div>
   </div>

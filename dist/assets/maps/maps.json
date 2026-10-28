@@ -1,0 +1,106 @@
+[
+  {
+    "id": "demo",
+    "name": "Town 1 (Oxpond)",
+    "desc": "Original starter hospital. Compact grounds with starting plot and helipad.",
+    "plotsCount": 1,
+    "hospitalTiles": 776,
+    "image": "assets/maps/demo.png"
+  },
+  {
+    "id": "avatar",
+    "name": "Avatar",
+    "desc": "Large metropolitan healthcare campus featuring 5 separate hospital plots.",
+    "plotsCount": 4,
+    "hospitalTiles": 756,
+    "image": "assets/maps/avatar.png"
+  },
+  {
+    "id": "confined_v5",
+    "name": "Confined",
+    "desc": "Challenging tight grounds across 4 compact plots requiring efficient layout.",
+    "plotsCount": 3,
+    "hospitalTiles": 300,
+    "image": "assets/maps/confined_v5.png"
+  },
+  {
+    "id": "finisham",
+    "name": "Finisham",
+    "desc": "Expansive hospital complex divided by a river with connecting bridges across 7 plots.",
+    "plotsCount": 6,
+    "hospitalTiles": 1943,
+    "image": "assets/maps/finisham.png"
+  },
+  {
+    "id": "st.peter's",
+    "name": "St. Peter's",
+    "desc": "Sprawling classic compound with 7 distinct building wings and garden paths.",
+    "plotsCount": 6,
+    "hospitalTiles": 1712,
+    "image": "assets/maps/st_peter_s.png"
+  },
+  {
+    "id": "level1",
+    "name": "Level 1 - Original Campaign",
+    "desc": "The original Theme Hospital campaign level with standard town boundaries.",
+    "plotsCount": 1,
+    "hospitalTiles": 776,
+    "image": "assets/maps/level1.png"
+  },
+  {
+    "id": "four_corners",
+    "name": "Four Corners",
+    "desc": "4 large building quadrants separated by cross roads across 9 plots.",
+    "plotsCount": 9,
+    "hospitalTiles": 3600,
+    "image": "assets/maps/four_corners.png"
+  },
+  {
+    "id": "greyham_gardens",
+    "name": "Greyham Gardens",
+    "desc": "Scenic parkland hospital surrounded by gardens across 7 plots.",
+    "plotsCount": 7,
+    "hospitalTiles": 1656,
+    "image": "assets/maps/greyham_gardens.png"
+  },
+  {
+    "id": "royal_hospital",
+    "name": "Royal Hospital",
+    "desc": "Massive royal healthcare facility spanning 21 separate hospital plots.",
+    "plotsCount": 21,
+    "hospitalTiles": 4634,
+    "image": "assets/maps/royal_hospital.png"
+  },
+  {
+    "id": "snuffit_sands",
+    "name": "Snuffit Sands",
+    "desc": "Desert oasis regional hospital with 5 open plots.",
+    "plotsCount": 5,
+    "hospitalTiles": 1414,
+    "image": "assets/maps/snuffit_sands.png"
+  },
+  {
+    "id": "upper_pukington",
+    "name": "Upper Pukington",
+    "desc": "Suburban medical district with 7 spacious plots.",
+    "plotsCount": 7,
+    "hospitalTiles": 2308,
+    "image": "assets/maps/upper_pukington.png"
+  },
+  {
+    "id": "wishinwell",
+    "name": "Wishinwell",
+    "desc": "Mountain valley hospital complex with 7 plots.",
+    "plotsCount": 7,
+    "hospitalTiles": 2556,
+    "image": "assets/maps/wishinwell.png"
+  },
+  {
+    "id": "tufflook",
+    "name": "Tufflook",
+    "desc": "Industrial sector high-capacity medical center across 11 plots.",
+    "plotsCount": 11,
+    "hospitalTiles": 5376,
+    "image": "assets/maps/tufflook.png"
+  }
+]
