@@ -217,6 +217,14 @@ BrowserTHospital/
   - Shared invite links (`#btn-copy-link`) and browser address bar state (`history.replaceState`) strictly encode `?join=CODE` (plus optional `server` parameter only if using a custom relay).
   - Game modes, level layouts, and win conditions (`curedPatients`, `cashBalance`, `timeLimit`, `level`) are completely excluded from URL queries. Win conditions and match configurations are seamlessly and authoritatively synchronized across peers via the network protocol (`joined`/`config` and `set_config` packets).
 
+### I. WebAssembly Package Cache-Busting & Integrity Verification
+- **Automatic Build Manifest (`dist/game/build.json`)**:
+  - `web/build.ps1` computes a 12-character SHA-256 fingerprint across `corsixth.js`, `corsixth.wasm`, and `corsixth.data` along with exact byte sizes (`dataSize`, `wasmSize`, `jsSize`) and writes `dist/game/build.json` on every build.
+- **Synchronized Cache-Busted Loading**:
+  - `startGame` in `dist/app.js` fetches `game/build.json` with `{ cache: "no-store" }`, appends `?v=<hash>` to `corsixth.js`, `corsixth.wasm`, and `corsixth.data`, verifies `corsixth.data` byte length against `dataSize` (re-fetching with `cache: "no-store"` on mismatch), and supplies the verified buffer via `getPreloadedPackage` so `corsixth.js` byte offsets and `corsixth.data` can never drift out of sync across deployments.
+- **Vercel Cache Headers (`vercel.json`)**:
+  - `/game/build.json` uses `no-cache, no-store, must-revalidate`; `/game/corsixth.{js,wasm,data}` use `public, max-age=0, must-revalidate` (ETag revalidation instead of unhashed `immutable`).
+
 ---
 
 ## 6. Testing Guide
@@ -225,6 +233,9 @@ Run tests before committing any changes:
 ```powershell
 # Run CorsixTH menu pruning & speed lock verification
 node tests/test_corsix_menu_and_speed.js
+
+# Run WebAssembly & data package cache-busting and size integrity verification
+node tests/test_wasm_cache_bust.js
 
 # Run the simplified quests & multi-player leaderboard test
 node tests/test_quests_and_leaderboard_multiplayer.js

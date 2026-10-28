@@ -2346,10 +2346,34 @@
     const W = Math.max(640, window.innerWidth), H = Math.max(480, window.innerHeight);
     let ready;
     try {
-      if (!window.createCorsixTH) await loadScript("game/corsixth.js");
+      let buildHash = "4f60dc17e229";
+      let expectedDataSize = 0;
+      try {
+        const bRes = await fetch("game/build.json?t=" + Date.now(), { cache: "no-store" });
+        if (bRes.ok) {
+          const bInfo = await bRes.json();
+          if (bInfo && bInfo.hash) buildHash = String(bInfo.hash);
+          if (bInfo && bInfo.dataSize) expectedDataSize = Number(bInfo.dataSize) || 0;
+        }
+      } catch (_) {}
+      const vQuery = "?v=" + encodeURIComponent(buildHash);
+      if (!window.createCorsixTH) await loadScript("game/corsixth.js" + vQuery);
+      setLoading("Downloading engine data ...");
+      let preloadedDataBuf = null;
+      try {
+        let dRes = await fetch("game/corsixth.data" + vQuery);
+        if (dRes.ok) {
+          preloadedDataBuf = await dRes.arrayBuffer();
+          if (expectedDataSize > 0 && preloadedDataBuf.byteLength !== expectedDataSize) {
+            dRes = await fetch("game/corsixth.data" + vQuery + "&r=" + Date.now(), { cache: "no-store" });
+            if (dRes.ok) preloadedDataBuf = await dRes.arrayBuffer();
+          }
+        }
+      } catch (_) {}
       const mod = await createCorsixTH({
         canvas,
-        locateFile: (p) => "game/" + p,
+        locateFile: (p) => "game/" + p + vQuery,
+        getPreloadedPackage: (name, size) => (preloadedDataBuf && preloadedDataBuf.byteLength === size) ? preloadedDataBuf : null,
         print: (t) => console.log("[game]", t),
         printErr: (t) => console.warn("[game]", t),
         thBridge: (cmd, arg) => bridge(cmd, arg),

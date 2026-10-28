@@ -27,5 +27,23 @@ Pop-Location
 
 New-Item -ItemType Directory -Force "$root\dist\game" | Out-Null
 Copy-Item "$build\wasm\corsixth.*" "$root\dist\game\" -Force
-Write-Host "Build done -> dist/game"
+
+$jsFile = Get-Item "$root\dist\game\corsixth.js"
+$wasmFile = Get-Item "$root\dist\game\corsixth.wasm"
+$dataFile = Get-Item "$root\dist\game\corsixth.data"
+$hJs = (Get-FileHash $jsFile.FullName -Algorithm SHA256).Hash.ToLower()
+$hWasm = (Get-FileHash $wasmFile.FullName -Algorithm SHA256).Hash.ToLower()
+$hData = (Get-FileHash $dataFile.FullName -Algorithm SHA256).Hash.ToLower()
+$combinedBytes = [System.Text.Encoding]::UTF8.GetBytes("$hJs|$hWasm|$hData")
+$sha = [System.Security.Cryptography.SHA256]::Create()
+$combinedHash = ([System.BitConverter]::ToString($sha.ComputeHash($combinedBytes)).Replace("-", "").ToLower()).Substring(0, 12)
+$manifest = [ordered]@{
+  hash = $combinedHash
+  jsSize = $jsFile.Length
+  wasmSize = $wasmFile.Length
+  dataSize = $dataFile.Length
+} | ConvertTo-Json
+[System.IO.File]::WriteAllText("$root\dist\game\build.json", $manifest, (New-Object System.Text.UTF8Encoding $false))
+
+Write-Host "Build done -> dist/game (hash: $combinedHash)"
 
