@@ -189,23 +189,25 @@ node tests/test_ui_improvements_oct28.js
 
 ---
 
-## 7. TODO: CorsixTH v0.70.1 Engine Upgrade (DO NOT IMPLEMENT YET)
+## 7. TODO: CorsixTH v0.70.1 / v0.70.2 Engine Upgrade (DO NOT IMPLEMENT YET)
 
 > STATUS: PREPARED AS ROADMAP TODO — DO NOT EXECUTE UNTIL EXPLICIT USER INSTRUCTION.
 
 The current game engine runs on CorsixTH **v0.69.2** (savegame version 222).
-Upstream release **v0.70.1** introduces:
+Upstream release **v0.70.1** and the upcoming hotfix milestone **v0.70.2** introduce:
 - 2x and 3x UI scaling for high-resolution displays.
 - Announcer speech subtitles.
 - Option to disable earthquake screen shake.
 - Pathfinding performance improvements for large hospitals.
-- Bug fixes for rare patient stuck states and staff hiring crashes.
+- Bug fixes for rare patient stuck states, staff hiring crashes, and MIDI/JACK audio stability.
+- Post-0.70.1 hotfix patches (v0.70.2 milestone) for minor simulation glitches and lower-drawer save compatibility.
 
 ### Step-by-Step Upgrade Roadmap (When Greenlit):
-1. **Source Inspection & Diff**:
-   - Compare `third_party/CorsixTH` against upstream release tag `v0.70.1` (`https://github.com/CorsixTH/CorsixTH/releases/tag/v0.70.1`).
+1. **Target Selection & Source Diff**:
+   - Check upstream repository `https://github.com/CorsixTH/CorsixTH` for the latest available tag: use **v0.70.2** if published, or pull the latest `v0.70.2` hotfix commits on top of release tag **v0.70.1**.
+   - Diff upstream tree against `third_party/CorsixTH`.
 2. **Rebase Custom Multiplayer Netcode**:
-   - Port custom changes from `third_party/CorsixTH/CorsixTH/Lua/multiplayer.lua` onto the v0.70.1 Lua files.
+   - Port custom changes from `third_party/CorsixTH/CorsixTH/Lua/multiplayer.lua` onto the updated Lua files.
    - Port web lifecycle modifications from `CorsixTH/Lua/app.lua` and `CorsixTH/Lua/game_ui.lua`.
    - Update `SAVEGAME_VERSION` checks in `app.lua` (v0.70.x increments savegame version to 223+).
 3. **WebAssembly Bridge Verification**:
