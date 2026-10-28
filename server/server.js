@@ -239,11 +239,18 @@ class Room {
 }
 
 function newCode() {
-  for (;;) {
+  for (let attempt = 0; attempt < 5000; attempt++) {
     let c = "";
-    for (let i = 0; i < 5; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-    if (!rooms.has(c)) return c;
+    for (let i = 0; i < 8; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    if (!rooms.has(c) && !allHostedCodes.has(c) && !externalLobbies.has(c)) {
+      allHostedCodes.add(c);
+      return c;
+    }
   }
+  let c = "";
+  for (let i = 0; i < 8; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  allHostedCodes.add(c);
+  return c;
 }
 
 function send(ws, obj) {

@@ -17,42 +17,75 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     const code = (await pHost.textContent("#room-code")).trim();
     console.log("Host room created with code:", code);
 
+    // Verify 8-character room code format
+    if (code.length !== 8 || !/^[A-Z0-9]{8}$/.test(code)) {
+      throw new Error(`FAIL: Expected 8-character alphanumeric room code, got '${code}' (length: ${code.length})`);
+    }
+    console.log("✓ Room code is exactly 8 characters long:", code);
+
     // Now configure custom goals inside the lobby
     await pHost.selectOption("#goal-cured", "10");
     await pHost.selectOption("#goal-money", "50000");
     await pHost.selectOption("#goal-time", "20");
     await sleep(400);
 
-    // Verify Copy Invite Link contains join and goals
+    // Verify browser URL and generated invite link contain ONLY join=CODE and NO goals/game modes
+    const currentUrl = await pHost.evaluate(() => location.href);
+    console.log("Current Browser URL in lobby:", currentUrl);
+    if (!currentUrl.includes(`join=${code}`)) {
+      throw new Error(`Browser URL missing room code: ${currentUrl}`);
+    }
+    if (currentUrl.includes("curedPatients") || currentUrl.includes("cashBalance") || currentUrl.includes("timeLimit") || currentUrl.includes("level")) {
+      throw new Error(`Browser URL contains game modes/goals, should only contain join code: ${currentUrl}`);
+    }
+
+    // Verify copy invite link button behavior
     await pHost.click("#btn-copy-link");
-    const inviteLink = await pHost.evaluate(() => {
+    const generatedInviteLink = await pHost.evaluate(() => {
       const u = new URL(location.origin + location.pathname);
-      u.searchParams.set("join", window.__bth.state.lobby.code);
-      const goals = window.__bth.state.lobby.goals;
-      if (goals) {
-        if (goals.cured !== undefined) u.searchParams.set("curedPatients", goals.cured);
-        if (goals.money !== undefined) u.searchParams.set("cashBalance", goals.money);
-        if (goals.timeLimit !== undefined) u.searchParams.set("timeLimit", goals.timeLimit);
-      }
-      if (window.__bth.state.lobby.level) {
-        u.searchParams.set("level", window.__bth.state.lobby.level);
+      if (window.__bth.state.lobby) {
+        u.searchParams.set("join", window.__bth.state.lobby.code);
       }
       return u.toString();
     });
-    console.log("Generated Invite Link:", inviteLink);
-
-    if (!inviteLink.includes(`join=${code}`)) {
-      throw new Error(`Invite link missing room code: ${inviteLink}`);
+    console.log("Generated Invite Link:", generatedInviteLink);
+    if (!generatedInviteLink.includes(`join=${code}`)) {
+      throw new Error(`Invite link missing room code: ${generatedInviteLink}`);
     }
-    if (!inviteLink.includes("curedPatients=10") || !inviteLink.includes("cashBalance=50000") || !inviteLink.includes("timeLimit=20")) {
-      throw new Error(`Invite link missing custom goals: ${inviteLink}`);
+    if (generatedInviteLink.includes("curedPatients") || generatedInviteLink.includes("cashBalance") || generatedInviteLink.includes("timeLimit") || generatedInviteLink.includes("level")) {
+      throw new Error(`Invite link contains goals/modes! Should only be join=CODE: ${generatedInviteLink}`);
     }
-    console.log("✓ Invite link parameters verified successfully!");
+    console.log("✓ Invite link parameters verified successfully: strictly join=CODE with zero game modes!");
 
-    // Test 1: Guest visits with cached data -> direct landing into lobby
+    // Verify room code storage and uniqueness in localStorage
+    const uniquenessCheck = await pHost.evaluate(() => {
+      const bth = window.__bth;
+      const used = bth.getUsedRoomCodes();
+      const currentCode = bth.state.lobby.code;
+      const hasCurrent = used.has(currentCode);
+
+      // Generate 100 new codes and verify non-repetition
+      const sample = new Set();
+      for (let i = 0; i < 100; i++) {
+        const c = bth.newCode();
+        if (c.length !== 8) return { ok: false, err: `Code length not 8: ${c}` };
+        if (sample.has(c)) return { ok: false, err: `Duplicate code in batch: ${c}` };
+        if (c === currentCode) return { ok: false, err: `Generated code matched current code!` };
+        sample.add(c);
+      }
+      return { ok: true, hasCurrent, totalUsed: used.size };
+    });
+    if (!uniquenessCheck.ok) {
+      throw new Error("FAIL: " + uniquenessCheck.err);
+    }
+    if (!uniquenessCheck.hasCurrent) {
+      throw new Error("FAIL: Current room code was not recorded in used room codes set!");
+    }
+    console.log(`✓ Room codes are saved and guaranteed unique! (tested 100 consecutive generations, ${uniquenessCheck.totalUsed} stored)`);
+
+    // Test 1: Guest visits with cached data -> direct landing into lobby via pure ?join=CODE
     console.log("\nTesting Guest opening invite link with pre-cached data...");
-    const urlObj = new URL(inviteLink);
-    const query = urlObj.search; // e.g. "?join=CODE&curedPatients=10..."
+    const query = `?join=${code}`;
 
     // Open guest context and pre-seed indexedDB (load demo, wait for IDB save, then navigate with invite link)
     const pGuest = await newPage(browser, port, "GuestDirect");

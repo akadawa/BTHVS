@@ -1207,9 +1207,48 @@
   }
 
   const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const USED_ROOM_CODES_KEY = "bth_used_room_codes";
+
+  function getUsedRoomCodes() {
+    try {
+      const raw = localStorage.getItem(USED_ROOM_CODES_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr);
+      }
+    } catch (e) {}
+    return new Set();
+  }
+
+  function markRoomCodeUsed(code) {
+    if (!code) return;
+    const c = String(code).trim().toUpperCase();
+    if (!c) return;
+    const used = getUsedRoomCodes();
+    if (!used.has(c)) {
+      used.add(c);
+      try {
+        const list = Array.from(used);
+        if (list.length > 10000) list.splice(0, list.length - 10000);
+        localStorage.setItem(USED_ROOM_CODES_KEY, JSON.stringify(list));
+      } catch (e) {}
+    }
+  }
+
   function newCode() {
+    const used = getUsedRoomCodes();
+    const publicCodes = new Set((state.publicLobbies || []).map((l) => (l.code || "").toUpperCase()));
+    for (let attempt = 0; attempt < 5000; attempt++) {
+      let c = "";
+      for (let i = 0; i < 8; i++) c += CODE_ALPHABET[(Math.random() * CODE_ALPHABET.length) | 0];
+      if (!used.has(c) && !publicCodes.has(c)) {
+        markRoomCodeUsed(c);
+        return c;
+      }
+    }
     let c = "";
-    for (let i = 0; i < 5; i++) c += CODE_ALPHABET[(Math.random() * CODE_ALPHABET.length) | 0];
+    for (let i = 0; i < 8; i++) c += CODE_ALPHABET[(Math.random() * CODE_ALPHABET.length) | 0];
+    markRoomCodeUsed(c);
     return c;
   }
 
@@ -1319,6 +1358,7 @@
           this.isHost = true;
           this.id = 0;
           let code = (targetCode || newCode()).toUpperCase();
+          markRoomCodeUsed(code);
 
           const initHostPeer = (c) => {
             const peerId = "bth-vs-" + c.toLowerCase();
@@ -1352,7 +1392,9 @@
 
             peer.on("error", (err) => {
               if (err.type === "unavailable-id") {
-                initHostPeer(newCode().toUpperCase());
+                const alt = newCode().toUpperCase();
+                markRoomCodeUsed(alt);
+                initHostPeer(alt);
               } else {
                 if (!this.open) reject(new Error("P2P Error: " + (err.message || err.type)));
               }
@@ -1985,18 +2027,17 @@
       net.id = m.id;
       if (m.started && m.config) { startMultiplayer(m.config, true); return; }
       const u = new URL(location.href);
+      u.searchParams.delete("curedPatients");
+      u.searchParams.delete("cashBalance");
+      u.searchParams.delete("timeLimit");
+      u.searchParams.delete("level");
+      u.searchParams.delete("cured");
+      u.searchParams.delete("money");
+      u.searchParams.delete("time");
       u.searchParams.set("join", m.code);
-      const curGoals = (m.host ? getGoalsFromUI() : state.lobby.goals);
-      if (curGoals) {
-        if (curGoals.cured !== undefined) u.searchParams.set("curedPatients", curGoals.cured);
-        if (curGoals.money !== undefined) u.searchParams.set("cashBalance", curGoals.money);
-        if (curGoals.timeLimit !== undefined) u.searchParams.set("timeLimit", curGoals.timeLimit);
-      }
-      if (state.lobby.level) {
-        u.searchParams.set("level", state.lobby.level);
-      }
       history.replaceState(null, "", u.pathname + u.search);
       if (m.host) {
+        markRoomCodeUsed(m.code);
         state.lobby.goals = getGoalsFromUI();
         const curTotal = (parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0) + 1;
         localStorage.setItem("bth_total_lobbies", String(curTotal));
@@ -3592,7 +3633,7 @@
       lockUsername();
       enterLobby("join", code);
     };
-    $("#join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+    $("#join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8); });
     $("#join-code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#btn-join").click(); });
     $("#btn-ready").onclick = toggleReady;
     $("#btn-leave-lobby").onclick = leaveLobby;
@@ -3613,15 +3654,6 @@
       const u = new URL(location.origin + location.pathname);
       if (state.lobby) {
         u.searchParams.set("join", state.lobby.code);
-        const goals = state.lobby.goals || getGoalsFromUI();
-        if (goals) {
-          if (goals.cured !== undefined) u.searchParams.set("curedPatients", goals.cured);
-          if (goals.money !== undefined) u.searchParams.set("cashBalance", goals.money);
-          if (goals.timeLimit !== undefined) u.searchParams.set("timeLimit", goals.timeLimit);
-        }
-        if (state.lobby.level) {
-          u.searchParams.set("level", state.lobby.level);
-        }
       }
       if (state.net && state.net.mode === "ws") {
         const relayParam = new URLSearchParams(location.search).get("server") || new URLSearchParams(location.search).get("relay") || localStorage.getItem("bth-relay-url");
@@ -3748,7 +3780,7 @@
     }, 4000);
 
     const urlParams = new URLSearchParams(location.search);
-    const joinCode = (urlParams.get("join") || "").trim().toUpperCase().slice(0, 5);
+    const joinCode = (urlParams.get("join") || "").trim().toUpperCase().slice(0, 8);
     const curedParam = urlParams.get("curedPatients") ?? urlParams.get("cured");
     const moneyParam = urlParams.get("cashBalance") ?? urlParams.get("money");
     const timeParam = urlParams.get("timeLimit") ?? urlParams.get("time");
@@ -3779,7 +3811,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, DEFAULT_LEADERBOARD };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
   }
 
   init();

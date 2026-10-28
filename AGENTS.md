@@ -204,6 +204,18 @@ BrowserTHospital/
   - CorsixTH standalone singleplayer main menu (`UIMainMenu`) is completely blocked.
   - If `App:loadMainMenu`, `GameUI:quit`, or `UIMainMenu` is invoked, `self:exit()` is executed, cleanly returning the user to the web application (`location.pathname`).
 
+### H. 8-Character Unique Room Codes & Pure Join Invite Links
+- **8-Character Alphanumeric Room Codes**:
+  - Room codes are strictly 8 characters drawn from `CODE_ALPHABET` (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, excluding ambiguous characters like `0`/`O`, `1`/`I`).
+  - Total combinations exceed 1.09 trillion ($32^8$), preventing accidental collisions.
+  - UI inputs (`#join-code` with `maxlength="8"`, placeholder `ABCDEFGH`) and lobby banners (`#room-code`) are scaled and styled with responsive font-size and letter-spacing.
+- **Non-Repeating Code Guarantee & Storage**:
+  - In the browser client (`dist/app.js`), every created room code is recorded in `localStorage` under `bth_used_room_codes` and checked against known public lobbies. `newCode()` verifies that newly generated codes are never re-issued.
+  - In the WebSocket relay server (`server/server.js`), `allHostedCodes` stores all historical codes created or registered during the session, guaranteeing that `newCode()` generates unique room codes without repetition.
+- **Pure Join Invite Links (Zero Query Param Clutter)**:
+  - Shared invite links (`#btn-copy-link`) and browser address bar state (`history.replaceState`) strictly encode `?join=CODE` (plus optional `server` parameter only if using a custom relay).
+  - Game modes, level layouts, and win conditions (`curedPatients`, `cashBalance`, `timeLimit`, `level`) are completely excluded from URL queries. Win conditions and match configurations are seamlessly and authoritatively synchronized across peers via the network protocol (`joined`/`config` and `set_config` packets).
+
 ---
 
 ## 6. Testing Guide
@@ -215,6 +227,9 @@ node tests/test_corsix_menu_and_speed.js
 
 # Run the simplified quests & multi-player leaderboard test
 node tests/test_quests_and_leaderboard_multiplayer.js
+
+# Run the 8-character room codes and pure join invite links verification
+node tests/test_invite_link_and_leds.js
 
 # Run the game language & collapsible notes verification
 node tests/test_game_language_and_notes.js
