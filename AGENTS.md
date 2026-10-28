@@ -169,7 +169,7 @@ BrowserTHospital/
   4. `lobbies`: Lobbies Hosted
   5. `wins`: Versus Match Victories
 - Initial state starts completely clean at zero (`DEFAULT_LEADERBOARD = []`, all stats start at 0).
-- JSON Export/Import and Reset buttons ("Export Stats", "Import Stats", "Reset Stats") allow players to backup, restore, or wipe their records.
+
 - Single-recording match guard (`state.vs.matchRecorded`) guarantees match statistics are recorded at most once per match, preventing stat runaway.
 
 ### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence

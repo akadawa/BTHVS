@@ -153,36 +153,21 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     await p1.click("#leaderboard-btn");
     await sleep(200);
 
-    // 11. Test Reset Stats Button and Single-Recording Guard
-    console.log("Testing Reset Stats button & single-recording victory guard...");
-    const resetBtn = await p1.$("#btn-reset-stats");
-    if (!resetBtn) throw new Error("FAIL: #btn-reset-stats not found!");
-
-    // Simulate accumulated stats
-    await p1.evaluate(() => {
-      window.__bth.recordMatchStats(true, 12, 45000, 25);
-      window.__bth.renderLeaderboard("cured");
+    // 11. Verify Absence of Reset / Export / Import Buttons and Single-Recording Guard
+    console.log("Verifying absence of Reset / Export / Import buttons & single-recording victory guard...");
+    const hasBackupButtons = await p1.evaluate(() => {
+      return {
+        hasReset: !!document.querySelector("#btn-reset-stats"),
+        hasExport: !!document.querySelector("#btn-export-stats"),
+        hasImport: !!document.querySelector("#btn-import-stats"),
+        hasBackupRow: !!document.querySelector(".lb-player-backup-row")
+      };
     });
-    const statsBeforeReset = await p1.evaluate(() => window.__bth.getPlayerStats());
-    console.log("Stats before reset:", statsBeforeReset);
-    if (statsBeforeReset.cured !== 12 || statsBeforeReset.games !== 1) {
-      throw new Error(`FAIL: Stats were not simulated properly: ${JSON.stringify(statsBeforeReset)}`);
+    console.log("Backup buttons presence check:", hasBackupButtons);
+    if (hasBackupButtons.hasReset || hasBackupButtons.hasExport || hasBackupButtons.hasImport || hasBackupButtons.hasBackupRow) {
+      throw new Error(`FAIL: Reset, Export, or Import buttons should NOT exist! State: ${JSON.stringify(hasBackupButtons)}`);
     }
-
-    // Click Reset Stats
-    await p1.click("#btn-reset-stats");
-    await sleep(200);
-
-    const statsAfterReset = await p1.evaluate(() => window.__bth.getPlayerStats());
-    console.log("Stats after reset:", statsAfterReset);
-    if (statsAfterReset.cured !== 0 || statsAfterReset.cash !== 0 || statsAfterReset.games !== 0 || statsAfterReset.wins !== 0) {
-      throw new Error(`FAIL: Stats were not cleanly reset to zero! Got: ${JSON.stringify(statsAfterReset)}`);
-    }
-    const resetBtnTxt = await p1.$eval("#btn-reset-stats", (el) => el.textContent.trim());
-    if (resetBtnTxt !== "Stats Reset!") {
-      throw new Error(`FAIL: Expected 'Stats Reset!' button feedback, got '${resetBtnTxt}'`);
-    }
-    console.log("✓ #btn-reset-stats cleanly wiped all stats to 0 and showed confirmation feedback.");
+    console.log("✓ Verified: No Reset, Export, or Import buttons exist in Leaderboard drawer.");
 
     // Verify victory modal guard: multiple calls must not inflate stats
     await p1.evaluate(() => {

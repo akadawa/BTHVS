@@ -1117,47 +1117,6 @@
     }
   }
 
-  function exportPlayerStats() {
-    const data = {
-      bthvs_version: BTHVS_VERSION,
-      exportedAt: new Date().toISOString(),
-      doctorName: playerName(),
-      stats: getPlayerStats()
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bthvs-${playerName().toLowerCase().replace(/[^a-z0-9]/g, "_")}-stats.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  function importPlayerStats(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsed = JSON.parse(e.target.result);
-        if (parsed && parsed.stats) {
-          savePlayerStats(parsed.stats);
-          if (parsed.doctorName) {
-            localStorage.setItem("bth-name", parsed.doctorName);
-            localStorage.setItem("bth-name-locked", "true");
-            if ($("#player-name")) $("#player-name").value = parsed.doctorName;
-            updateUsernameLockUI(true);
-          }
-          renderLeaderboard(currentLeaderboardTab);
-        }
-      } catch (err) {
-        console.error("Could not parse stats backup:", err);
-      }
-    };
-    reader.readAsText(file);
-  }
-
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
@@ -3755,33 +3714,6 @@
       };
     });
 
-    const btnExport = $("#btn-export-stats");
-    if (btnExport) btnExport.onclick = exportPlayerStats;
-    const btnImport = $("#btn-import-stats");
-    const fileImport = $("#file-import-stats");
-    if (btnImport && fileImport) {
-      btnImport.onclick = (e) => {
-        e.preventDefault();
-        fileImport.click();
-      };
-      fileImport.onchange = () => {
-        if (fileImport.files && fileImport.files[0]) {
-          importPlayerStats(fileImport.files[0]);
-          fileImport.value = "";
-        }
-      };
-    }
-
-    const btnResetStats = $("#btn-reset-stats");
-    if (btnResetStats) {
-      btnResetStats.onclick = () => {
-        resetAllStats();
-        const oldTxt = btnResetStats.textContent;
-        btnResetStats.textContent = "Stats Reset!";
-        setTimeout(() => { btnResetStats.textContent = oldTxt; }, 1500);
-      };
-    }
-
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const leaveModal = $("#leave-modal");
@@ -3837,7 +3769,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
   }
 
   init();
