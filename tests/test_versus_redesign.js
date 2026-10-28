@@ -167,18 +167,24 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   const playersText = await pHost.textContent("#hud-players");
   const timerVisible = await pHost.isVisible("#hud-timer");
   const timerText = await pHost.textContent("#hud-timer");
+  const timerHtml = await pHost.$eval("#hud-timer", (el) => el.innerHTML);
   console.log("HUD Room:", roomText);
   console.log("HUD Players:", playersText);
-  console.log("HUD Timer:", timerText, "Visible:", timerVisible);
+  console.log("HUD Timer:", timerText, "Visible:", timerVisible, "HTML:", timerHtml);
   if (!roomText.includes("Room")) throw new Error("FAIL: Room chip missing!");
   if (!playersText.includes("HostDoc") || !playersText.includes("GuestDoc")) throw new Error("FAIL: Players chip missing names!");
-  if (!timerVisible || !timerText.includes("⏱️")) throw new Error("FAIL: Timer chip should be visible for 30 min timed match!");
-  console.log("✓ HUD contains Room, Host/Guest players, and live countdown timer.");
+  if (!timerVisible || !timerHtml.includes("#th-time")) throw new Error("FAIL: Timer chip should be visible with Theme Hospital clock icon!");
+  console.log("✓ HUD contains Room, Host/Guest players, and live countdown timer with Theme Hospital clock.");
 
-  // 5. Test Resizable Windows (Chat and Quests)
+  // 5. Test Auto-Opened Windows on Game Start & Resizable Windows (Chat and Quests)
+  const isChatOpenOnStart = await pHost.isVisible("#chat");
+  const isQuestOpenOnStart = await pHost.isVisible("#quest-win");
+  console.log("Auto-open on start - Chat:", isChatOpenOnStart, "Quests:", isQuestOpenOnStart);
+  if (!isChatOpenOnStart) throw new Error("FAIL: Chat window should be auto-opened on match start!");
+  if (!isQuestOpenOnStart) throw new Error("FAIL: Quests window should be auto-opened on match start!");
+  console.log("✓ In-game Chat and Quests windows are automatically opened on match start.");
+
   // Test Chat
-  await pHost.click("#hud-chat-btn");
-  await pHost.waitForSelector("#chat:not([hidden])");
   const chatResizeHandle = await pHost.$("#chat .win-resize-handle");
   if (!chatResizeHandle) throw new Error("FAIL: Chat missing .win-resize-handle!");
 
@@ -206,8 +212,6 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
   await pHost.click("#chat-close");
 
   // Test Quests
-  await pHost.click("#hud-quest-btn");
-  await pHost.waitForSelector("#quest-win:not([hidden])");
   const questResizeHandle = await pHost.$("#quest-win .win-resize-handle");
   if (!questResizeHandle) throw new Error("FAIL: Quest window missing .win-resize-handle!");
 
@@ -247,26 +251,32 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
 
   // 6. Test Real Mouse Clicks on in-game Toolbar (Bottom Panel)
   console.log("Testing in-game canvas toolbar clicks...");
-  const buildRoomOpened = await pHost.evaluate(() => {
+  await pHost.waitForFunction(() => document.querySelector("#loading")?.hidden);
+  await sleep(400);
+
+  const hostBtn = await pHost.evaluate(() => {
     const mod = window.__bth.state.game.mod;
     const lua = `
       local bp = TheApp.ui:getWindow(UIBottomPanel)
       if bp then
-        TheApp.multiplayer.web.call("bottomPanelCoords", string.format("%d,%d", bp.x + 206 + 18, bp.y + 18))
+        TheApp.multiplayer.web.call("test.val", string.format("%d,%d", bp.x + 224, bp.y + 18))
+      else
+        TheApp.multiplayer.web.call("test.val", "NONE")
       end
     `;
-    let res = "416,738";
-    window.__bth.bridge = (cmd, arg) => {
-      if (cmd === "bottomPanelCoords") res = arg;
-    };
-    mod.ccall("th_eval_lua", "number", ["string"], [lua]);
-    const [bx, by] = res.split(",").map(Number);
-    return { bx, by };
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val;
   });
-  console.log("Build room button coordinates:", buildRoomOpened);
+  console.log("Build room button coordinates:", hostBtn);
+  const [bx, by] = hostBtn.split(",").map(Number);
+  const elAtPoint = await pHost.evaluate(([x, y]) => {
+    const el = document.elementFromPoint(x, y);
+    return el ? `${el.tagName}#${el.id}.${el.className}` : "null";
+  }, [bx, by]);
+  console.log(`Element at (${bx}, ${by}):`, elAtPoint);
 
   // Click on the build room button with real browser mouse
-  await pHost.mouse.move(buildRoomOpened.bx, buildRoomOpened.by);
+  await pHost.mouse.move(bx, by);
   await sleep(100);
   await pHost.mouse.down();
   await sleep(100);
@@ -277,10 +287,10 @@ const { listen, launch, newPage, loadDemo, sleep } = require("./lib");
     const mod = window.__bth.state.game.mod;
     const lua = `
       local w = TheApp.ui:getWindow(UIBuildRoom)
-      TheApp.multiplayer.web.call("test.val", tostring(w ~= nil))
+      TheApp.multiplayer.web.call("test.val", w and "OPEN" or "CLOSED")
     `;
-    mod.ccall("th_eval_lua", "number", ["string"], [lua]);
-    return window.__test_val === "true";
+    mod.ccall("th_eval_lua", "string", ["string"], [lua]);
+    return window.__test_val === "OPEN";
   });
   console.log("UIBuildRoom window opened after canvas click:", hasBuildWindow);
   if (!hasBuildWindow) {

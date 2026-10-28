@@ -80,7 +80,7 @@
   const GOAL_PRESETS = {
     cured_10: {
       id: "cured_10",
-      title: "❤️ Rescue Race: Cure 10 Patients",
+      title: "Rescue Race: Cure 10 Patients",
       shortTitle: "10 Cures",
       desc: "Cure 10 patients",
       quests: [
@@ -89,7 +89,7 @@
     },
     cured_25: {
       id: "cured_25",
-      title: "❤️ Championship: Cure 25 Patients",
+      title: "Championship: Cure 25 Patients",
       shortTitle: "25 Cures",
       desc: "Cure 25 patients",
       quests: [
@@ -98,7 +98,7 @@
     },
     cured_100: {
       id: "cured_100",
-      title: "❤️ Grand Hospital: Cure 100 Patients",
+      title: "Grand Hospital: Cure 100 Patients",
       shortTitle: "100 Cures",
       desc: "Cure 100 patients",
       quests: [
@@ -107,7 +107,7 @@
     },
     cured_200: {
       id: "cured_200",
-      title: "❤️ Metropolis: Cure 200 Patients",
+      title: "Metropolis: Cure 200 Patients",
       shortTitle: "200 Cures",
       desc: "Cure 200 patients",
       quests: [
@@ -116,7 +116,7 @@
     },
     cured_400: {
       id: "cured_400",
-      title: "❤️ Legend: Cure 400 Patients",
+      title: "Legend: Cure 400 Patients",
       shortTitle: "400 Cures",
       desc: "Cure 400 patients",
       quests: [
@@ -125,7 +125,7 @@
     },
     time_20m: {
       id: "time_20m",
-      title: "⏱️ 20-Minute Sprint: Most cash after 20 min",
+      title: "20-Minute Sprint: Most cash after 20 min",
       shortTitle: "20 Min Cash Race",
       desc: "The player with the most cash after 20 minutes wins!",
       durationSec: 20 * 60,
@@ -136,7 +136,7 @@
     },
     time_30m: {
       id: "time_30m",
-      title: "⏱️ 30-Minute Duel: Most cash after 30 min",
+      title: "30-Minute Duel: Most cash after 30 min",
       shortTitle: "30 Min Cash Race",
       desc: "The player with the most cash after 30 minutes wins!",
       durationSec: 30 * 60,
@@ -147,7 +147,7 @@
     },
     time_60m: {
       id: "time_60m",
-      title: "⏱️ 60-Minute Marathon: Most cash after 60 min",
+      title: "60-Minute Marathon: Most cash after 60 min",
       shortTitle: "60 Min Cash Race",
       desc: "The player with the most cash after 60 minutes wins!",
       durationSec: 60 * 60,
@@ -158,7 +158,7 @@
     },
     money_100k: {
       id: "money_100k",
-      title: "💰 Economy Race: $100,000 Cash Balance",
+      title: "Economy Race: $100,000 Cash Balance",
       shortTitle: "$100,000 Balance",
       desc: "Reach $100,000 in hospital cash balance",
       quests: [
@@ -167,7 +167,7 @@
     },
     money_150k: {
       id: "money_150k",
-      title: "💎 Tycoon: $150,000 Cash Balance",
+      title: "Tycoon: $150,000 Cash Balance",
       shortTitle: "$150,000 Balance",
       desc: "Reach $150,000 in hospital cash balance",
       quests: [
@@ -176,7 +176,7 @@
     },
     endless: {
       id: "endless",
-      title: "♾️ Free Versus (Live Stats Comparison)",
+      title: "Free Versus (Live Stats Comparison)",
       shortTitle: "Endless Duel",
       desc: "No fixed victory condition – Compare metrics and live stats with your rivals!",
       quests: [],
@@ -197,25 +197,25 @@
     if ($("#goal-time")) $("#goal-time").value = String(g.timeLimit ?? 0);
   }
 
-  function formatGoalsList(g) {
-    if (!g) return ["Cure 25 patients"];
+  function formatGoalsList(g, html = false) {
+    if (!g) return [html ? '<svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cure 25 patients' : "Cure 25 patients"];
     const items = [];
-    if (g.cured > 0) items.push(`❤️ Cure ${g.cured} patients`);
-    if (g.money > 0) items.push(`💰 $${g.money.toLocaleString()} Cash balance`);
-    if (g.timeLimit > 0) items.push(`⏱️ ${g.timeLimit} Min. time limit`);
-    if (items.length === 0) items.push("♾️ Free Versus (Live Stats Comparison)");
+    if (g.cured > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cure ${g.cured} patients` : `Cure ${g.cured} patients`);
+    if (g.money > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> $${g.money.toLocaleString()} Cash balance` : `$${g.money.toLocaleString()} Cash balance`);
+    if (g.timeLimit > 0) items.push(html ? `<svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> ${g.timeLimit} Min. time limit` : `${g.timeLimit} Min. time limit`);
+    if (items.length === 0) items.push("Free Versus (Live Stats Comparison)");
     return items;
   }
 
   function updateGoalSummaryUI(g) {
-    const items = formatGoalsList(g);
+    const htmlItems = formatGoalsList(g, true);
     const textEl = $("#goal-summary-text");
     if (textEl) {
-      textEl.innerHTML = items.map((it) => `<span>• ${escapeHtml(it)}</span>`).join("<br>");
+      textEl.innerHTML = htmlItems.map((it) => `<div style="display:flex;align-items:center;gap:6px;margin:3px 0;">${it}</div>`).join("");
     }
     const guestSummaryEl = $("#guest-goal-summary");
     if (guestSummaryEl) {
-      guestSummaryEl.innerHTML = items.map((it) => `<span class="guest-goal-badge">${escapeHtml(it)}</span>`).join("");
+      guestSummaryEl.innerHTML = htmlItems.map((it) => `<span class="guest-goal-badge">${it}</span>`).join("");
     }
   }
 
@@ -340,7 +340,7 @@
     const d = state.data;
     if (d) {
       st.className = "status ok";
-      st.textContent = `✔ Full version files ready (${d.name}, ${fmtMB(d.bytes)})`;
+      st.textContent = `Full version files ready (${d.name}, ${fmtMB(d.bytes)})`;
     } else {
       st.className = "status warn";
       st.textContent = "No game files found";
@@ -1722,16 +1722,16 @@
     if (hostP) {
       const isMe = hostP.id === myId;
       const offline = hostP.connected === false ? " (offline)" : "";
-      parts.push(`<span class="hud-role-host" title="Game Host">👑 Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
+      parts.push(`<span class="hud-role-host" title="Game Host">Host: <b>${escapeHtml(hostP.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
     }
     if (guestPs.length > 0) {
       for (const gp of guestPs) {
         const isMe = gp.id === myId;
         const offline = gp.connected === false ? " (offline)" : "";
-        parts.push(`<span class="hud-role-guest" title="Connected Player">🎮 Player: <b>${escapeHtml(gp.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
+        parts.push(`<span class="hud-role-guest" title="Connected Player">Player: <b>${escapeHtml(gp.name)}</b>${isMe ? " (You)" : ""}${offline}</span>`);
       }
     } else {
-      parts.push(`<span class="hud-role-guest muted">🎮 Player: (waiting …)</span>`);
+      parts.push(`<span class="hud-role-guest muted">Player: (waiting …)</span>`);
     }
     el.innerHTML = parts.join(' <span class="hud-sep">·</span> ');
     el.hidden = false;
@@ -1812,7 +1812,7 @@
         const remSec = rem % 60;
         if (timerEl) {
           timerEl.hidden = false;
-          timerEl.textContent = `⏱️ ${remMin}:${String(remSec).padStart(2, "0")}`;
+          timerEl.innerHTML = `<svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> <span>${remMin}:${String(remSec).padStart(2, "0")}</span>`;
           timerEl.className = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
         }
         if (!$("#quest-win").hidden && state.vs.tab === "goals") {
@@ -1829,6 +1829,25 @@
     setupChat();
     setupQuests();
     $("#hud-fs-btn").onclick = toggleFullscreen;
+
+    // Automatically open Chat and Quests on match start
+    if ($("#chat")) $("#chat").hidden = false;
+    if ($("#quest-win")) {
+      $("#quest-win").hidden = false;
+      updateQuestUI();
+    }
+    // Carry over lobby chat history into in-game chat
+    const lobbyLines = document.querySelectorAll("#lobby-chat-log .chat-line:not(.chat-placeholder)");
+    const inGameLog = $("#chat-log");
+    if (lobbyLines.length > 0 && inGameLog && inGameLog.children.length === 0) {
+      lobbyLines.forEach((line) => {
+        const clone = line.cloneNode(true);
+        inGameLog.appendChild(clone);
+      });
+      inGameLog.scrollTop = inGameLog.scrollHeight;
+    }
+    // Return canvas focus so player controls work immediately
+    if ($("#canvas")) $("#canvas").focus();
   }
   function peersString(players) {
     return players.map((p) => p.id + ":" + (p.connected ? 1 : 0)).join(",");
@@ -2101,14 +2120,14 @@
         const diff = (my.bal || 0) - (opp.bal || 0);
 
         if (diff > 500) {
-          leadText.innerHTML = `🟢 <b>You are in the lead! (+$${diff.toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
+          leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You are in the lead! (+$${diff.toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
         } else if (diff < -500) {
-          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Opponent")} is leading! (+$${Math.abs(diff).toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
+          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(opp.name || "Opponent")} is leading! (+$${Math.abs(diff).toLocaleString()})</b> · Time left: <b>${timeStr}</b>`;
         } else {
-          leadText.innerHTML = `⚔️ <b>Tied cash balance!</b> · Time left: <b>${timeStr}</b>`;
+          leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Tied cash balance!</b> · Time left: <b>${timeStr}</b>`;
         }
       } else if (quests.length === 0) {
-        leadText.innerHTML = "♾️ <b>Free Versus</b> – Compare your live metrics!";
+        leadText.innerHTML = "<b>Free Versus</b> – Compare your live metrics!";
       } else {
         let myPctSum = 0, oppPctSum = 0;
         for (const q of quests) {
@@ -2119,11 +2138,11 @@
         const oppAvg = Math.round(oppPctSum / quests.length);
 
         if (myAvg > oppAvg + 5) {
-          leadText.innerHTML = `🟢 <b>You are leading the race!</b> (${myAvg}% vs. ${oppAvg}%)`;
+          leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You are leading the race!</b> (${myAvg}% vs. ${oppAvg}%)`;
         } else if (oppAvg > myAvg + 5) {
-          leadText.innerHTML = `⚠️ <b>${escapeHtml(opp.name || "Opponent")} is leading!</b> (${oppAvg}% vs. ${myAvg}%)`;
+          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(opp.name || "Opponent")} is leading!</b> (${oppAvg}% vs. ${myAvg}%)`;
         } else {
-          leadText.innerHTML = `⚔️ <b>Head-to-head race!</b> (${myAvg}% vs. ${oppAvg}%)`;
+          leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Head-to-head race!</b> (${myAvg}% vs. ${oppAvg}%)`;
         }
       }
     }
@@ -2148,8 +2167,8 @@
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title">⏱️ Time Challenge (${g.timeLimit} Min.)</span>
-              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}">⏱️ ${timeStr} left</span>
+              <span class="quest-card-title"><svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> Time Challenge (${g.timeLimit} Min.)</span>
+              <span class="quest-badge ${rem < 120 ? 'done' : 'pending'}"><svg class="th-icon" aria-hidden="true"><use href="#th-time"/></svg> ${timeStr} left</span>
             </div>
             <p class="muted small" style="margin: 4px 0 8px;">
               Whoever reaches the goals or holds the most cash when time runs out wins!
@@ -2183,17 +2202,18 @@
         const oppPct = Math.min(100, Math.max(0, Math.round((oppVal / q.target) * 100)));
         const myDone = myVal >= q.target;
         const oppDone = oppVal >= q.target;
+        const iconHref = q.id === "cured" ? "#th-patient" : q.id === "bal" ? "#th-money" : "#th-trophy";
 
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title">${escapeHtml(q.name)}</span>
+              <span class="quest-card-title"><svg class="th-icon" aria-hidden="true"><use href="${iconHref}"/></svg> ${escapeHtml(q.name)}</span>
               <span class="quest-badge ${myDone ? "done" : "pending"}">Goal: ${formatVal(q.target, q.unit)}</span>
             </div>
             <div class="prog-row">
               <div class="prog-label">
                 <span>You: ${formatVal(myVal, q.unit)}</span>
-                <span>${myPct}%${myDone ? " ✓" : ""}</span>
+                <span>${myPct}%${myDone ? " (Done)" : ""}</span>
               </div>
               <div class="prog-bar-wrap">
                 <div class="prog-bar-fill you" style="width: ${myPct}%"></div>
@@ -2202,7 +2222,7 @@
             <div class="prog-row">
               <div class="prog-label">
                 <span>${escapeHtml(opp.name || "Opponent")}: ${formatVal(oppVal, q.unit)}</span>
-                <span>${oppPct}%${oppDone ? " ✓" : ""}</span>
+                <span>${oppPct}%${oppDone ? " (Done)" : ""}</span>
               </div>
               <div class="prog-bar-wrap">
                 <div class="prog-bar-fill opp" style="width: ${oppPct}%"></div>
@@ -2216,7 +2236,7 @@
         cardsHtml.push(`
           <div class="quest-card">
             <div class="quest-card-header">
-              <span class="quest-card-title">♾️ Free Versus Match</span>
+              <span class="quest-card-title">Free Versus Match</span>
             </div>
             <p class="muted small" style="margin: 6px 0 0;">There is no fixed victory condition in this mode. Compare metrics in real time under the <b>Rivals Dashboard</b> tab!</p>
           </div>
@@ -2232,8 +2252,8 @@
       const myStarted = my.started;
       const oppStarted = opp.started;
 
-      const myStatus = myStarted ? '<span class="status-pill active">🟢 Active</span>' : '<span class="status-pill wait">⏳ Waiting</span>';
-      const oppStatus = oppStarted ? '<span class="status-pill active">🟢 Active</span>' : '<span class="status-pill wait">⏳ Waiting</span>';
+      const myStatus = myStarted ? '<span class="status-pill active">Active</span>' : '<span class="status-pill wait">Waiting</span>';
+      const oppStatus = oppStarted ? '<span class="status-pill active">Active</span>' : '<span class="status-pill wait">Waiting</span>';
 
       const cmp = (v1, v2, higherIsBetter = true) => {
         if (v1 === v2) return ["", ""];
@@ -2256,37 +2276,37 @@
           <td class="val-opp">${oppStatus}</td>
         </tr>
         <tr>
-          <td>💰 Cash Balance</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> Cash Balance</td>
           <td class="val-you ${cBal1}">$${my.bal.toLocaleString()}</td>
           <td class="val-opp ${cBal2}">$${opp.bal.toLocaleString()}</td>
         </tr>
         <tr>
-          <td>🏥 Built Rooms</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-room"/></svg> Built Rooms</td>
           <td class="val-you ${cRooms1}">${my.rooms} ${my.rooms === 1 ? "Room" : "Rooms"}</td>
           <td class="val-opp ${cRooms2}">${opp.rooms} ${opp.rooms === 1 ? "Room" : "Rooms"}</td>
         </tr>
         <tr>
-          <td>👥 Staff Members</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-staff"/></svg> Staff Members</td>
           <td class="val-you ${cStaff1}">${my.staff} Staff</td>
           <td class="val-opp ${cStaff2}">${opp.staff} Staff</td>
         </tr>
         <tr>
-          <td>💉 Cured Patients</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cured Patients</td>
           <td class="val-you ${cCured1}">${my.cured}</td>
           <td class="val-opp ${cCured2}">${opp.cured}</td>
         </tr>
         <tr>
-          <td>💀 Patient Deaths</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-death"/></svg> Patient Deaths</td>
           <td class="val-you ${cDeaths1}">${my.deaths}</td>
           <td class="val-opp ${cDeaths2}">${opp.deaths}</td>
         </tr>
         <tr>
-          <td>⭐ Hospital Reputation</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-rep"/></svg> Hospital Reputation</td>
           <td class="val-you ${cRep1}">${my.rep} / 1000</td>
           <td class="val-opp ${cRep2}">${opp.rep} / 1000</td>
         </tr>
         <tr>
-          <td>📈 Overall Valuation</td>
+          <td><svg class="th-icon" aria-hidden="true"><use href="#th-val"/></svg> Overall Valuation</td>
           <td class="val-you ${cVal1}">$${my.val.toLocaleString()}</td>
           <td class="val-opp ${cVal2}">$${opp.val.toLocaleString()}</td>
         </tr>
@@ -2349,9 +2369,9 @@
     const descEl = $("#vic-desc");
     const summaryEl = $("#vic-stats-summary");
 
-    if (iconEl) iconEl.textContent = isMe ? "🏆" : "🥈";
+    if (iconEl) iconEl.innerHTML = isMe ? '<svg class="th-icon th-icon-hero" aria-hidden="true"><use href="#th-trophy"/></svg>' : '<svg class="th-icon th-icon-hero" aria-hidden="true"><use href="#th-val"/></svg>';
     if (titleEl) {
-      titleEl.textContent = isMe ? "🎉 Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
+      titleEl.textContent = isMe ? "Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
       titleEl.className = isMe ? "vic-won" : "vic-lost";
     }
     if (descEl) {
@@ -2383,13 +2403,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr><td>💰 Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
-            <tr><td>🏥 Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
-            <tr><td>👥 Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
-            <tr><td>💉 Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
-            <tr><td>💀 Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
-            <tr><td>⭐ Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
-            <tr><td>📈 Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-money"/></svg> Cash Balance</td><td class="val-you">$${my.bal.toLocaleString()}</td><td class="val-opp">$${opp.bal.toLocaleString()}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-room"/></svg> Built Rooms</td><td class="val-you">${my.rooms}</td><td class="val-opp">${opp.rooms}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-staff"/></svg> Staff Members</td><td class="val-you">${my.staff}</td><td class="val-opp">${opp.staff}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-patient"/></svg> Cured Patients</td><td class="val-you">${my.cured}</td><td class="val-opp">${opp.cured}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-death"/></svg> Patient Deaths</td><td class="val-you">${my.deaths}</td><td class="val-opp">${opp.deaths}</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-rep"/></svg> Hospital Reputation</td><td class="val-you">${my.rep} / 1000</td><td class="val-opp">${opp.rep} / 1000</td></tr>
+            <tr><td><svg class="th-icon" aria-hidden="true"><use href="#th-val"/></svg> Overall Valuation</td><td class="val-you">$${my.val.toLocaleString()}</td><td class="val-opp">$${opp.val.toLocaleString()}</td></tr>
           </tbody>
         </table>
       `;
