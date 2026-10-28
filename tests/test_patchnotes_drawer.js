@@ -17,7 +17,32 @@ const { listen, launch, newPage, sleep } = require("./lib");
     }
     console.log("✓ Verified 0 SVG elements across the entire document.");
 
-    // 2. Verify Patchnotes button exists and is docked on far left (left: 0)
+    // 2. Verify BTHVS version display on website
+    const versionHeader = await p1.textContent("#bthvs-version");
+    const versionFooter = await p1.textContent("#footer-bthvs-version");
+    const versionDrawer = await p1.textContent("#patchnotes-version");
+    const versionHud = await p1.textContent("#hud-version");
+    const bthVersion = await p1.evaluate(() => window.__bth.version);
+
+    console.log(`Version verification: Header=${versionHeader}, Footer=${versionFooter}, Drawer=${versionDrawer}, HUD=${versionHud}, JS=${bthVersion}`);
+    if (versionHeader.trim() !== "v0.0.1") {
+      throw new Error(`FAIL: Expected header version 'v0.0.1', got '${versionHeader}'`);
+    }
+    if (!versionFooter.includes("BTHVS v0.0.1")) {
+      throw new Error(`FAIL: Expected footer version 'BTHVS v0.0.1', got '${versionFooter}'`);
+    }
+    if (versionDrawer.trim() !== "v0.0.1") {
+      throw new Error(`FAIL: Expected drawer version 'v0.0.1', got '${versionDrawer}'`);
+    }
+    if (versionHud.trim() !== "v0.0.1") {
+      throw new Error(`FAIL: Expected HUD version 'v0.0.1', got '${versionHud}'`);
+    }
+    if (bthVersion !== "0.0.1") {
+      throw new Error(`FAIL: Expected window.__bth.version '0.0.1', got '${bthVersion}'`);
+    }
+    console.log("✓ Verified BTHVS version v0.0.1 prominently displayed across header, footer, HUD, and drawer.");
+
+    // 3. Verify Patchnotes button exists and is docked on far left (left: 0)
     const btn = await p1.$("#patchnotes-btn");
     if (!btn) {
       throw new Error("FAIL: #patchnotes-btn does not exist in DOM!");

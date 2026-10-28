@@ -1,6 +1,6 @@
 {
   "name": "browser-theme-hospital",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "description": "CorsixTH (Theme Hospital engine) in the browser with co-op multiplayer",
   "scripts": {
