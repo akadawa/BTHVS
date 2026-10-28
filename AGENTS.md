@@ -175,7 +175,7 @@ BrowserTHospital/
 ### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence
 - **Minimalist In-Game HUD**: Docked at `top: 8px; right: 8px` to ensure zero overlap with the Theme Hospital game action toolbar at 1080p and 720p resolutions. Redundant telemetry (ping `- ms`, sync badge, host/player listings) was completely removed to keep the HUD unobtrusive.
   - Visible HUD elements: `[v0.0.1] [Room CODE · Map] [Timer (if timed)] [Quests] [Chat] [FS] [Leave]`
-- **Leave Match Button & Confirmation Modal**: Inside active matches, the top-right `Leave` chip button (`#hud-exit-btn`) and the `Escape` key open the `#leave-modal` confirmation dialog. Confirming cleanly terminates the peer connection and returns the player to the BTHVS main lobby/menu (`gameExit(false)` -> `location.href = location.pathname`), eliminating the issue of getting stranded in CorsixTH's internal DOS menu.
+- **Leave Match Button, Fullscreen Exit & Zero-BeforeUnload Flow**: Inside active matches, the top-right `Leave` chip button (`#hud-exit-btn`) and the `Escape` key open the `#leave-modal` confirmation dialog (automatically releasing any active Pointer Lock and ensuring `default` OS cursor visibility). Confirming calls `gameExit(false)`, which sets `state.isExiting = true` (suppressing both app and SDL2 `beforeunload` prompts via a capture-phase `stopImmediatePropagation` guard), exits HTML5 Fullscreen cleanly before navigation, notifies rivals with `{ t: "leave" }`, and navigates via `window.location.replace(location.pathname)`. All fullscreen requests (HUD `FS` button, `canvas.requestFullscreen`, and CorsixTH `UI:toggleFullscreen` / `Alt+Enter`) target `document.documentElement` so `#hud` and `#leave-modal` always remain visible on top.
 - **Window Persistence**: Quests and Chat windows are draggable and resizable with handles; their positions and dimensions are persisted across sessions in `localStorage` (`bth_win_quests` and `bth_win_chat`).
 
 ### F. Simplified In-Game Quests & Multi-Player Rivals Leaderboard
@@ -231,6 +231,9 @@ BrowserTHospital/
 
 Run tests before committing any changes:
 ```powershell
+# Run Fullscreen & Leave Match (zero browser beforeunload dialog) verification
+node tests/test_fullscreen_leave.js
+
 # Run CorsixTH menu pruning & speed lock verification
 node tests/test_corsix_menu_and_speed.js
 

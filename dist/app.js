@@ -254,6 +254,7 @@
     lobby: null,
     session: null,
     game: null,
+    isExiting: false,
     vs: {
       goal: "custom",
       goals: { cured: 25, money: 100000, timeLimit: 30 },
@@ -269,6 +270,18 @@
     },
   };
   window.__bth = state;
+
+  // Capture-phase guard registered before Emscripten/SDL2 so intentional exits never trigger native browser unload prompts.
+  window.addEventListener("beforeunload", (e) => {
+    if (state.isExiting) {
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (state.session && state.session.mp) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  }, true);
 
   /** entries: Array<[relativePath, Uint8Array]> -> normalised data set or throws. */
   function normaliseEntries(entries, name, sourceType = "folder", sourcePath = "") {
@@ -2343,10 +2356,17 @@
     $("#loading").hidden = false;
     setLoading("Loading game engine ...");
     const canvas = $("#canvas");
+    // Ensure any SDL2/canvas fullscreen request puts the entire document (including HUD and Leave modal) into fullscreen.
+    if (canvas) {
+      canvas.requestFullscreen = (opts) => document.documentElement.requestFullscreen(opts);
+      if (canvas.webkitRequestFullscreen) {
+        canvas.webkitRequestFullscreen = (opts) => document.documentElement.webkitRequestFullscreen(opts);
+      }
+    }
     const W = Math.max(640, window.innerWidth), H = Math.max(480, window.innerHeight);
     let ready;
     try {
-      let buildHash = "4f60dc17e229";
+      let buildHash = "2c1fcc3ee4ae";
       let expectedDataSize = 0;
       try {
         const bRes = await fetch("game/build.json?t=" + Date.now(), { cache: "no-store" });
@@ -2411,46 +2431,112 @@
     }
   }
 
+  function releasePointerLockSafe() {
+    try {
+      if (document.pointerLockElement && document.exitPointerLock) {
+        document.exitPointerLock();
+      }
+    } catch (_) {}
+  }
+
+  function openLeaveModal() {
+    const leaveModal = $("#leave-modal");
+    if (!leaveModal) return;
+    releasePointerLockSafe();
+    leaveModal.hidden = false;
+    const confirmBtn = $("#leave-confirm");
+    if (confirmBtn) setTimeout(() => confirmBtn.focus(), 20);
+  }
+
+  function closeLeaveModal() {
+    const leaveModal = $("#leave-modal");
+    if (!leaveModal) return;
+    leaveModal.hidden = true;
+    const canvas = $("#canvas");
+    if (canvas && !($("#game") && $("#game").hidden)) canvas.focus();
+  }
+
   function installWindowHandlers(mod) {
     let t = null;
+    let t2 = null;
+    const doResize = () => {
+      const w = Math.max(640, window.innerWidth), h = Math.max(480, window.innerHeight);
+      try { mod._th_resize(w, h); } catch (e) {}
+    };
     const resize = () => {
       clearTimeout(t);
-      t = setTimeout(() => {
-        const w = Math.max(640, window.innerWidth), h = Math.max(480, window.innerHeight);
-        try { mod._th_resize(w, h); } catch (e) {}
-      }, 120);
+      clearTimeout(t2);
+      t = setTimeout(doResize, 100);
+      t2 = setTimeout(doResize, 320);
+    };
+    const onFsChange = () => {
+      const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+      const fsBtn = $("#hud-fs-btn");
+      if (fsBtn) {
+        fsBtn.classList.toggle("ok", !!fsEl);
+        fsBtn.title = fsEl ? "Exit Fullscreen (Esc / F11)" : "Fullscreen (F11)";
+      }
+      resize();
+      const leaveModal = $("#leave-modal");
+      if ((!leaveModal || leaveModal.hidden) && document.activeElement?.tagName !== "INPUT") {
+        setTimeout(() => { if ($("#canvas") && !($("#game") && $("#game").hidden)) $("#canvas").focus(); }, 60);
+      }
     };
     window.addEventListener("resize", resize);
-    document.addEventListener("fullscreenchange", resize);
-    window.addEventListener("beforeunload", (e) => {
-      if (state.session && state.session.mp) { e.preventDefault(); e.returnValue = ""; }
-    });
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
     $("#canvas").addEventListener("mousedown", () => $("#canvas").focus());
     // keep browser shortcuts (F5/F11) usable but swallow game keys that scroll the page
     $("#canvas").addEventListener("keydown", (e) => {
       if (["Tab", " ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
-      if (e.key === "Escape") {
-        const leaveModal = $("#leave-modal");
-        if (leaveModal) {
-          e.preventDefault();
-          e.stopPropagation();
-          leaveModal.hidden = !leaveModal.hidden;
-        }
-      }
     });
   }
 
   function fatal(msg) {
     log("fatal", msg);
+    releasePointerLockSafe();
     $("#fatal-text").textContent = String(msg);
     $("#fatal").hidden = false;
     $("#loading").hidden = true;
   }
-  function gameExit(restart) {
+  async function gameExit(restart) {
+    if (state.isExiting) return;
+    state.isExiting = true;
+    state.session = null;
+    window.onbeforeunload = null;
     log("game exit, restart=", restart);
-    if (state.net) { state.net.sendRaw({ t: "leave" }); state.net.close(); }
-    location.href = location.pathname;
+    if (state._timerInterval) {
+      clearInterval(state._timerInterval);
+      state._timerInterval = null;
+    }
+    releasePointerLockSafe();
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl) {
+      const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exitFs) {
+        try {
+          await Promise.race([
+            Promise.resolve(exitFs.call(document)),
+            new Promise((r) => setTimeout(r, 250)),
+          ]);
+        } catch (_) {}
+      }
+    }
+    try {
+      if (state.game && state.game.canvas) {
+        state.game.canvas.style.cursor = "auto";
+      }
+    } catch (_) {}
+    if (state.net) {
+      try { state.net.sendRaw({ t: "leave" }); } catch (_) {}
+      try { state.net.close(); } catch (_) {}
+      state.net = null;
+    }
+    window.location.replace(location.pathname);
   }
+  state.openLeaveModal = openLeaveModal;
+  state.closeLeaveModal = closeLeaveModal;
+  state.gameExit = gameExit;
 
   // ------------------------------------------------------------ Lua bridge
   function parseStats(str) {
@@ -2534,6 +2620,12 @@
         }
         return null;
       }
+      case "ui.toggle_fullscreen":
+        toggleFullscreen();
+        return null;
+      case "ui.leave_match":
+        openLeaveModal();
+        return null;
       case "time.now":
         return String(Date.now());
       case "log":
@@ -2705,14 +2797,14 @@
     const leaveCancel = $("#leave-cancel");
     const leaveConfirm = $("#leave-confirm");
     if (exitBtn && leaveModal) {
-      exitBtn.onclick = () => { leaveModal.hidden = false; };
+      exitBtn.onclick = () => openLeaveModal();
     }
     if (leaveCancel && leaveModal) {
-      leaveCancel.onclick = () => { leaveModal.hidden = true; };
+      leaveCancel.onclick = () => closeLeaveModal();
     }
     if (leaveModal) {
       leaveModal.onclick = (e) => {
-        if (e.target === leaveModal) leaveModal.hidden = true;
+        if (e.target === leaveModal) closeLeaveModal();
       };
     }
     if (leaveConfirm) {
@@ -2748,8 +2840,21 @@
     return players.map((p) => p.id + ":" + (p.connected ? 1 : 0)).join(",");
   }
   function toggleFullscreen() {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else document.documentElement.requestFullscreen().catch(() => {});
+    releasePointerLockSafe();
+    const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+    if (fsEl) {
+      const exitFs = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exitFs) Promise.resolve(exitFs.call(document)).catch(() => {});
+    } else {
+      const reqFs = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+      if (reqFs) Promise.resolve(reqFs.call(document.documentElement)).catch(() => {});
+    }
+    setTimeout(() => {
+      const leaveModal = $("#leave-modal");
+      if ((!leaveModal || leaveModal.hidden) && $("#canvas") && !($("#game") && $("#game").hidden)) {
+        $("#canvas").focus();
+      }
+    }, 60);
   }
 
   
@@ -3424,6 +3529,7 @@
     const modal = $("#victory-modal");
     if (!modal) return;
     if (state.vs.matchRecorded) return;
+    releasePointerLockSafe();
     state.vs.matchRecorded = true;
     state.vs.winner = winnerName;
     const iconEl = $("#vic-icon");
@@ -3664,7 +3770,7 @@
       btn.textContent = "Link copied!";
       setTimeout(() => { btn.textContent = oldTxt; }, 1800);
     };
-    $("#fatal-reload").onclick = () => (location.href = location.pathname);
+    $("#fatal-reload").onclick = () => gameExit(false);
 
     const btnRefreshLobbies = $("#btn-refresh-lobbies");
     if (btnRefreshLobbies) {
@@ -3743,8 +3849,23 @@
         const leaveModal = $("#leave-modal");
         if (leaveModal && !leaveModal.hidden) {
           e.preventDefault();
-          leaveModal.hidden = true;
+          closeLeaveModal();
           return;
+        }
+        if (state.game && !($("#game") && $("#game").hidden)) {
+          if (document.activeElement && document.activeElement.id === "chat-input") {
+            e.preventDefault();
+            document.activeElement.blur();
+            if ($("#canvas")) $("#canvas").focus();
+            return;
+          }
+          const vicModal = $("#victory-modal");
+          const fatalModal = $("#fatal");
+          if ((!vicModal || vicModal.hidden) && (!fatalModal || fatalModal.hidden)) {
+            e.preventDefault();
+            openLeaveModal();
+            return;
+          }
         }
         if (mapModal && !mapModal.hidden) closeMapModal();
         const patchDrawer = $("#patchnotes-drawer");

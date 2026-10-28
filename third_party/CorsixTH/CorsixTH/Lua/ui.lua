@@ -640,6 +640,10 @@ end
 --! Turns fullscreen on and off
 --!return success true if toggle succeeded
 function UI:toggleFullscreen()
+  if package.loaded.web then
+    pcall(package.loaded.web.call, "ui.toggle_fullscreen", "")
+    return true
+  end
   local modes = self.app.modes
 
   local function toggleMode(index)
