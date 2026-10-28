@@ -97,51 +97,55 @@ function StaffProfile:randomise(month)
   self.skill = math.random()
   --self.skill_level_modifier = math.random(-50, 50) / 1000 -- [-0.05, +0.05]
 
-  if self.humanoid_class == "Doctor" then
-    -- find the correct config line (based on month) for generation of the doctor
-    local i = 0
-    while i < #level_config.staff_levels and
-    level_config.staff_levels[i+1].Month <= month do
-      i = i+1
-    end
-
-    -- list of level_config values and the corresponding staff modifiers, plus the value set for "no"
-    local mods = {
-      {"ShrkRate", "is_psychiatrist", 0},
-      {"SurgRate", "is_surgeon",      0},
-      {"RschRate", "is_researcher",   0},
-      {"JrRate",   "is_junior",     nil},
-      {"ConsRate", "is_consultant", nil},
-    }
-
-    -- The following assumes ascending month order of the staff_levels table.
-    -- TODO don't assume this but sort when loading map config
-    for _, m in ipairs(mods) do
-      local rate
-      local ind = i
-      while not rate do
-        assert(ind >= 0, "Staff modifier " .. m[1] .. " not existent (should at least be given by base_config).")
-        rate = level_config.staff_levels[ind][m[1]]
-        ind = ind - 1
-      end
-      -- 0 means none. Other values x mean "one in x"; thus 1 means "one in one" aka "all"
-      rate = (rate == 0) and 0 or 1 / rate
-      self[m[2]] = math.random() < rate and 1.0 or m[3]
-    end
-
-    -- is_consultant is forced to nil if is_junior is already 1
-    self.is_consultant = not self.is_junior and self.is_consultant or nil
-
+  if self:isType("Doctor") then
     local jr_limit = level_config.gbv.DoctorThreshold / 1000
     local cons_limit = level_config.gbv.ConsultantThreshold / 1000
 
-    -- put the doctor in the right skill level box
-    if self.is_junior then
-      self.skill = jr_limit * self.skill
-    elseif self.is_consultant then
-      self.skill = cons_limit + ((1 - cons_limit) * self.skill)
+    if self.world:getLocalPlayerHospital().hosp_cheats:isCheatActive("super_doctor") then
+      self:initDoctor(1, 1, 1, false, true, math.random(cons_limit * 1000, 1000) / 1000)
     else
-      self.skill = jr_limit + ((cons_limit - jr_limit) * self.skill)
+      -- find the correct config line (based on month) for generation of the doctor
+      local i = 0
+      while i < #level_config.staff_levels and
+      level_config.staff_levels[i+1].Month <= month do
+        i = i+1
+      end
+
+      -- list of level_config values and the corresponding staff modifiers, plus the value set for "no"
+      local mods = {
+        {"ShrkRate", "is_psychiatrist", 0},
+        {"SurgRate", "is_surgeon",      0},
+        {"RschRate", "is_researcher",   0},
+        {"JrRate",   "is_junior",     nil},
+        {"ConsRate", "is_consultant", nil},
+      }
+
+      -- The following assumes ascending month order of the staff_levels table.
+      -- TODO don't assume this but sort when loading map config
+      for _, m in ipairs(mods) do
+        local rate
+        local ind = i
+        while not rate do
+          assert(ind >= 0, "Staff modifier " .. m[1] .. " not existent (should at least be given by base_config).")
+          rate = level_config.staff_levels[ind][m[1]]
+          ind = ind - 1
+        end
+        -- 0 means none. Other values x mean "one in x"; thus 1 means "one in one" aka "all"
+        rate = (rate == 0) and 0 or 1 / rate
+        self[m[2]] = math.random() < rate and 1.0 or m[3]
+      end
+
+      -- is_consultant is forced to nil if is_junior is already 1
+      self.is_consultant = not self.is_junior and self.is_consultant or nil
+
+      -- put the doctor in the right skill level box
+      if self.is_junior then
+        self.skill = jr_limit * self.skill
+      elseif self.is_consultant then
+        self.skill = cons_limit + ((1 - cons_limit) * self.skill)
+      else
+        self.skill = jr_limit + ((cons_limit - jr_limit) * self.skill)
+      end
     end
   end
   self.wage = self:getFairWage()
@@ -173,7 +177,7 @@ function StaffProfile:randomiseOrganical()
     descs[#descs] = nil
   end
   self.desc = our_concat(shuffle(descs))
-  if self.humanoid_class == "Doctor" then
+  if self:isType("Doctor") then
     self.is_black = math.random(0, 1) == 0
     if self.is_black then
       self.hair_index = math.random(5, 9)
@@ -186,25 +190,28 @@ function StaffProfile:randomiseOrganical()
       self.chin_index = math.random(0, 4)
       self.layer5 = 2
     end
-  elseif self.humanoid_class == "Nurse" then
+  elseif self:isType("Nurse") then
     self.hair_index = math.random(10, 12)
     self.face_index = math.random(10, 12)
     self.chin_index = math.random(10, 12)
-  elseif self.humanoid_class == "Receptionist" then
+  elseif self:isType("Receptionist") then
     self.hair_index = math.random(13, 14)
     self.face_index = math.random(13, 14)
     self.chin_index = math.random(13, 14)
-  elseif self.humanoid_class == "Handyman" then
+  elseif self:isType("Handyman") then
     self.hair_index = math.random(15, 17)
     self.face_index = math.random(15, 17)
     self.chin_index = math.random(15, 17)
   end
 end
 
-function StaffProfile:drawFace(canvas, x, y, parts_bitmap)
-  parts_bitmap:draw(canvas, x, y     , 0,       self.hair_index * 29, 65, 29)
-  parts_bitmap:draw(canvas, x, y + 29, 0, 522 + self.face_index * 24, 65, 24)
-  parts_bitmap:draw(canvas, x, y + 53, 0, 954 + self.chin_index * 22, 65, 22)
+function StaffProfile:drawFace(canvas, x, y, parts_bitmap, scale)
+  scale = scale or 1
+  canvas:scale(scale, "bitmap")
+  parts_bitmap:draw(canvas, x, y             , 0,       self.hair_index * 29, 65, 29)
+  parts_bitmap:draw(canvas, x, y + 29 * scale, 0, 522 + self.face_index * 24, 65, 24)
+  parts_bitmap:draw(canvas, x, y + 53 * scale, 0, 954 + self.chin_index * 22, 65, 22)
+  canvas:scale(1, "bitmap")
 end
 
 -- Update junior and consultant status
@@ -242,7 +249,7 @@ function StaffProfile:getFairWage()
   local level_config = self.world.map.level_config
   local wage = level_config.staff[conf_id[self.humanoid_class]].MinSalary
   wage = wage + self.skill * 1000 / level_config.gbv.SalaryAbilityDivisor
-  if self.humanoid_class == "Doctor" then
+  if self:isType("Doctor") then
     for name, id in pairs(ability_conf_id) do
       if self[name] == 1 then
         wage = wage + level_config.gbv.SalaryAdd[id]
@@ -276,4 +283,8 @@ function StaffProfile.translateStaffClass(staff_class)
     Researcher   = _S.staff_title.researcher,
   }
   return staffclass_to_string[staff_class]
+end
+
+function StaffProfile:isType(humanoid_class)
+  return self.humanoid_class == humanoid_class
 end

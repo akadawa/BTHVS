@@ -107,7 +107,6 @@ action_walk_interrupt = permanent"action_walk_interrupt"( function(action, human
   end
 end)
 
-local flag_list_bottom = 2048
 local flag_flip_h = 1
 
 local navigateDoor
@@ -281,7 +280,7 @@ navigateDoor = function(humanoid, x1, y1, dir)
   local is_entering_room = room and humanoid:getRoom() ~= room
 
   if class.is(humanoid, Staff) and is_entering_room and
-      humanoid.humanoid_class ~= "Handyman" then
+      not class.is(humanoid, Handyman) then
     -- A member of staff is entering, but is maybe no longer needed
     -- in this room?
     if not room.is_active or not room:staffFitsInRoom(humanoid) then
@@ -350,25 +349,25 @@ navigateDoor = function(humanoid, x1, y1, dir)
 
   local duration, direction
   if dir == "north" then
-    humanoid:setAnimation(leaving, flag_list_bottom)
+    humanoid:setAnimation(leaving)
     duration = TheApp.animation_manager:getAnimLength(leaving)
     to_x, to_y = dx, dy - 1
     direction = "in"
 
   elseif dir == "west" then
-    humanoid:setAnimation(leaving, flag_list_bottom + flag_flip_h)
+    humanoid:setAnimation(leaving, flag_flip_h)
     duration = TheApp.animation_manager:getAnimLength(leaving)
     to_x, to_y = dx - 1, dy
     direction = "in"
 
   elseif dir == "east" then
-    humanoid:setAnimation(entering, flag_list_bottom)
+    humanoid:setAnimation(entering)
     duration = TheApp.animation_manager:getAnimLength(entering)
     to_x, to_y = dx, dy
     direction = "out"
 
   elseif dir == "south" then
-    humanoid:setAnimation(entering, flag_list_bottom + flag_flip_h)
+    humanoid:setAnimation(entering, flag_flip_h)
     duration = TheApp.animation_manager:getAnimLength(entering)
     to_x, to_y = dx, dy
     direction = "out"
@@ -430,8 +429,10 @@ local function action_walk_start(action, humanoid)
   if not action.no_truncate then
     action.on_interrupt = action_walk_interrupt
   end
+  if action.on_restart ~= nil then
+    action.saved_must_happen = action.must_happen
+  end
   action.on_restart = action_walk_start
-  action.saved_must_happen = action.must_happen
   action.must_happen = true
   if action.reserve_on_resume and not action.todo_interrupt then
     action.reserve_on_resume.reserved_for = humanoid

@@ -25,24 +25,21 @@ SOFTWARE.
 
 #include "config.h"
 
-#include <cstdio>
-#include <cstring>
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "lua.hpp"
 #include "th.h"
 #include "th_gfx_common.h"
+#include "th_gfx_sdl.h"
 #include "th_lua.h"
 
 class lua_persist_reader;
 class lua_persist_writer;
 class memory_reader;
-class render_target;
-class sprite_sheet;
-struct clip_rect;
 struct map_tile;
 
 enum class scaled_items { none, sprite_sheets, bitmaps, all };
@@ -58,9 +55,11 @@ enum draw_flags : uint32_t {
   thdf_flip_horizontal = 1 << 0,
   //! Draw with the top becoming the bottom and vice versa
   thdf_flip_vertical = 1 << 1,
-  //! Draw with 50% transparency
+  //! Draw with 50% transparency. If set together with thdf_alpha_75, don't draw
+  //! at all.
   thdf_alpha_50 = 1 << 2,
-  //! Draw with 75% transparency
+  //! Draw with 75% transparency. If set together with thdf_alpha_50, don't draw
+  //! at all.
   thdf_alpha_75 = 1 << 3,
   //! Draw using a remapped palette
   thdf_alt_palette = 1 << 4,
@@ -80,13 +79,10 @@ enum draw_flags : uint32_t {
   //! Draw the sprite with red and blue colours swapped.
   thdf_alt32_blue_red_swap = 2 << thdf_alt32_start,
 
-  /** Object attached to tile flags **/
-  /* (should be set prior to attaching to a tile) */
-
   //! Attach to the early sprite list (right-to-left pass)
+  /* (should be set prior to attaching to a tile) */
   thdf_early_list = 1 << 10,
-  //! Keep this sprite at the bottom of the attached list
-  thdf_list_bottom = 1 << 11,
+
   //! Hit-test using bounding-box precision rather than pixel-perfect
   thdf_bound_box_hit_test = 1 << 12,
   //! Apply a cropping operation prior to drawing
@@ -95,16 +91,10 @@ enum draw_flags : uint32_t {
   thdf_nearest = 1 << 14,
 };
 
-/** Helper structure with parameters to create a #render_target. */
-struct render_target_creation_params {
-  int width;               ///< Expected width of the render target.
-  int height;              ///< Expected height of the render target.
-  int bpp;                 ///< Expected colour depth of the render target.
-  bool fullscreen;         ///< Run full-screen.
-  bool present_immediate;  ///< Whether to present immediately to the user
-                           ///< (else wait for Vsync).
-  bool direct_zoom;  ///< Scale each texture when copying if true, otherwise
-                     ///< render to intermediate texture and scale.
+// Integer 2D pair.
+struct xy_pair {
+  int x{};  ///< Value of the X coordinate.
+  int y{};  ///< Value of the Y coordinate.
 };
 
 /*!
@@ -114,20 +104,20 @@ struct render_target_creation_params {
 */
 // TODO: Replace this struct with something cleaner
 struct drawable : public link_list {
-  drawable() : link_list() { drawing_layer = 0; }
+  drawable() = default;
 
   //! Draw the object at a specific point on a render target
   /*!
       Can also "draw" the object to the speakers, i.e. play sounds.
   */
-  virtual void draw_fn(render_target* pCanvas, int iDestX, int iDestY) = 0;
+  virtual void draw_fn(render_target* canvas, const xy_pair& draw_pos) = 0;
 
   //! Perform a hit test against the object
   /*!
-      Should return true if when the object is drawn at (iDestX, iDestY) on a
-     canvas, the point (iTestX, iTestY) is within / on the object.
+      Should return true if when the object is drawn at \p draw_pos on a
+     canvas, the point \p obj_pos is within / on the object.
   */
-  virtual bool hit_test_fn(int iDestX, int iDestY, int iTestX, int iTestY) = 0;
+  virtual bool hit_test_fn(const xy_pair& draw_pos, const xy_pair& obj_pos) = 0;
 
   /** Returns true if instance is a multiple frame animation.
       Should be overloaded in derived class.
@@ -138,10 +128,10 @@ struct drawable : public link_list {
   void set_drawing_layer(int layer) { drawing_layer = layer; }
 
   //! Drawing flags (zero or more list flags from #draw_flags).
-  uint32_t flags;
+  uint32_t flags{0};
 
  private:
-  int drawing_layer;
+  int drawing_layer{0};
 };
 
 /*!
@@ -154,16 +144,11 @@ class chunk_renderer {
   /*!
       @param width Pixel width of the resulting image
       @param height Pixel height of the resulting image
-      @param buffer If nullptr, then a new buffer is created to render the
-     image onto. Otherwise, should be an array at least width*height in size.
-        Ownership of this pointer is assumed by the class - call takeData()
-        to take ownership back again.
+      @param start An iterator to the start writing the resulting image to.
+                   Must point to a container of at least width * height.
   */
-  chunk_renderer(int width, int height, uint8_t* buffer = nullptr);
+  chunk_renderer(int width, int height, std::vector<uint8_t>::iterator start);
 
-  ~chunk_renderer();
-
-  // TODO: Should be function, not method of chunk_renderer
   //! Convert a stream of chunks into a raw bitmap
   /*!
       @param pData Stream data.
@@ -171,21 +156,8 @@ class chunk_renderer {
       @param bComplex true if pData is a stream of "complex" chunks, false if
         pData is a stream of "simple" chunks. Passing the wrong value will
         usually result in a very visible wrong result.
-
-      Use getData() or takeData() to obtain the resulting bitmap.
   */
   void decode_chunks(const uint8_t* pData, int iDataLen, bool bComplex);
-
-  //! Get the result buffer, and take ownership of it
-  /*!
-      This transfers ownership of the buffer to the caller. After calling,
-      the class will not have any buffer, and thus cannot be used for
-      anything.
-  */
-  uint8_t* take_data();
-
-  //! Get the result buffer
-  inline const uint8_t* get_data() const { return data; }
 
   //! Perform a "copy" chunk (normally called by decodeChunks)
   void chunk_copy(int npixels, const uint8_t* in_data);
@@ -200,13 +172,14 @@ class chunk_renderer {
   void chunk_finish(uint8_t value);
 
  private:
-  inline bool is_done() { return ptr == end; }
+  inline bool is_done() const { return ptr == end; }
   inline void fix_n_pixels(int& npixels) const;
   inline void increment_position(int npixels);
 
-  uint8_t *data, *ptr, *end;
-  int x, y, width, height;
-  bool skip_eol;
+  std::vector<uint8_t>::iterator ptr, end;
+  int x{0}, y{0};
+  int width, height;
+  bool skip_eol{false};
 };
 
 //! Number of available layers, must be less or equal to 16 as it is stored in
@@ -215,7 +188,7 @@ const int max_number_of_layers = 13;
 
 //! Layer information (see animation_manager::draw_frame)
 struct layers {
-  uint8_t layer_contents[max_number_of_layers];
+  uint8_t layer_contents[max_number_of_layers]{};
 };
 
 /** Key value for finding an animation. */
@@ -240,10 +213,10 @@ inline bool operator<(const animation_key& oK, const animation_key& oL) {
  * A negative number indicates there is no animation in that direction.
  */
 struct animation_start_frames {
-  long north;  ///< Animation start frame for the 'north' view.
-  long east;   ///< Animation start frame for the 'east' view.
-  long south;  ///< Animation start frame for the 'south' view.
-  long west;   ///< Animation start frame for the 'west' view.
+  long north{-1};  ///< Animation start frame for the 'north' view.
+  long east{-1};   ///< Animation start frame for the 'east' view.
+  long south{-1};  ///< Animation start frame for the 'south' view.
+  long west{-1};   ///< Animation start frame for the 'west' view.
 };
 
 /** Map holding the custom animations. */
@@ -260,8 +233,7 @@ typedef std::pair<animation_key, animation_start_frames> named_animation_pair;
 */
 class animation_manager {
  public:
-  animation_manager();
-  ~animation_manager();
+  animation_manager() = default;
 
   void set_sprite_sheet(sprite_sheet* pSpriteSheet);
 
@@ -348,11 +320,12 @@ class animation_manager {
       @param patient_effect The animation effect to apply to the patient.
       @param patient_effect_offset The number of ticks to offset the effect
           animation by.
+      @param scale_factor
   */
   void draw_frame(render_target* pCanvas, size_t iFrame,
                   const ::layers& oLayers, int iX, int iY, uint32_t iFlags,
                   animation_effect patient_effect = animation_effect::none,
-                  size_t patient_effect_offset = 0) const;
+                  size_t patient_effect_offset = 0, int scale_factor = 1) const;
 
   void get_frame_extent(size_t iFrame, const ::layers& oLayers, int* pMinX,
                         int* pMaxX, int* pMinY, int* pMaxY,
@@ -373,55 +346,13 @@ class animation_manager {
       @param iTilesize Tile size of the animation.
       @return A set starting frames for the queried animation.
    */
-  const animation_start_frames& get_named_animations(const std::string& sName,
+  const animation_start_frames& get_named_animations(std::string_view sName,
                                                      int iTilesize) const;
 
   //! Notified every world tick to allow tracking rate of game time passage.
   void tick();
 
  private:
-#if CORSIX_TH_USE_PACK_PRAGMAS
-#pragma pack(push)
-#pragma pack(1)
-#endif
-  // Animation information structure reinterpreted from Theme Hospital data.
-  struct th_animation_properties {
-    uint16_t first_frame;
-    // It could be that frame is a uint32_t rather than a uint16_t, which
-    // would resolve the following unknown (which seems to always be zero).
-    uint16_t unknown;
-  } CORSIX_TH_PACKED_FLAGS;
-
-  // Frame information structure reinterpreted from Theme Hospital data.
-  struct th_frame_properties {
-    uint32_t list_index;
-    // These fields have something to do with width and height, but it's
-    // not clear quite exactly how.
-    uint8_t width;
-    uint8_t height;
-    // If non-zero, index into sound.dat filetable.
-    uint8_t sound;
-    // Combination of zero or more fame_flags values
-    uint8_t flags;
-    uint16_t next;
-  } CORSIX_TH_PACKED_FLAGS;
-
-  // Structure reinterpreted from Theme Hospital data.
-  struct th_element_properties {
-    uint16_t table_position;
-    uint8_t offx;
-    uint8_t offy;
-    // High nibble: The layer which the element belongs to
-    //              [0, max_number_of_layers)
-    // Low  nibble: Zero or more draw_flags
-    uint8_t flags;
-    // The layer option / layer id
-    uint8_t layerid;
-  } CORSIX_TH_PACKED_FLAGS;
-#if CORSIX_TH_USE_PACK_PRAGMAS
-#pragma pack(pop)
-#endif
-
   struct frame {
     size_t list_index;   ///< First entry in #element_list (pointing to an
                          ///< element) for this frame.
@@ -464,27 +395,27 @@ class animation_manager {
     uint8_t layer_id;  ///< Value of the layer class to match.
 
     sprite_sheet* element_sprite_sheet;  ///< Sprite sheet to use for this
-                                         ///< element.
+                                         ///< element. Not owned.
   };
 
   std::vector<size_t> first_frames;    ///< First frame number of an animation.
   std::vector<frame> frames;           ///< The loaded frames.
   std::vector<uint16_t> element_list;  ///< List of elements for a frame.
   std::vector<element> elements;       ///< Sprite Elements.
-  std::vector<sprite_sheet*>
+  std::vector<sprite_sheet>
       custom_sheets;  ///< Sprite sheets with custom graphics.
   named_animations_map named_animations;  ///< Collected named animations.
 
-  sprite_sheet* sheet;    ///< Sprite sheet to use.
-  render_target* canvas;  ///< Video surface to use.
+  sprite_sheet* sheet{nullptr};    ///< Sprite sheet to use. Not owned.
+  render_target* canvas{nullptr};  ///< Video surface to use. Not owned.
 
-  size_t animation_count;     ///< Number of animations.
-  size_t frame_count;         ///< Number of frames.
-  size_t element_list_count;  ///< Number of list elements.
-  size_t element_count;       ///< Number of sprite elements.
+  size_t animation_count{0};     ///< Number of animations.
+  size_t frame_count{0};         ///< Number of frames.
+  size_t element_list_count{0};  ///< Number of list elements.
+  size_t element_count{0};       ///< Number of sprite elements.
 
-  size_t
-      game_ticks;  ///< Number of game ticks, used for global animation timing.
+  //! Number of game ticks, used for global animation timing.
+  size_t game_ticks{0};
 
   //! Compute the bounding box of the frame.
   /*!
@@ -536,33 +467,41 @@ class animation_base : public drawable {
   animation_base();
 
   void remove_from_tile();
-  void attach_to_tile(map_tile* pMapNode, int layer);
+  void attach_to_tile(const xy_pair& tile_pos, map_tile* node, int layer);
 
   uint32_t get_flags() const { return flags; }
-  int get_x() const { return x_relative_to_tile; }
-  int get_y() const { return y_relative_to_tile; }
+  const xy_pair& get_pixel_offset() const { return pixel_offset; }
+  const xy_pair& get_tile() const { return tile; }
 
   void set_flags(uint32_t iFlags) { flags = iFlags; }
-  void set_position(int iX, int iY) {
-    x_relative_to_tile = iX, y_relative_to_tile = iY;
+  void set_tile(const xy_pair& tile_pos) { tile = tile_pos; }
+  void set_pixel_offset(int x, int y) {
+    pixel_offset.x = x;
+    pixel_offset.y = y;
   }
   void set_layer(int iLayer, int iId);
   void set_layers_from(const animation_base* pSrc) { layers = pSrc->layers; }
+  void set_scale_factor(int s) { scale_factor = s; }
 
  protected:
-  //! X position on tile (not tile x-index)
-  int x_relative_to_tile;
-  //! Y position on tile (not tile y-index)
-  int y_relative_to_tile;
+  //! Tile containing the animation. A negative x or y means it is not active.
+  xy_pair tile{-1, -1};
 
-  ::layers layers;
-};
+  //! Offset in pixels relative to the center of the animation tile.
+  xy_pair pixel_offset{0, 0};
 
-struct xy_diff {
-  //! Amount to change x per tick
-  int dx;
-  //! Amount to change y per tick
-  int dy;
+  ::layers layers{};
+
+  //! Scale factor for the animation.
+  /**
+   * For both animation and sprite_render_list scale_factor is currently only
+   * implemented for drawing. Support for hit_test should be implemented if
+   * a need to hit_test on a scaled sprite_render_list or animation arises.
+   *
+   * In all cases scale_factor is not persisted, and expected to be set
+   * according to the current game options before calling draw.
+   */
+  int scale_factor{1};
 };
 
 //! The kind of animation.
@@ -572,52 +511,53 @@ class animation : public animation_base {
  public:
   animation();
 
-  void set_parent(animation* pParent, bool use_primary);
+  void set_parent(animation* parent_anim, bool use_primary);
 
   void tick();
-  void draw(render_target* pCanvas, int iDestX, int iDestY);
-  bool hit_test(int iDestX, int iDestY, int iTestX, int iTestY);
-  void draw_morph(render_target* pCanvas, int iDestX, int iDestY);
-  bool hit_test_morph(int iDestX, int iDestY, int iTestX, int iTestY);
-  void draw_child(render_target* pCanvas, int iDestX, int iDestY,
+  void draw(render_target* canvas, const xy_pair& draw_pos);
+  void draw_morph(render_target* canvas, const xy_pair& draw_pos);
+  void draw_child(render_target* canvas, const xy_pair& draw_pos,
                   bool use_primary);
-  bool hit_test_child(int iDestX, int iDestY, int iTestX, int iTestY);
 
-  void draw_fn(render_target* pCanvas, int iDestX, int iDestY) override {
+  void draw_fn(render_target* canvas, const xy_pair& draw_pos) override {
     switch (anim_kind) {
       case animation_kind::normal:
-        draw(pCanvas, iDestX, iDestY);
+        draw(canvas, draw_pos);
         return;
       case animation_kind::primary_child:
-        draw_child(pCanvas, iDestX, iDestY, true);
+        draw_child(canvas, draw_pos, true);
         return;
       case animation_kind::secondary_child:
-        draw_child(pCanvas, iDestX, iDestY, false);
+        draw_child(canvas, draw_pos, false);
         return;
       case animation_kind::morph:
-        draw_morph(pCanvas, iDestX, iDestY);
+        draw_morph(canvas, draw_pos);
         return;
     }
   }
 
-  bool hit_test_fn(int iDestX, int iDestY, int iTestX, int iTestY) override {
+  bool hit_test(const xy_pair& draw_pos, const xy_pair& obj_pos);
+  bool hit_test_morph(const xy_pair& draw_pos, const xy_pair& obj_pos);
+  bool hit_test_child(const xy_pair& draw_pos, const xy_pair& obj_pos);
+
+  bool hit_test_fn(const xy_pair& draw_pos, const xy_pair& obj_pos) override {
     switch (anim_kind) {
       case animation_kind::normal:
-        return hit_test(iDestX, iDestY, iTestX, iTestY);
+        return hit_test(draw_pos, obj_pos);
       case animation_kind::primary_child:
       case animation_kind::secondary_child:
-        return hit_test_child(iDestX, iDestY, iTestX, iTestY);
+        return hit_test_child(draw_pos, obj_pos);
       case animation_kind::morph:
-        return hit_test_morph(iDestX, iDestY, iTestX, iTestY);
+        return hit_test_morph(draw_pos, obj_pos);
     }
     return false;
   }
 
   bool is_multiple_frame_animation_fn() override {
-    size_t firstFrame =
-        get_animation_manager()->get_first_frame(get_animation());
-    size_t nextFrame = get_animation_manager()->get_next_frame(firstFrame);
-    return nextFrame != firstFrame;
+    size_t anim = get_animation();
+    size_t first_frame = get_animation_manager()->get_first_frame(anim);
+    size_t next_frame = get_animation_manager()->get_next_frame(first_frame);
+    return next_frame != first_frame;
   }
 
   link_list* get_previous() { return prev; }
@@ -627,15 +567,18 @@ class animation : public animation_base {
   size_t get_frame() const { return frame_index; }
   int get_crop_column() const { return crop_column; }
 
-  void set_animation(animation_manager* pManager, size_t iAnimation);
-  void set_morph_target(animation* pMorphTarget, int iDurationFactor = 1);
-  void set_frame(size_t iFrame);
+  void set_animation(animation_manager* mgr, size_t anim);
+  void set_morph_target(animation* target, int duration = 1);
+  void set_frame(size_t new_frame);
 
-  void set_speed(int iX, int iY) { speed.dx = iX, speed.dy = iY; }
-  void set_crop_column(int iColumn) { crop_column = iColumn; }
+  void set_speed(int x, int y) {
+    speed.x = x;
+    speed.y = y;
+  }
+  void set_crop_column(int column) { crop_column = column; }
 
-  void persist(lua_persist_writer* pWriter) const;
-  void depersist(lua_persist_reader* pReader);
+  void persist(lua_persist_writer* writer) const;
+  void depersist(lua_persist_reader* reader);
 
   void set_patient_effect(animation_effect patient_effect);
   void set_animation_kind(animation_kind anim_kind);
@@ -644,21 +587,22 @@ class animation : public animation_base {
   animation_manager* get_animation_manager() { return manager; }
 
  private:
-  animation_manager* manager;
-  animation* morph_target;
-  size_t animation_index;  ///< Animation number.
-  size_t frame_index;      ///< Frame number.
+  animation_manager* manager{nullptr};
+  animation* morph_target{nullptr};
+  size_t animation_index{};  ///< Animation number.
+  size_t frame_index{};      ///< Frame number.
   union {
-    xy_diff speed;
+    xy_pair speed{};  ///< Speed in pixels per tick.
+
     //! Some animations are tied to the primary or secondary marker of another
     //! animation and hence have a parent rather than a speed.
     animation* parent;
   };
 
-  size_t sound_to_play;
-  int crop_column;
-  animation_kind anim_kind;
-  animation_effect patient_effect;
+  size_t sound_to_play{};
+  int crop_column{};
+  animation_kind anim_kind{animation_kind::normal};
+  animation_effect patient_effect{animation_effect::none};
   //! Number of game_ticks to offset animation by so they aren't all
   //! running in sync.
   size_t patient_effect_offset;
@@ -666,29 +610,31 @@ class animation : public animation_base {
 
 class sprite_render_list : public animation_base {
  public:
-  sprite_render_list();
-  ~sprite_render_list() override;
-
   void tick();
-  void draw(render_target* pCanvas, int iDestX, int iDestY);
-  bool hit_test(int iDestX, int iDestY, int iTestX, int iTestY);
 
-  void set_sheet(sprite_sheet* pSheet) { sheet = pSheet; }
-  void set_speed(int iX, int iY) { dx_per_tick = iX, dy_per_tick = iY; }
-  void set_lifetime(int iLifetime);
+  void set_sheet(sprite_sheet* new_sheet) { sheet = new_sheet; }
+  void set_speed(int x_speed, int y_speed) {
+    dx_per_tick = x_speed;
+    dy_per_tick = y_speed;
+  }
+  void set_lifetime(int life_time);
   void set_use_intermediate_buffer();
-  void append_sprite(size_t iSprite, int iX, int iY);
+  void append_sprite(size_t spr_num, int xpos, int ypos);
   bool is_dead() const { return lifetime == 0; }
 
-  void persist(lua_persist_writer* pWriter) const;
-  void depersist(lua_persist_reader* pReader);
+  void persist(lua_persist_writer* writer) const;
+  void depersist(lua_persist_reader* reader);
 
-  void draw_fn(render_target* pCanvas, int iDestX, int iDestY) override {
-    draw(pCanvas, iDestX, iDestY);
+  void draw(render_target* canvas, const xy_pair& draw_pos);
+
+  void draw_fn(render_target* canvas, const xy_pair& draw_pos) override {
+    draw(canvas, draw_pos);
   }
 
-  bool hit_test_fn(int iDestX, int iDestY, int iTestX, int iTestY) override {
-    return hit_test(iDestX, iDestY, iTestX, iTestY);
+  bool hit_test(const xy_pair& draw_pos, const xy_pair& obj_pos);
+
+  bool hit_test_fn(const xy_pair& draw_pos, const xy_pair& obj_pos) override {
+    return hit_test(draw_pos, obj_pos);
   }
 
   bool is_multiple_frame_animation_fn() override { return false; }
@@ -700,20 +646,18 @@ class sprite_render_list : public animation_base {
     int y;
   };
 
-  sprite_sheet* sheet = nullptr;
-  sprite* sprites = nullptr;
-  int sprite_count = 0;
-  int buffer_size = 0;
+  sprite_sheet* sheet{nullptr};
+  std::vector<sprite> sprites{};
 
   //! Amount to change x per tick
-  int dx_per_tick = 0;
+  int dx_per_tick{0};
   //! Amount to change y per tick
-  int dy_per_tick = 0;
+  int dy_per_tick{0};
   //! Number of ticks until reports as dead (-1 = never dies)
-  int lifetime = -1;
+  int lifetime{-1};
   //! Whether to draw to an intermediate buffer. This is used to preserve text
-  //! rendering quality when scaling.
-  bool use_intermediate_buffer = false;
+  //! rendering quality when scaling. Not persisted.
+  bool use_intermediate_buffer{false};
 };
 
 // Find the appropriate subclass of animation_base for a given

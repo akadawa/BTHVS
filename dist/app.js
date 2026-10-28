@@ -2300,12 +2300,40 @@
   }
 
   // ----------------------------------------------------------- game launch
+  function computeSafeUIScale(w, h, desiredScale) {
+    const maxScale = Math.max(1, Math.min(3, Math.floor(Math.min(w / 640, h / 480))));
+    const parsed = parseInt(desiredScale, 10) || 1;
+    return Math.max(1, Math.min(maxScale, parsed));
+  }
+
+  function setGameUIScale(scale) {
+    const w = Math.max(640, window.innerWidth);
+    const h = Math.max(480, window.innerHeight);
+    const clamped = computeSafeUIScale(w, h, scale);
+    try { localStorage.setItem("bth-ui-scale", String(clamped)); } catch (_) {}
+    if (state.game && state.game.mod && typeof state.game.mod.ccall === "function") {
+      try {
+        state.game.mod.ccall("th_eval_lua", "string", ["string"], [`
+          if TheApp and TheApp.config and TheApp.ui and TheApp.gfx then
+            TheApp.config.ui_scale = ${clamped}
+            TheApp.ui:changeResolution(TheApp.config.width, TheApp.config.height)
+            TheApp.gfx:onChangeUIScale()
+          end
+        `]);
+      } catch (_) {}
+    }
+    return clamped;
+  }
+
   function configText(w, h, lang, name) {
     const q = (s) => "[[" + s + "]]";
+    const savedScale = localStorage.getItem("bth-ui-scale") || "1";
+    const uiScale = computeSafeUIScale(w, h, savedScale);
     return [
       "fullscreen = false",
       `width = ${w}`,
       `height = ${h}`,
+      `ui_scale = ${uiScale}`,
       `language = ${q(lang)}`,
       "audio = true",
       "play_sounds = true",
@@ -2321,6 +2349,10 @@
       "capture_mouse = false",
       "debug = false",
       "allow_user_actions_while_paused = true",
+      "enable_screen_shake = true",
+      "enable_announcer_subtitles = false",
+      "blocking_off_areas = 2",
+      "direct_zoom = true",
       `theme_hospital_install = ${q("/thdata")}`,
       `player_name = ${q(name)}`,
       "",
@@ -2328,11 +2360,16 @@
   }
 
   function mkdirp(FS, dir) {
+    if (!FS._bthDirs) FS._bthDirs = new Set(["", "/"]);
+    if (FS._bthDirs.has(dir)) return;
     const parts = dir.split("/").filter(Boolean);
     let cur = "";
     for (const p of parts) {
       cur += "/" + p;
-      try { FS.mkdir(cur); } catch (e) { /* exists */ }
+      if (!FS._bthDirs.has(cur)) {
+        try { FS.mkdir(cur); } catch (e) { /* exists */ }
+        FS._bthDirs.add(cur);
+      }
     }
   }
 
@@ -2364,9 +2401,8 @@
       }
     }
     const W = Math.max(640, window.innerWidth), H = Math.max(480, window.innerHeight);
-    let ready;
     try {
-      let buildHash = "2c1fcc3ee4ae";
+      let buildHash = "b6b1bf366297";
       let expectedDataSize = 0;
       try {
         const bRes = await fetch("game/build.json?t=" + Date.now(), { cache: "no-store" });
@@ -2377,19 +2413,25 @@
         }
       } catch (_) {}
       const vQuery = "?v=" + encodeURIComponent(buildHash);
-      if (!window.createCorsixTH) await loadScript("game/corsixth.js" + vQuery);
-      setLoading("Downloading engine data ...");
-      let preloadedDataBuf = null;
-      try {
-        let dRes = await fetch("game/corsixth.data" + vQuery);
-        if (dRes.ok) {
-          preloadedDataBuf = await dRes.arrayBuffer();
-          if (expectedDataSize > 0 && preloadedDataBuf.byteLength !== expectedDataSize) {
-            dRes = await fetch("game/corsixth.data" + vQuery + "&r=" + Date.now(), { cache: "no-store" });
-            if (dRes.ok) preloadedDataBuf = await dRes.arrayBuffer();
+      setLoading("Downloading engine & assets ...");
+      const fetchEngineData = async () => {
+        try {
+          let dRes = await fetch("game/corsixth.data" + vQuery);
+          if (dRes.ok) {
+            let buf = await dRes.arrayBuffer();
+            if (expectedDataSize > 0 && buf.byteLength !== expectedDataSize) {
+              dRes = await fetch("game/corsixth.data" + vQuery + "&r=" + Date.now(), { cache: "no-store" });
+              if (dRes.ok) buf = await dRes.arrayBuffer();
+            }
+            return buf;
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+        return null;
+      };
+      const [, preloadedDataBuf] = await Promise.all([
+        window.createCorsixTH ? Promise.resolve() : loadScript("game/corsixth.js" + vQuery),
+        fetchEngineData(),
+      ]);
       const mod = await createCorsixTH({
         canvas,
         locateFile: (p) => "game/" + p + vQuery,
@@ -2413,8 +2455,10 @@
       const cfgDir = "/home/web_user/.config/CorsixTH";
       mkdirp(FS, cfgDir);
       try {
-        FS.mount(FS.filesystems.IDBFS, {}, cfgDir);
-        await new Promise((res) => FS.syncfs(true, () => res()));
+        if (FS.filesystems && FS.filesystems.IDBFS) {
+          FS.mount(FS.filesystems.IDBFS, {}, cfgDir);
+          await new Promise((res) => FS.syncfs(true, () => res()));
+        }
       } catch (e) { console.warn("IDBFS unavailable", e); }
       FS.writeFile(cfgDir + "/config.txt", configText(W, H, session.language || $("#language").value, session.name || playerName()));
       mkdirp(FS, "/tmp");
@@ -2604,11 +2648,22 @@
       }
       case "ui.banner": {
         const el = $("#net-banner");
+        if (!el) return null;
+        if (state._bannerTimer) {
+          clearTimeout(state._bannerTimer);
+          state._bannerTimer = null;
+        }
         if (!arg) { el.hidden = true; return null; }
         const [kind, text] = [arg.charAt(0), arg.slice(1)];
         el.className = kind === "e" ? "err" : "";
         el.textContent = text;
         el.hidden = false;
+        if (kind !== "e") {
+          state._bannerTimer = setTimeout(() => {
+            el.hidden = true;
+            state._bannerTimer = null;
+          }, 3500);
+        }
         return null;
       }
       case "ui.sync": {
@@ -2775,10 +2830,15 @@
         const remSec = rem % 60;
         if (timerEl) {
           timerEl.hidden = false;
-          timerEl.innerHTML = `<span>${remMin}:${String(remSec).padStart(2, "0")}</span>`;
-          timerEl.className = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
+          const timeTxt = `${remMin}:${String(remSec).padStart(2, "0")}`;
+          if (timerEl._lastTxt !== timeTxt) {
+            timerEl._lastTxt = timeTxt;
+            timerEl.textContent = timeTxt;
+          }
+          const nextCls = "chip " + (rem < 120 ? "err" : rem < 300 ? "warn" : "ok");
+          if (timerEl.className !== nextCls) timerEl.className = nextCls;
         }
-        if (!$("#quest-win").hidden) {
+        if ($("#quest-win") && !$("#quest-win").hidden) {
           updateQuestUI();
         }
         checkWinConditions();
@@ -3228,7 +3288,17 @@
     return list;
   }
 
+  function setHtmlIfChanged(el, html) {
+    if (!el) return;
+    if (el._lastHtml !== html) {
+      el._lastHtml = html;
+      el.innerHTML = html;
+    }
+  }
+
   function updateQuestUI() {
+    const questWin = $("#quest-win");
+    if (questWin && questWin.hidden) return;
     const g = state.vs.goals || { cured: 25, money: 100000, timeLimit: 30 };
     const my = state.vs.myStats || {};
     const quests = buildQuestsFromConfig(g);
@@ -3238,16 +3308,21 @@
     const goalFooter = $("#quest-match-goal");
     if (goalFooter) {
       const gList = formatGoalsList(g);
-      goalFooter.textContent = gList.length ? "Goal: " + gList.join(" · ") : "Free Match";
+      const nextGoalTxt = gList.length ? "Goal: " + gList.join(" · ") : "Free Match";
+      if (goalFooter.textContent !== nextGoalTxt) goalFooter.textContent = nextGoalTxt;
     }
 
     // Tab button: Leaderboard (X)
     const dashTabBtn = $("#tab-btn-dashboard");
-    if (dashTabBtn) dashTabBtn.textContent = `Leaderboard (${allPlayers.length})`;
+    if (dashTabBtn) {
+      const nextDashTxt = `Leaderboard (${allPlayers.length})`;
+      if (dashTabBtn.textContent !== nextDashTxt) dashTabBtn.textContent = nextDashTxt;
+    }
 
     // Lead banner (compact status line)
     const leadText = $("#quest-lead-text");
     if (leadText) {
+      let nextLeadHtml = "";
       if (g.timeLimit > 0) {
         const elapsed = Math.floor((Date.now() - state.vs.startTime) / 1000);
         const rem = Math.max(0, g.timeLimit * 60 - elapsed);
@@ -3261,18 +3336,18 @@
 
         const activeRivals = allPlayers.filter((p) => !p.isMe && !p.left);
         if (allPlayers.length > 1 && activeRivals.length === 0) {
-          leadText.innerHTML = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
+          nextLeadHtml = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
         } else if (allPlayers.length <= 1) {
-          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · Cash: <b>$${(my.bal || 0).toLocaleString()}</b>`;
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · Cash: <b>$${(my.bal || 0).toLocaleString()}</b>`;
         } else if (isMeTop) {
           const secondCash = sortedByCash[1] ? (sortedByCash[1].stats.bal || 0) : 0;
           const leadDiff = (my.bal || 0) - secondCash;
-          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-you">Lead</span> <b>You are leading! (+$${leadDiff.toLocaleString()})</b>`;
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-you">Lead</span> <b>You are leading! (+$${leadDiff.toLocaleString()})</b>`;
         } else {
-          leadText.innerHTML = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(top.name)} leads ($${(top.stats.bal || 0).toLocaleString()})</b>`;
+          nextLeadHtml = `Time Left: <b>${timeStr}</b> · <span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(top.name)} leads ($${(top.stats.bal || 0).toLocaleString()})</b>`;
         }
       } else if (quests.length === 0) {
-        leadText.innerHTML = `<b>Free Match</b> · Compare metrics across all ${allPlayers.length} players`;
+        nextLeadHtml = `<b>Free Match</b> · Compare metrics across all ${allPlayers.length} players`;
       } else {
         const playerScores = allPlayers.map((p) => {
           let pctSum = 0;
@@ -3288,20 +3363,21 @@
         const activeRivals = allPlayers.filter((p) => !p.isMe && !p.left);
 
         if (allPlayers.length > 1 && activeRivals.length === 0) {
-          leadText.innerHTML = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
+          nextLeadHtml = `<span class="lead-pill lead-you">Rivals Left</span> <b>All rivals have left the match.</b>`;
         } else if (allPlayers.length <= 1) {
-          leadText.innerHTML = `Progress: <b>${meScore}%</b> towards match victory`;
+          nextLeadHtml = `Progress: <b>${meScore}%</b> towards match victory`;
         } else if (leader.isMe) {
           const second = playerScores[1];
           if (second && second.score === leader.score) {
-            leadText.innerHTML = `<span class="lead-pill lead-tie">Tied</span> <b>Head-to-head race at ${leader.score}%!</b>`;
+            nextLeadHtml = `<span class="lead-pill lead-tie">Tied</span> <b>Head-to-head race at ${leader.score}%!</b>`;
           } else {
-            leadText.innerHTML = `<span class="lead-pill lead-you">Lead</span> <b>You lead the race (${leader.score}%)!</b>`;
+            nextLeadHtml = `<span class="lead-pill lead-you">Lead</span> <b>You lead the race (${leader.score}%)!</b>`;
           }
         } else {
-          leadText.innerHTML = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(leader.name)} leads (${leader.score}%) · You: ${meScore}%</b>`;
+          nextLeadHtml = `<span class="lead-pill lead-opp">Behind</span> <b>${escapeHtml(leader.name)} leads (${leader.score}%) · You: ${meScore}%</b>`;
         }
       }
+      setHtmlIfChanged(leadText, nextLeadHtml);
     }
 
     // 1. Render Quest Cards List
@@ -3424,7 +3500,7 @@
         `);
       }
 
-      list.innerHTML = cardsHtml.join("");
+      setHtmlIfChanged(list, cardsHtml.join(""));
     }
 
     // 2. Render Multi-player Rivals Leaderboard Table (Up to 10 players)
@@ -3441,7 +3517,7 @@
         return (b.stats.cured || 0) - (a.stats.cured || 0);
       });
 
-      tbody.innerHTML = sortedPlayers.map((p, idx) => {
+      const nextRowsHtml = sortedPlayers.map((p, idx) => {
         const rank = idx + 1;
         const s = p.stats || {};
         const isFinished = !p.left && quests.length > 0 && quests.every((q) => q.getVal(s) >= q.target);
@@ -3472,6 +3548,7 @@
           </tr>
         `;
       }).join("");
+      setHtmlIfChanged(tbody, nextRowsHtml);
     }
   }
   state.updateQuestUI = updateQuestUI;
@@ -3914,7 +3991,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
+    window.__bth = { state, startGame, setGameUIScale, computeSafeUIScale, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, resetAllStats, DEFAULT_LEADERBOARD, newCode, markRoomCodeUsed, getUsedRoomCodes, USED_ROOM_CODES_KEY };
   }
 
   init();

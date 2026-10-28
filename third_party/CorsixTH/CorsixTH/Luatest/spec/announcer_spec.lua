@@ -49,9 +49,15 @@ local function create_app_mock(speed_set, desk_set)
   world_mock.isCurrentSpeed = function() return speed_set end
   world_mock.getLocalPlayerHospital = function()
     return {
-      hasStaffedDesk = function() return desk_set end
+      hasReceptionDesk = function() return desk_set end
     }
   end
+
+  local ui_mock = {}
+  local subtitles_mock = {
+    queueSubtitle = function() end,
+  }
+  ui_mock.subtitles = subtitles_mock
 
   local config_mock = {
     play_announcements = true
@@ -75,11 +81,15 @@ local function create_app_mock(speed_set, desk_set)
         v.played_callback()
         played_sounds[k] = nil -- clear
       end
+    end,
+    resolveFilenameWildcard = function(_, name)
+      return name
     end
   }
 
   local app = {
     world = world_mock,
+    ui = ui_mock,
     config = config_mock,
     audio = audio_mock
   }

@@ -353,6 +353,8 @@ function Humanoid:Humanoid(...)
   self.build_callbacks  = {--[[set]]}
   self.remove_callbacks = {--[[set]]}
   self.staff_change_callbacks = {--[[set]]}
+
+  self:setIfHoverMoodsVisible()
 end
 
 -- Save game compatibility
@@ -364,7 +366,7 @@ function Humanoid:afterLoad(old, new)
   end
   -- make sure female slack patients have the correct animation
   if old < 42 and new >= 42 then
-    if self.humanoid_class == "Slack Female Patient" then
+    if self:isType("Slack Female Patient") then
       self.die_anims = die_animations["Slack Female Patient"]
     end
   end
@@ -387,7 +389,7 @@ function Humanoid:afterLoad(old, new)
       self.toilet_callback = nil
     end
   end
-  if old < 83 and new >= 83 and self.humanoid_class == "Chewbacca Patient" then
+  if old < 83 and new >= 83 and self:isType("Chewbacca Patient") then
     self.die_anims.extra_east = 1682
   end
   if old < 134 and new >= 134 then
@@ -515,6 +517,11 @@ function Humanoid:isMoodActive(mood)
   return false
 end
 
+--! Set whether this humanoid should display its mood on hover.
+function Humanoid:setIfHoverMoodsVisible()
+  self.hover_moods = true
+end
+
 function Humanoid.getIdleAnimation(humanoid_class)
   return assert(walk_animations[humanoid_class], "Invalid humanoid class").idle_east
 end
@@ -522,6 +529,55 @@ end
 function Humanoid:getCurrentMood()
   if self.mood_info then
     return self.mood_info
+  end
+end
+
+--! Collect the objects in a square around the humanoid within the same room.
+--!param size (int) Size of the square to be searched, as number of rows/columns
+--  around the humanoid. Size 0 only searches the tile of the humanoid, size 1
+--  adds the 8 tiles around the humanoid (one tile in all directions), and so on.
+--!param object_spec (str or array str) Name(s) of objects to find.
+--!return (array objs, or table str -> array objects) Found requested objects.
+--  One array is returned if an object name was supplied, else a table with
+--  object names to array of objects.
+function Humanoid:findObjectsInSquare(size, object_spec)
+  -- Prepare for the search.
+  local objs_table = {}
+  if type(object_spec) == "string" then
+    -- Find one type of objects.
+    objs_table[object_spec] = {}
+  else
+    -- Find more types of objects.
+    for _, name in ipairs(object_spec) do objs_table[name] = {} end
+  end
+
+  local world_map = self.world.map
+  local th_map = world_map.th
+  local self_room_id = th_map:getRoomId(self.tile_x, self.tile_y)
+
+  -- Search the rectangle for as far as it is within the world.
+  local width, height = world_map.th:size()
+  local entity_map = self.world.entity_map
+
+  size = (size >= 0) and size or 0
+  for x = self.tile_x - size, self.tile_x + size do
+    if x >= 1 and x <= width then
+      for y = self.tile_y - size, self.tile_y + size do
+        if y >= 1 and y <= height and th_map:getRoomId(x, y) == self_room_id then
+          for _, obj in ipairs(entity_map:getObjectsAtCoordinate(x, y)) do
+            local entry = objs_table[obj.id]
+            if entry then entry[#entry + 1] = obj end
+          end
+        end
+      end
+    end
+  end
+
+  -- Return what was promised.
+  if type(object_spec) == "string" then
+    return objs_table[object_spec]
+  else
+    return objs_table
   end
 end
 
@@ -652,10 +708,33 @@ function Humanoid:isLeaving()
   return self.action_queue[1].is_leaving and true or false
 end
 
+-- Check if the humanoid is knocking on a door
+function Humanoid:isKnockingDoor()
+  return class.is(self:getCurrentAction(), KnockDoorAction)
+end
+
+-- Check if the humanoid is entering room
+function Humanoid:isEnteringRoom()
+  if self.user_of and self.user_of.object_type.id == "door" then
+    return true
+  end
+  return false
+end
+
 -- Check if there is "is_leaving" action in the action queue
 function Humanoid:hasLeavingAction()
   for _, action in ipairs(self.action_queue) do
     if action.is_leaving then
+      return true
+    end
+  end
+  return false
+end
+
+-- Check if there is "use_screen is_leaving" action in the action queue
+function Humanoid:hasDressingAndLeavingAction()
+  for _, action in ipairs(self.action_queue) do
+    if action.name == "use_screen" and action.is_leaving then
       return true
     end
   end
@@ -670,6 +749,19 @@ function Humanoid:_handleEmptyActionQueue()
     return
   end
 
+  -- Log what just happened.
+  local message = "Warning: Empty action queue. For humanoid at coord x:"
+    .. self.tile_x .. " y:" .. self.tile_y .. ". Last action: " .. self.previous_action.name
+  if not TheApp.config.debug then
+    -- Notify the user about this in console even if debug mode is disabled.
+    -- Because gameLog() will be silent in console if debug mode is disabled.
+    print(message)
+    print("Automatic recovery has been attempted for empty queue.")
+  end
+  self.world:gameLog("")
+  self.world:gameLog(message)
+  self.world:gameLog(self:tostring())
+
   -- First find out if this humanoid is in a room.
   local room = self:getRoom()
   if room then
@@ -681,38 +773,41 @@ function Humanoid:_handleEmptyActionQueue()
     self:queueAction(MeanderAction())
   elseif class.is(self, GrimReaper) then
     self:queueAction(IdleAction())
+  elseif class.is(self, Patient) then
+    self:queueAction(SeekReceptionAction())
   else
     self:queueAction(SeekReceptionAction())
   end
 
-  -- Open the dialog of the humanoid as feedback to the user.
-  local ui = self.world.ui
-  if class.is(self, Patient) then
-    ui:addWindow(UIPatient(ui, self))
-  elseif class.is(self, Staff) then
-    ui:addWindow(UIStaff(ui, self))
+  if TheApp.config.debug then
+    -- Open the dialog of the humanoid as feedback to the user.
+    local ui = self.world.ui
+    if class.is(self, Patient) then
+      ui:addWindow(UIPatient(ui, self))
+    elseif class.is(self, Staff) then
+      ui:addWindow(UIStaff(ui, self))
+    end
+
+    -- Ask user to choose kick off humanoid or do nothing
+    ui:addWindow(UIConfirmDialog(ui, true, _S.errors.dialog_empty_queue,
+      --[[persistable:humanoid_leave_hospital]] function()
+        self.world:gameLog("The humanoid was told to leave the hospital...")
+        if class.is(self, Staff) then
+          self:fire()
+        elseif class.is(self, Patient) then
+          -- Set these variables to increase the likelihood of the humanoid managing to get out of the hospital.
+          self.going_home = false
+          self.hospital = self.world:getLocalPlayerHospital()
+          self:goHome("kicked")
+        end
+      end,
+      nil -- Do nothing on cancel
+    ))
+  else
+    self.world:gameLog("Warning: Humanoid encountered an empty action queue. Recovery has been attempted.")
   end
-
-  -- Tell the player what just happened.
   self.world:gameLog("")
-  self.world:gameLog("Empty action queue!")
-  self.world:gameLog("Last action: " .. self.previous_action.name)
-  self.world:gameLog(debug.traceback())
-
-  ui:addWindow(UIConfirmDialog(ui, true, _S.errors.dialog_empty_queue,
-    --[[persistable:humanoid_leave_hospital]] function()
-      self.world:gameLog("The humanoid was told to leave the hospital...")
-      if class.is(self, Staff) then
-        self:fire()
-      else
-        -- Set these variables to increase the likelihood of the humanoid managing to get out of the hospital.
-        self.going_home = false
-        self.hospital = self.world:getLocalPlayerHospital()
-        self:goHome("kicked")
-      end
-    end,
-    nil -- Do nothing on cancel
-  ))
+  self.world:dumpGameLog()
 end
 
 function Humanoid:setType(humanoid_class)
@@ -744,6 +839,10 @@ function Humanoid:setType(humanoid_class)
   self.th:setPartialFlag(self.permanent_flags or 0)
 end
 
+function Humanoid:isType(humanoid_class)
+  return self.humanoid_class == humanoid_class
+end
+
 -- Helper function for the common case of instructing a `Humanoid` to walk to
 -- a position on the map. Equivalent to calling `setNextAction` with a walk
 -- action.
@@ -772,7 +871,7 @@ end
 
 function Humanoid:handleRemovedObject(object)
   local replacement_action
-  if self.humanoid_class and self.humanoid_class == "Receptionist" then
+  if class.is(self, Receptionist) then
     replacement_action = MeanderAction()
   elseif object.object_type.id == "bench" or object.object_type.id == "drinks_machine" then
     replacement_action = IdleAction():setMustHappen(true)
@@ -810,7 +909,7 @@ function Humanoid:changeAttribute(attribute, amount)
   -- Handle some happiness special cases
   if attribute == "happiness" and self.humanoid_class then
     local max_salary = self.world.map.level_config.payroll.MaxSalary
-    if self.humanoid_class == "Receptionist" then
+    if class.is(self, Receptionist) then
       -- A receptionist is never unhappy
       self.attributes[attribute] = 1
       return true
@@ -835,7 +934,7 @@ end
 -- feeling of warmth accordingly. Returns whether the calling function should proceed.
 function Humanoid:tickDay()
   -- No use doing anything if we're going home/fired (or dead)
-  if self.going_home or self.dead then
+  if self.going_home or self.going_to_die or self.dead then
     return false
   end
 
@@ -972,10 +1071,6 @@ function Humanoid:unregisterCallbacks()
   end
 end
 
-function Humanoid:getDrawingLayer()
-  return 4
-end
-
 function Humanoid:getCurrentAction()
   if next(self.action_queue) == nil then
     error("Action queue was empty. This should never happen.\n" .. self:tostring())
@@ -1064,4 +1159,40 @@ function Humanoid:unexpectFromRoom(dest_room)
 --!return (float)
 function Humanoid:getAttribute(attribute, default_value)
   return self.attributes[attribute] or default_value or 0
+end
+
+--! Checks whether a humanoid is within the specified area or is currently
+-- walking into it. To properly check whether a humanoid is entering an area,
+-- pass coordinates 1 tile outside the square where actually need to build.
+-- For example, if the intended wall of the room being built is outside the
+-- perimeter (x1, y1) (x2, y2), then need to pass (x1-1, y1-1) (x2+1, y2+1).
+-- Example input parameters: (50, 55, 60, 65).
+--!param x1 (int) north-west X position of target area.
+--!param x2 (int) south-east X position of target area.
+--!param y1 (int) north-west Y position of target area.
+--!param y2 (int) south-east Y position of target area.
+--!return (bool) true if obscuring given area.
+function Humanoid:isObscuringArea(x1, x2, y1, y2)
+  if self.tile_x then
+    if x1 <= self.tile_x and self.tile_x <= x2 and
+        y1 <= self.tile_y and self.tile_y <= y2 then
+      if (x1 == self.tile_x or x2 == self.tile_x) or
+          (y1 == self.tile_y or y2 == self.tile_y) then
+        -- Humanoid not in the rectangle, but might be walking into it
+        local action = self:getCurrentAction()
+        if action.name ~= "walk" then
+          return false
+        end
+        if action.path_x then -- in a (rare) special case, path_x is nil (see action_walk_start)
+          local next_x = action.path_x[action.path_index]
+          local next_y = action.path_y[action.path_index]
+          if x1 >= next_x or next_x >= x2 or y1 >= next_y or next_y >= y2 then
+            return false
+          end
+        end
+      end
+      return true
+    end
+  end
+  return false
 end

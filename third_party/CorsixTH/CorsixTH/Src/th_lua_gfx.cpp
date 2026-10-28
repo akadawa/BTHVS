@@ -23,9 +23,16 @@ SOFTWARE.
 #include "config.h"
 
 #include <SDL_stdinc.h>
+#include <ft2build.h>  // IWYU pragma: keep
+// IWYU pragma: no_include "freetype/config/ftheader.h"
+#ifdef WITH_TRACY
+#include <tracy/Tracy.hpp>
+#endif
 
+#include <algorithm>
 #include <climits>
 #include <cstring>
+#include <exception>
 #include <new>
 
 #include "lua.hpp"
@@ -35,15 +42,10 @@ SOFTWARE.
 #include "th_gfx_sdl.h"
 #include "th_lua.h"
 #include "th_lua_internal.h"
-
-#ifdef CORSIX_TH_USE_FREETYPE2
-#include <ft2build.h>  // IWYU pragma: keep
 #include FT_ERRORS_H
 #include FT_TYPES_H
-#endif
 
 namespace {
-
 font* luaT_getfont(lua_State* L) {
   font* p = luaT_touserdata_base<font, bitmap_font, freetype_font>(
       L, 1, {"bitmap_font", "freetype_font"});
@@ -57,19 +59,16 @@ font* luaT_getfont(lua_State* L) {
 }
 
 int l_palette_new(lua_State* L) {
-  luaT_stdnew<palette>(L);
-  return 1;
-}
-
-int l_palette_load(lua_State* L) {
-  palette* pPalette = luaT_testuserdata<palette>(L);
   size_t iDataLen;
   const uint8_t* pData = luaT_checkfile(L, 2, &iDataLen);
+  bool pal8 = lua_toboolean(L, 3);
 
-  if (pPalette->load_from_th_file(pData, iDataLen))
-    lua_pushboolean(L, 1);
-  else
-    lua_pushboolean(L, 0);
+  try {
+    luaT_stdnew<palette>(L, luaT_environindex, false, pData, iDataLen, pal8);
+  } catch (const std::exception& ex) {
+    lua_pushstring(L, ex.what());
+    lua_error(L);
+  }
   return 1;
 }
 
@@ -101,6 +100,8 @@ int l_rawbitmap_set_pal(lua_State* L) {
 }
 
 int l_rawbitmap_load(lua_State* L) {
+  ZoneScoped;
+
   raw_bitmap* pBitmap = luaT_testuserdata<raw_bitmap>(L);
   size_t iDataLen;
   const uint8_t* pData = luaT_checkfile(L, 2, &iDataLen);
@@ -108,8 +109,15 @@ int l_rawbitmap_load(lua_State* L) {
   render_target* pSurface =
       luaT_testuserdata<render_target>(L, 4, luaT_upvalueindex(1), false);
 
+  uint32_t flags = 0;
+  if (lua_type(L, 5) == LUA_TTABLE) {
+    lua_getfield(L, 5, "flags");
+    flags = static_cast<uint32_t>(luaL_optinteger(L, -1, 0));
+    lua_pop(L, 1);
+  }
+
   try {
-    pBitmap->load_from_th_file(pData, iDataLen, iWidth, pSurface);
+    pBitmap->load_from_th_file(pData, iDataLen, iWidth, pSurface, flags);
   } catch (const std::exception& ex) {
     lua_pushstring(L, ex.what());
     lua_error(L);
@@ -121,6 +129,8 @@ int l_rawbitmap_load(lua_State* L) {
 }
 
 int l_rawbitmap_draw(lua_State* L) {
+  ZoneScoped;
+
   raw_bitmap* pBitmap = luaT_testuserdata<raw_bitmap>(L);
   render_target* pCanvas = luaT_testuserdata<render_target>(L, 2);
 
@@ -155,6 +165,8 @@ int l_spritesheet_set_pal(lua_State* L) {
 }
 
 int l_spritesheet_load(lua_State* L) {
+  ZoneScoped;
+
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L);
   size_t iDataLenTable, iDataLenChunk;
   const uint8_t* pDataTable = luaT_checkfile(L, 2, &iDataLenTable);
@@ -197,21 +209,41 @@ int l_spritesheet_size(lua_State* L) {
 }
 
 int l_spritesheet_draw(lua_State* L) {
+  ZoneScoped;
+
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L);
   render_target* pCanvas = luaT_testuserdata<render_target>(L, 2);
   int iSprite =
       static_cast<int>(luaL_checkinteger(L, 3));  // No array adjustment
 
-  pSheet->draw_sprite(pCanvas, iSprite,
-                      static_cast<int>(luaL_optinteger(L, 4, 0)),
-                      static_cast<int>(luaL_optinteger(L, 5, 0)),
-                      static_cast<int>(luaL_optinteger(L, 6, 0)));
+  int x = static_cast<int>(luaL_optinteger(L, 4, 0));
+  int y = static_cast<int>(luaL_optinteger(L, 5, 0));
+
+  int scaleFactor = 1;
+  uint32_t flags = 0;
+  int arg6type = lua_type(L, 6);
+  if (arg6type == LUA_TTABLE) {
+    lua_getfield(L, 6, "flags");
+    flags = static_cast<uint32_t>(luaL_optinteger(L, -1, 0));
+    lua_pop(L, 1);
+
+    lua_getfield(L, 6, "scaleFactor");
+    scaleFactor = static_cast<int>(luaL_optinteger(L, -1, 1));
+    lua_pop(L, 1);
+  } else if (arg6type != LUA_TNONE) {
+    luaL_error(L, "Expected table for draw options");
+  }
+
+  pSheet->draw_sprite(pCanvas, iSprite, x, y, flags, 0, animation_effect::none,
+                      scaleFactor);
 
   lua_settop(L, 1);
   return 1;
 }
 
 int l_spritesheet_hittest(lua_State* L) {
+  ZoneScoped;
+
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L);
   size_t iSprite = luaL_checkinteger(L, 2);
   int iX = static_cast<int>(luaL_checkinteger(L, 3));
@@ -237,14 +269,28 @@ int l_bitmap_font_new(lua_State* L) {
 }
 
 int l_bitmap_font_set_spritesheet(lua_State* L) {
+  // Note: l_freetype_font_set_spritesheet and l_bitmap_font_set_spritesheet
+  // differ in their expected arguments.
+
   bitmap_font* pFont = luaT_testuserdata<bitmap_font>(L);
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L, 2);
-  // Note: l_freetype_font_set_spritesheet has additional RGB parameters for
-  // the colour.
+  int charset_idx = static_cast<int>(luaL_optinteger(L, 3, 1));
+
+  bitmap_font_character_set charset;
+  switch (charset_idx) {
+    case 1:
+      charset = bitmap_font_character_set::cp437;
+      break;
+    case 2:
+      charset = bitmap_font_character_set::mik;
+      break;
+    default:
+      return luaL_argerror(L, 3, "Invalid character set");
+  }
 
   lua_settop(L, 2);
 
-  pFont->set_sprite_sheet(pSheet);
+  pFont->set_sprite_sheet(pSheet, charset);
   luaT_setenvfield(L, 1, "sprites");
   return 1;
 }
@@ -265,7 +311,13 @@ int l_bitmap_font_set_sep(lua_State* L) {
   return 1;
 }
 
-#ifdef CORSIX_TH_USE_FREETYPE2
+int l_bitmap_font_set_scale(lua_State* L) {
+  bitmap_font* pFont = luaT_testuserdata<bitmap_font>(L);
+  pFont->set_scale_factor(static_cast<int>(luaL_checkinteger(L, 2)));
+  lua_settop(L, 1);
+  return 1;
+}
+
 void l_freetype_throw_error_code(lua_State* L, FT_Error e) {
   if (e != FT_Err_Ok) {
     switch (e) {
@@ -291,24 +343,128 @@ int l_freetype_font_new(lua_State* L) {
   return 1;
 }
 
-int l_freetype_font_set_spritesheet(lua_State* L) {
+//! Read the color from the top of the Lua stack.
+//! The color may be either a number representing an ARGB color, or a table
+//! with fields "red", "green", "blue" and "alpha". If alpha is omitted it
+//! defaults to 255 (fully opaque). All other color components default to 0
+//! If neither a number nor a table is present, the color is left unchanged.
+argb_colour read_color_from_lua(lua_State* L, argb_colour defaultColor) {
+  argb_colour color = defaultColor;
+  if (lua_istable(L, -1)) {
+    lua_getfield(L, -1, "red");
+    lua_getfield(L, -2, "green");
+    lua_getfield(L, -3, "blue");
+    lua_getfield(L, -4, "alpha");
+
+    int red = static_cast<int>(luaL_optinteger(L, -4, 0));
+    int green = static_cast<int>(luaL_optinteger(L, -3, 0));
+    int blue = static_cast<int>(luaL_optinteger(L, -2, 0));
+    int alpha = static_cast<int>(luaL_optinteger(L, -1, 255));
+    color = palette::pack_argb(alpha, red, green, blue);
+    lua_pop(L, 4);
+  } else if (lua_isnumber(L, -1)) {
+    color = static_cast<argb_colour>(lua_tointeger(L, -1));
+    if ((color & 0xFF000000u) == 0) {
+      // If no alpha was specified, assume fully opaque.
+      color |= 0xFF000000u;
+    }
+  }
+  return color;
+}
+
+//! Set the font options for a freetype font.
+//!
+//! The lua stack contains three arguments:
+//! 1. The freetype_font userdata
+//! 2. A sprite_sheet userdata used to find a default size and colour
+//! 3. A table of options, which may contain:
+//!    <dl>
+//!    <dt>ttf_color</dt>
+//!    <dd>Either a number representing an ARGB colour, or a table
+//!        with fields "red", "green", "blue" and "alpha". If alpha is omitted
+//!        it defaults to 255 (fully opaque). All other color components default
+//!        to 0.</dd>
+//!    <dt>ttf_width</dt>
+//!    <dd>Desired nominal character width, in pixels. If omitted, the width is
+//!    calculated from the sprite sheet.</dd>
+//!    <dt>ttf_height</dt>
+//!    <dd>Desired nominal character height, in pixels. If omitted, the height
+//!    is calculated from the sprite sheet.</dd>
+//!    <dt>ttf_shadow</dt>
+//!    <dd>A table with fields "offset_x", "offset_y" and "color". The color
+//!        field has the same format as ttf_color. If this field is present, the
+//!        font will be drawn with a shadow of the specified colour and offset.
+//!        color is optional and defaults to opaque black. offset_x and offset_y
+//!        are optional and default to 1. If the field is omitted entirely, no
+//!        shadow is drawn. Alternately ttf_shadow can be set to true to draw
+//!        a shadow with default parameters, or false to disable any shadow.
+//!        </dd>
+//!    </dl>
+//! @param L Lua stack
+//! @return argument count
+int l_freetype_font_set_font_options(lua_State* L) {
+  ZoneScoped;
+
   // Colour 0 falls back to using the average colour of the sprite sheet.
-  argb_colour colour = 0;
+  int width = 0;
+  int height = 0;
+  argb_colour color = 0;
 
   freetype_font* pFont = luaT_testuserdata<freetype_font>(L);
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L, 2);
-  if (!lua_isnoneornil(L, 3)) {
-    int red = static_cast<int>(luaL_checkinteger(L, 3));
-    int green = static_cast<int>(luaL_checkinteger(L, 4));
-    int blue = static_cast<int>(luaL_checkinteger(L, 5));
-    red = std::max(0, std::min(255, red));
-    green = std::max(0, std::min(255, green));
-    blue = std::max(0, std::min(255, blue));
-    colour = palette::pack_argb(255, red, green, blue);
-  }
-  lua_settop(L, 2);
 
-  l_freetype_throw_error_code(L, pFont->match_bitmap_font(pSheet, colour));
+  pFont->match_bitmap_font(pSheet, &color, &width, &height);
+
+  // Optional RGB colour parameters
+  lua_getfield(L, 3, "ttf_color");
+  color = read_color_from_lua(L, color);
+  lua_pop(L, 1);
+
+  lua_getfield(L, 3, "ttf_width");
+  if (lua_isnumber(L, -1)) {
+    width = static_cast<int>(lua_tointeger(L, -1));
+  }
+  lua_pop(L, 1);
+
+  lua_getfield(L, 3, "ttf_height");
+  if (lua_isnumber(L, -1)) {
+    height = static_cast<int>(lua_tointeger(L, -1));
+  }
+  lua_pop(L, 1);
+
+  font_shadow_options shadowOptions;
+  lua_getfield(L, 3, "ttf_shadow");
+  if (lua_istable(L, -1)) {
+    shadowOptions.enabled = true;
+
+    lua_getfield(L, -1, "offset_x");
+    shadowOptions.offset_x = static_cast<int>(luaL_optinteger(L, -1, 1));
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "offset_y");
+    shadowOptions.offset_y = static_cast<int>(luaL_optinteger(L, -1, 1));
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "color");
+    shadowOptions.color = read_color_from_lua(L, shadowOptions.color);
+    lua_pop(L, 1);
+  } else if (lua_isboolean(L, -1)) {
+    shadowOptions.enabled = lua_toboolean(L, -1);
+  }
+  lua_pop(L, 1);
+
+  lua_getfield(L, -1, "scale_factor");
+  int scale_factor = static_cast<int>(luaL_optinteger(L, -1, 1));
+  width *= scale_factor;
+  height *= scale_factor;
+  shadowOptions.offset_x *= scale_factor;
+  shadowOptions.offset_y *= scale_factor;
+  lua_pop(L, 1);
+
+  pFont->set_font_color(color);
+  pFont->set_shadow_options(shadowOptions);
+  l_freetype_throw_error_code(L,
+                              pFont->set_ideal_character_size(width, height));
   lua_settop(L, 1);
   return 1;
 }
@@ -335,12 +491,12 @@ int l_freetype_font_clear_cache(lua_State* L) {
   return 0;
 }
 
-#endif
-
 int l_font_get_size(lua_State* L) {
   font* pFont = luaT_getfont(L);
   size_t iMsgLen;
   const char* sMsg = luaT_checkstring(L, 2, &iMsgLen);
+
+  ZoneScoped;
 
   int iMaxWidth = INT_MAX;
   if (!lua_isnoneornil(L, 3))
@@ -356,6 +512,8 @@ int l_font_get_size(lua_State* L) {
 }
 
 int l_font_draw(lua_State* L) {
+  ZoneScoped;
+
   font* pFont = luaT_getfont(L);
   render_target* pCanvas = nullptr;
   if (!lua_isnoneornil(L, 2)) {
@@ -404,6 +562,8 @@ int l_font_draw(lua_State* L) {
 }
 
 int l_font_draw_wrapped(lua_State* L) {
+  ZoneScoped;
+
   font* pFont = luaT_getfont(L);
   render_target* pCanvas = nullptr;
   if (!lua_isnoneornil(L, 2)) {
@@ -451,15 +611,17 @@ int l_font_draw_wrapped(lua_State* L) {
 }
 
 int l_font_draw_tooltip(lua_State* L) {
+  ZoneScoped;
+
   font* pFont = luaT_getfont(L);
   render_target* pCanvas = luaT_testuserdata<render_target>(L, 2);
   size_t iMsgLen;
   const char* sMsg = luaT_checkstring(L, 3, &iMsgLen);
   int iX = static_cast<int>(luaL_checkinteger(L, 4));
   int iY = static_cast<int>(luaL_checkinteger(L, 5));
+  int iW = static_cast<int>(luaL_optinteger(L, 6, 200));
   int iScreenWidth = pCanvas->get_width();
 
-  int iW = 200;  // (for now) hardcoded width of tooltips
   uint32_t iBlack = render_target::map_colour(0x00, 0x00, 0x00);
   uint32_t iWhite = render_target::map_colour(0xFF, 0xFF, 0xFF);
   text_layout oArea = pFont->draw_text_wrapped(nullptr, sMsg, iMsgLen, iX + 2,
@@ -480,6 +642,12 @@ int l_font_draw_tooltip(lua_State* L) {
 
   lua_pushinteger(L, oArea.end_y);
 
+  return 1;
+}
+
+int l_font_is_bitmap(lua_State* L) {
+  font* pFont = luaT_getfont(L);
+  lua_pushboolean(L, dynamic_cast<bitmap_font*>(pFont) != nullptr ? 1 : 0);
   return 1;
 }
 
@@ -523,18 +691,17 @@ int l_layers_persist(lua_State* L) {
 }
 
 int l_layers_depersist(lua_State* L) {
-  layers* pLayers = luaT_testuserdata<layers>(L);
+  void* layers_ud = luaT_testuserdata<layers>(L);
   lua_settop(L, 2);
   lua_insert(L, 1);
   lua_persist_reader* pReader =
       static_cast<lua_persist_reader*>(lua_touserdata(L, 1));
 
-  std::memset(pLayers->layer_contents, 0, sizeof(pLayers->layer_contents));
+  layers* ls = new (layers_ud) layers();
   int iNumLayers;
   if (!pReader->read_uint(iNumLayers)) return 0;
   if (iNumLayers > max_number_of_layers) {
-    if (!pReader->read_byte_stream(pLayers->layer_contents,
-                                   max_number_of_layers)) {
+    if (!pReader->read_byte_stream(ls->layer_contents, max_number_of_layers)) {
       return 0;
     }
     if (!pReader->read_byte_stream(nullptr,
@@ -542,8 +709,7 @@ int l_layers_depersist(lua_State* L) {
       return 0;
     }
   } else {
-    if (!pReader->read_byte_stream(pLayers->layer_contents, iNumLayers))
-      return 0;
+    if (!pReader->read_byte_stream(ls->layer_contents, iNumLayers)) return 0;
   }
   return 0;
 }
@@ -554,6 +720,8 @@ int l_cursor_new(lua_State* L) {
 }
 
 int l_cursor_load(lua_State* L) {
+  ZoneScoped;
+
   cursor* pCursor = luaT_testuserdata<cursor>(L);
   sprite_sheet* pSheet = luaT_testuserdata<sprite_sheet>(L, 2);
   if (pCursor->create_from_sprite(pSheet,
@@ -589,50 +757,53 @@ int l_cursor_position(lua_State* L) {
 /** Construct the helper structure for making a #THRenderTarget. */
 render_target_creation_params l_surface_creation_params(lua_State* L,
                                                         int iArgStart) {
-  render_target_creation_params oParams;
-  oParams.width = static_cast<int>(luaL_checkinteger(L, iArgStart));
-  oParams.height = static_cast<int>(luaL_checkinteger(L, iArgStart + 1));
+  render_target_creation_params params;
+  params.width = static_cast<int>(luaL_checkinteger(L, iArgStart));
+  params.height = static_cast<int>(luaL_checkinteger(L, iArgStart + 1));
+  params.min_width = static_cast<int>(luaL_checkinteger(L, iArgStart + 2));
+  params.min_height = static_cast<int>(luaL_checkinteger(L, iArgStart + 3));
 
-  oParams.fullscreen = false;
-  oParams.present_immediate = false;
-  oParams.direct_zoom = false;
+  params.fullscreen = false;
+  params.present_immediate = false;
+  params.direct_zoom = false;
 
   // Parse string arguments, looking for matching parameter names.
-  for (int iArg = iArgStart + 2, iArgCount = lua_gettop(L); iArg <= iArgCount;
+  for (int iArg = iArgStart + 4, iArgCount = lua_gettop(L); iArg <= iArgCount;
        ++iArg) {
     const char* sOption = luaL_checkstring(L, iArg);
     if (sOption[0] == 0) continue;
 
     if (std::strcmp(sOption, "fullscreen") == 0) {
-      oParams.fullscreen = true;
+      params.fullscreen = true;
     }
     if (std::strcmp(sOption, "present immediate") == 0) {
-      oParams.present_immediate = true;
+      params.present_immediate = true;
     }
     if (std::strcmp(sOption, "direct zoom") == 0) {
-      oParams.direct_zoom = true;
+      params.direct_zoom = true;
     }
   }
 
-  return oParams;
+  return params;
 }
 
 int l_surface_new(lua_State* L) {
   lua_remove(L, 1);  // Value inserted by __call
 
-  render_target_creation_params oParams = l_surface_creation_params(L, 1);
-  render_target* pCanvas = luaT_stdnew<render_target>(L);
-  if (pCanvas->create(&oParams)) return 1;
+  render_target_creation_params params = l_surface_creation_params(L, 1);
+  try {
+    luaT_stdnew<render_target>(L, luaT_environindex, false, params);
+  } catch (const std::exception& ex) {
+    return luaL_error(L, "Could not create render target: %s", ex.what());
+  }
 
-  lua_pushnil(L);
-  lua_pushstring(L, pCanvas->get_last_error());
-  return 2;
+  return 1;
 }
 
 int l_surface_update(lua_State* L) {
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
-  render_target_creation_params oParams = l_surface_creation_params(L, 2);
-  if (pCanvas->update(&oParams)) {
+  render_target_creation_params params = l_surface_creation_params(L, 2);
+  if (pCanvas->update(params)) {
     lua_pushnil(L);
     return 1;
   }
@@ -641,14 +812,9 @@ int l_surface_update(lua_State* L) {
   return 1;
 }
 
-int l_surface_destroy(lua_State* L) {
-  render_target* pCanvas = luaT_testuserdata<render_target>(L);
-  pCanvas->end_frame();
-  pCanvas->destroy();
-  return 1;
-}
-
 int l_surface_fill_black(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   lua_settop(L, 1);
   if (pCanvas->fill_black()) return 1;
@@ -657,7 +823,21 @@ int l_surface_fill_black(lua_State* L) {
   return 2;
 }
 
+int l_surface_fill_colour(lua_State* L) {
+  ZoneScoped;
+
+  render_target* pCanvas = luaT_testuserdata<render_target>(L);
+  uint32_t c = read_color_from_lua(L, 0xFF000000);
+  lua_settop(L, 2);
+  if (pCanvas->fill_colour(c)) return 1;
+  lua_pushnil(L);
+  lua_pushstring(L, pCanvas->get_last_error());
+  return 2;
+}
+
 int l_surface_start_frame(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   lua_settop(L, 1);
   if (pCanvas->start_frame()) return 1;
@@ -667,6 +847,8 @@ int l_surface_start_frame(lua_State* L) {
 }
 
 int l_surface_end_frame(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   lua_settop(L, 1);
   if (pCanvas->end_frame()) return 1;
@@ -676,6 +858,8 @@ int l_surface_end_frame(lua_State* L) {
 }
 
 int l_surface_nonoverlapping(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   if (lua_isnone(L, 2) || lua_toboolean(L, 2) != 0)
     pCanvas->start_nonoverlapping_draws();
@@ -693,6 +877,8 @@ int l_surface_set_blue_filter_active(lua_State* L) {
 }
 
 int l_surface_map(lua_State* L) {
+  ZoneScoped;
+
   lua_pushnumber(
       L, (lua_Number)render_target::map_colour((Uint8)luaL_checkinteger(L, 2),
                                                (Uint8)luaL_checkinteger(L, 3),
@@ -701,6 +887,8 @@ int l_surface_map(lua_State* L) {
 }
 
 int l_surface_rect(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   if (pCanvas->fill_rect(static_cast<uint32_t>(luaL_checkinteger(L, 2)),
                          static_cast<int>(luaL_checkinteger(L, 3)),
@@ -716,9 +904,11 @@ int l_surface_rect(lua_State* L) {
 }
 
 int l_surface_screenshot(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
-  const char* sFile = luaL_checkstring(L, 2);
-  if (pCanvas->take_screenshot(sFile)) {
+  const char* file_path = luaL_checkstring(L, 2);
+  if (pCanvas->take_screenshot(file_path)) {
     lua_settop(L, 1);
     return 1;
   }
@@ -728,6 +918,8 @@ int l_surface_screenshot(lua_State* L) {
 }
 
 int l_surface_push_clip(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   clip_rect rcClip;
   rcClip.x = static_cast<clip_rect::x_y_type>(luaL_checkinteger(L, 2));
@@ -740,6 +932,8 @@ int l_surface_push_clip(lua_State* L) {
 }
 
 int l_surface_pop_clip(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   pCanvas->pop_clip_rect();
   lua_settop(L, 1);
@@ -759,6 +953,8 @@ int l_surface_get_height(lua_State* L) {
 }
 
 int l_surface_scale(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   scaled_items eToScale = scaled_items::none;
   if (lua_isnoneornil(L, 3)) {
@@ -787,6 +983,8 @@ int l_surface_set_caption(lua_State* L) {
 }
 
 int l_surface_get_renderer_details(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   lua_pushstring(L, pCanvas->get_renderer_details());
   return 1;
@@ -794,6 +992,8 @@ int l_surface_get_renderer_details(lua_State* L) {
 
 // Lua to THRenderTarget->setWindowGrab
 int l_surface_set_capture_mouse(lua_State* L) {
+  ZoneScoped;
+
   render_target* pCanvas = luaT_testuserdata<render_target>(L);
   pCanvas->set_window_grab(
       (lua_isnoneornil(L, 2) != 0) ? false : (lua_toboolean(L, 2) != 0));
@@ -841,6 +1041,8 @@ int l_set_colour(lua_State* L) {
 }
 
 int l_line_draw(lua_State* L) {
+  ZoneScoped;
+
   line_sequence* pLine = luaT_testuserdata<line_sequence>(L);
   render_target* pCanvas = luaT_testuserdata<render_target>(L, 2);
   pLine->draw(pCanvas, static_cast<int>(luaL_optinteger(L, 3, 0)),
@@ -858,13 +1060,13 @@ int l_line_persist(lua_State* L) {
 }
 
 int l_line_depersist(lua_State* L) {
-  line_sequence* pLine = luaT_testuserdata<line_sequence>(L);
+  void* line_ud = luaT_testuserdata<line_sequence>(L);
   lua_settop(L, 2);
   lua_insert(L, 1);
   lua_persist_reader* pReader =
       static_cast<lua_persist_reader*>(lua_touserdata(L, 1));
-  new (pLine) line_sequence();
-  pLine->depersist(pReader);
+  line_sequence* line = new (line_ud) line_sequence();
+  line->depersist(pReader);
   return 0;
 }
 
@@ -875,7 +1077,6 @@ void lua_register_gfx(const lua_register_state* pState) {
   {
     lua_class_binding<palette> lcb(pState, "palette", l_palette_new,
                                    lua_metatable::palette);
-    lcb.add_function(l_palette_load, "load");
     lcb.add_function(l_palette_set_entry, "setEntry");
   }
 
@@ -913,6 +1114,7 @@ void lua_register_gfx(const lua_register_state* pState) {
                      lua_metatable::surface);
     lcb.add_function(l_font_draw_tooltip, "drawTooltip",
                      lua_metatable::surface);
+    lcb.add_function(l_font_is_bitmap, "isBitmap");
   }
 
   // BitmapFont
@@ -925,22 +1127,21 @@ void lua_register_gfx(const lua_register_state* pState) {
     lcb.add_function(l_bitmap_font_get_spritesheet, "getSheet",
                      lua_metatable::sheet);
     lcb.add_function(l_bitmap_font_set_sep, "setSeparation");
+    lcb.add_function(l_bitmap_font_set_scale, "setScaleFactor");
   }
 
-#ifdef CORSIX_TH_USE_FREETYPE2
   // FreeTypeFont
   {
     lua_class_binding<freetype_font> lcb(pState, "freetype_font",
                                          l_freetype_font_new,
                                          lua_metatable::freetype_font);
     lcb.set_superclass(lua_metatable::font);
-    lcb.add_function(l_freetype_font_set_spritesheet, "setSheet",
+    lcb.add_function(l_freetype_font_set_font_options, "setFontOptions",
                      lua_metatable::sheet);
     lcb.add_function(l_freetype_font_set_face, "setFace");
     lcb.add_function(l_freetype_font_get_copyright, "getCopyrightNotice");
     lcb.add_function(l_freetype_font_clear_cache, "clearCache");
   }
-#endif
 
   // Layers
   {
@@ -966,8 +1167,8 @@ void lua_register_gfx(const lua_register_state* pState) {
     lua_class_binding<render_target> lcb(pState, "surface", l_surface_new,
                                          lua_metatable::surface);
     lcb.add_function(l_surface_update, "update");
-    lcb.add_function(l_surface_destroy, "destroy");
     lcb.add_function(l_surface_fill_black, "fillBlack");
+    lcb.add_function(l_surface_fill_colour, "fillColour");
     lcb.add_function(l_surface_start_frame, "startFrame");
     lcb.add_function(l_surface_end_frame, "endFrame");
     lcb.add_function(l_surface_nonoverlapping, "nonOverlapping");

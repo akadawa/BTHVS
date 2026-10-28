@@ -22,9 +22,11 @@ SOFTWARE. --]]
 
 -- Note: This file contains UTF-8 text. Make sure your editor is set to UTF-8.
 
+Font("cp437")
 Language("Deutsch", "German", "de", "ger", "deu")
 Inherit("english")
 Inherit("original_strings", 2)
+IsArabicNumerals(true)
 
 -------------------------------  OVERRIDE  ----------------------------------
 diseases.broken_wind.cure = " Therapie: Eine spezielle Mixtur aus der Pharma-Theke sorgt für Windstille." -- original string mentioned inflation, which is plain wrong.
@@ -467,7 +469,6 @@ options_window = {
   custom_resolution = "Benutzerdefiniert...",
   width = "Breite",
   height = "Höhe",
-  audio = "Audio", -- "Globale Audio-Einstellungen" would match eng, but it's too long
   customise = "Spezialeinstellungen",
   folder = "Pfade",
   language = "Spielsprache",
@@ -490,8 +491,6 @@ tooltip.options_window = {
   height = "Gewünschte Bildschirmhöhe eingeben",
   apply = "Die eingegebene Auflösung übernehmen",
   cancel = "Zurückkehren, ohne die Auflösung zu ändern",
-  audio_button = "Sämtliche Toneffekte des Spiels ein- bzw. ausschalten",
-  audio_toggle = "Ein- oder ausschalten",
   customise_button = "Weitere Einstellungen, die Sie ändern können, um Ihr Spielerlebnis anzupassen",
   folder_button = "Verzeichniseinstellungen",
   language = "Die Sprache, in der Texte im Spiel erscheinen",
@@ -508,6 +507,17 @@ tooltip.options_window = {
   apply_zoomspeed = "Eingegebene Zoom-Geschwindigkeit anwenden.",
   cancel_zoomspeed = "Ohne Änderung der Zoom-Geschwindigkeit zurückkehren.",
   hotkey = "Tastenkürzel ändern.",
+}
+
+audio_window = {
+  audio = "Audio", -- "Globale Audio-Einstellungen" would match eng, but it's too long
+  jukebox = "Jukebox",
+  back = "Zurück",
+}
+
+tooltip.audio_window = {
+  audio_button = "Sämtliche Toneffekte des Spiels ein- bzw. ausschalten",
+  audio_toggle = "Ein- oder ausschalten",
 }
 
 customise_window = {
@@ -567,7 +577,7 @@ tooltip.folders_window = {
   no_font_specified = "Kein Schriftverzeichnis festgelegt!",
   not_specified = "Kein Verzeichnis festgelegt!",
   default = "Standard",
-  reset_to_default = "Das Verzeichnis zur Standardeinstellung zurücksetzen",
+  reset_to_default = "Das Verzeichnis zur Standardeinstellung zurücksetzen (%1%)",
   --
   back = "Dieses Menü schließen und zum Einstellungsmenü zurückkehren",
 }
@@ -701,6 +711,10 @@ handyman_window = {
   parcel = "Grundstück",
 }
 
+tooltip.toolbar = {
+  machine_menu = "Maschinenmenü",
+}
+
 tooltip.handyman_window = {
   parcel_select = "Der Arbeitsbereich des Handlangers. Klicken zum Ändern.",
 }
@@ -748,7 +762,7 @@ errors = {
   no_games_to_contine = "Es gibt keine Spielstände.",
   load_quick_save = "Fehler: Der Schnellspeicherspielstand konnte nicht geladen werden, weil er nicht existiert. Kein Grund zur Sorge, wir haben nun einen für Sie erzeugt!",
   map_file_missing = "Die Kartendatei %s für das Level konnte nicht gefunden werden!",
-  minimum_screen_size = "Bitte eine Auflösung von mindestens 640×480 eingeben.",
+  minimum_screen_size = "Bitte eine Auflösung von mindestens %d×%d eingeben.",
   unavailable_screen_size = "Die gewünschte Auflösung ist im Vollbildmodus nicht verfügbar.",
   alien_dna = "BEACHTEN SIE: Für außerirdische Patienten gibt es keine Animationen für das Sitzen, das Öffnen von Türen, das Anklopfen, usw. Daher werden sie, wie bei Theme Hospital, normal aussehen und sich dann wieder zurückverwandeln. Patienten mit außerirdischer DNA werden nur auftauchen, wenn sie in der Leveldatei gesetzt sind.",
   fractured_bones = "BEACHTEN SIE: Die Animation für weibliche Patienten mit gebrochenen Knochen ist nicht perfekt.",

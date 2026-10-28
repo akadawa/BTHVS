@@ -7,12 +7,25 @@ endif()
 # Project Declaration
 project(CorsixTH)
 
+if(WITH_FONT AND FETCH_UNICODE_FONT)
+  message(WARNING "CorsixTH will attempt to use the WITH_FONT value ${WITH_FONT} before the fetched Unicode font.")
+endif()
+
 if(MSVC)
   # We want to bind against the very latest versions of the MSVC runtimes
   add_definitions(/D "_BIND_TO_CURRENT_VCLIBS_VERSION=1")
   # Suppress warnings about insecure functions
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
+
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+#include <atomic>
+int main() {
+  std::atomic<double> d {0.0};
+  return static_cast<int>(d.load());
+}
+" ATOMIC_BUILTIN)
 
 set(CORSIX_TH_SEARCH_LOCAL_DATADIRS ${SEARCH_LOCAL_DATADIRS})
 
@@ -89,21 +102,31 @@ if(UNIX AND NOT APPLE)
   set_target_properties(CorsixTH PROPERTIES OUTPUT_NAME corsix-th)
 endif()
 
+if(NOT ATOMIC_BUILTIN)
+  target_link_libraries(CorsixTH_lib PRIVATE atomic)
+endif()
+
 # Generate source files list
 # Note: Done after generating targets
 add_subdirectory(${PROJECT_SOURCE_DIR}/Src)
 add_subdirectory(${PROJECT_SOURCE_DIR}/SrcUnshared)
 
 # Set language standard
-set_property(TARGET CorsixTH_lib PROPERTY CXX_STANDARD 14)
+set_property(TARGET CorsixTH_lib PROPERTY CXX_STANDARD 17)
 set_property(TARGET CorsixTH_lib PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET CorsixTH_lib PROPERTY CXX_STANDARD_REQUIRED ON)
 
-set_property(TARGET CorsixTH PROPERTY CXX_STANDARD 14)
+set_property(TARGET CorsixTH PROPERTY CXX_STANDARD 17)
 set_property(TARGET CorsixTH PROPERTY CXX_EXTENSIONS OFF)
 set_property(TARGET CorsixTH PROPERTY CXX_STANDARD_REQUIRED ON)
 
 ## Finding libraries
+if(NOT VCPKG_TARGET_TRIPLET)
+  find_package(PkgConfig QUIET)
+endif()
+
+find_package(ZLIB REQUIRED)
+target_link_libraries(CorsixTH_lib PRIVATE ZLIB::ZLIB)
 
 # Find SDL
 if(VCPKG_TARGET_TRIPLET)
@@ -130,8 +153,9 @@ endif()
 
 # Find Lua
 if(VCPKG_TARGET_TRIPLET)
-  find_package(Lua CONFIG REQUIRED)
-  target_link_libraries(CorsixTH_lib PUBLIC lua)
+  find_package(Lua REQUIRED)
+  target_include_directories(CorsixTH_lib PUBLIC ${LUA_INCLUDE_DIRS})
+  target_link_libraries(CorsixTH_lib PUBLIC ${LUA_LIBRARIES})
 else()
   find_package(Lua REQUIRED)
   if(Lua_FOUND OR LUA_FOUND)
@@ -162,28 +186,26 @@ find_package(Threads)
 target_link_libraries(CorsixTH PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
 # Find SDL_mixer
-if(CORSIX_TH_USE_SDL_MIXER)
-  if(VCPKG_TARGET_TRIPLET)
-    find_package(SDL2_mixer CONFIG REQUIRED)
-    target_link_libraries(
-      CorsixTH_lib
-      PUBLIC
-        $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
+if(VCPKG_TARGET_TRIPLET)
+  find_package(SDL2_mixer CONFIG REQUIRED)
+  target_link_libraries(
+    CorsixTH_lib
+    PUBLIC
+      $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
+else()
+  find_package(SDL2_mixer REQUIRED)
+  if(SDLMIXER_FOUND)
+    target_link_libraries(CorsixTH_lib PUBLIC ${SDLMIXER_LIBRARY})
+    include_directories(${SDLMIXER_INCLUDE_DIR})
+    message("  SDL_mixer found")
   else()
-    find_package(SDL2_mixer REQUIRED)
-    if(SDLMIXER_FOUND)
-      target_link_libraries(CorsixTH_lib PUBLIC ${SDLMIXER_LIBRARY})
-      include_directories(${SDLMIXER_INCLUDE_DIR})
-      message("  SDL_mixer found")
-    else()
-      message(FATAL_ERROR "Error: SDL_mixer library not found, even though it was selected to be included")
-    endif()
+    message(FATAL_ERROR "Error: SDL_mixer library not found, it is required to build")
   endif()
 endif()
 
 # Find FFMPEG
 if(CORSIX_TH_USE_FFMPEG)
-  find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC AVUTIL SWSCALE SWRESAMPLE REQUIRED)
+  find_package(FFmpeg COMPONENTS AVFORMAT AVCODEC SWSCALE SWRESAMPLE AVUTIL REQUIRED)
   if(FFMPEG_FOUND)
     target_link_libraries(CorsixTH_lib PUBLIC ${FFMPEG_LIBRARIES})
     include_directories(${FFMPEG_INCLUDE_DIRS})
@@ -199,23 +221,21 @@ if(CORSIX_TH_USE_FFMPEG)
 endif()
 
 # Find Freetype2
-if(CORSIX_TH_USE_FREETYPE2)
-  if(VCPKG_TARGET_TRIPLET)
-    find_package(Freetype REQUIRED)
-    target_link_libraries(CorsixTH_lib PUBLIC Freetype::Freetype)
-  else()
-    find_package(Freetype REQUIRED)
-    if(FREETYPE_FOUND)
-      target_link_libraries(CorsixTH_lib PUBLIC ${FREETYPE_LIBRARIES})
-      include_directories(${FREETYPE_INCLUDE_DIRS})
-      if(APPLE)
-        target_link_libraries(CorsixTH_lib PRIVATE libz.dylib)
-        target_link_libraries(CorsixTH_lib PRIVATE libbz2.dylib)
-      endif()
-      message("  FreeType2 found")
-    else()
-      message(FATAL_ERROR "Error: FreeType2 library not found, even though it was selected to be used")
+if(VCPKG_TARGET_TRIPLET)
+  find_package(Freetype REQUIRED)
+  target_link_libraries(CorsixTH_lib PUBLIC Freetype::Freetype)
+else()
+  find_package(Freetype REQUIRED)
+  if(FREETYPE_FOUND)
+    target_link_libraries(CorsixTH_lib PUBLIC ${FREETYPE_LIBRARIES})
+    include_directories(${FREETYPE_INCLUDE_DIRS})
+    if(APPLE)
+      target_link_libraries(CorsixTH_lib PRIVATE libz.dylib)
+      target_link_libraries(CorsixTH_lib PRIVATE libbz2.dylib)
     endif()
+    message("  FreeType2 found")
+  else()
+    message(FATAL_ERROR "Error: FreeType2 library not found, it is required to build")
   endif()
 endif()
 
@@ -247,6 +267,67 @@ if(CORSIX_TH_LINK_LUA_MODULES)
   endif()
 else()
   message("Lua modules are not linked and will be loaded at runtime")
+endif()
+
+# Find libpng
+find_package(PNG REQUIRED)
+target_link_libraries(CorsixTH_lib PRIVATE PNG::PNG)
+
+if(WITH_MIDI_DEVICE)
+  find_package(RtMidi)
+  if(NOT RtMidi_FOUND AND PkgConfig_FOUND)
+    pkg_search_module(RTMIDI REQUIRED rtmidi)
+    if(RTMIDI_FOUND)
+      add_library(RtMidi::rtmidi INTERFACE IMPORTED)
+      set_target_properties(RtMidi::rtmidi PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${RTMIDI_INCLUDE_DIRS}"
+        INTERFACE_LINK_LIBRARIES "${RTMIDI_LIBRARIES}")
+      set(RtMidi_FOUND TRUE)
+    endif()
+  endif()
+  if(RtMidi_FOUND)
+    message("  RtMidi found")
+    target_link_libraries(CorsixTH_lib PRIVATE RtMidi::rtmidi)
+  else()
+    message(FATAL_ERROR "Error: RtMidi was not found. If not available, compile WITH_MIDI_DEVICE=OFF")
+  endif()
+endif()
+
+if(FETCH_SOUNDFONT)
+  include(FetchContent)
+
+  fetchcontent_declare(
+    FluidR3
+    URL https://raw.githubusercontent.com/Jacalz/fluid-soundfont/master/SF3/FluidR3.sf3
+    URL_HASH SHA256=32039e039c2f708467a6f171fbfd9fecdcadfe40a2327837c391490c8de70021
+    DOWNLOAD_NO_EXTRACT TRUE)
+
+  fetchcontent_makeavailable(FluidR3)
+  set(FLUIDR3_FILE ${fluidr3_SOURCE_DIR}/FluidR3.sf3)
+endif()
+
+if(FETCH_UNICODE_FONT)
+  include(FetchContent)
+
+  fetchcontent_declare(
+    GoNoto
+    URL https://github.com/satbyy/go-noto-universal/releases/download/v7.0/GoNotoKurrent-Regular.ttf
+    URL_HASH SHA256=2f2cee5fbb2403df352ca2005247f6c4faa70f3086ebd31b6c62308b5f2f9865
+    DOWNLOAD_NO_EXTRACT TRUE
+    DOWNLOAD_NAME CorsixTHUnicode.ttf)
+
+  fetchcontent_makeavailable(GoNoto)
+  set(GONOTO_FILE ${gonoto_SOURCE_DIR}/CorsixTHUnicode.ttf)
+endif()
+
+if(WITH_TRACY)
+  # If tracy is compiled on a machine with rocprofiler installed it
+  # automatically adds it as a dependency. Using an optional find_package
+  # before finding Tracy allows that dependency to resolve.
+  find_package(rocprofiler-sdk QUIET)
+
+  find_package(Tracy CONFIG REQUIRED)
+  target_link_libraries(CorsixTH_lib PUBLIC Tracy::TracyClient)
 endif()
 
 # Launch script to facilitate out of source builds
@@ -283,16 +364,25 @@ if(NOT USE_SOURCE_DATADIRS)
     install(FILES CorsixTH.ico DESTINATION ${CORSIX_TH_DATADIR})
 
     # Install dependencies
-    file(GLOB DLL_DEPS "${CMAKE_CURRENT_BINARY_DIR}/*.dll")
-    install(FILES ${DLL_DEPS} DESTINATION ${CORSIX_TH_DATADIR})
-    file(GLOB LUA_DEPS "${CMAKE_CURRENT_BINARY_DIR}/*.lua")
-    install(FILES ${LUA_DEPS} DESTINATION ${CORSIX_TH_DATADIR})
-    if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/mime")
-      install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/mime" "${CMAKE_CURRENT_BINARY_DIR}/socket" DESTINATION ${CORSIX_TH_DATADIR})
+    if(CMAKE_CONFIGURATION_TYPES)
+      install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+        DESTINATION ${CORSIX_TH_DATADIR}
+        FILES_MATCHING
+        PATTERN "*.dll"
+        PATTERN "*.lua"
+      )
+    else()
+      install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/"
+        DESTINATION ${CORSIX_TH_DATADIR}
+        FILES_MATCHING
+        PATTERN "*.dll"
+        PATTERN "*.lua"
+      )
     endif()
+
     # Include this module to search for compiler-provided system runtime
     # libraries and add install rules for them.
-    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ".")
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION ${CORSIX_TH_DATADIR})
     include(InstallRequiredSystemLibraries)
   else()
     install(TARGETS CorsixTH
@@ -303,9 +393,16 @@ if(NOT USE_SOURCE_DATADIRS)
   endif()
   install(DIRECTORY Campaigns Lua Levels DESTINATION ${CORSIX_TH_DATADIR})
   install(DIRECTORY Bitmap DESTINATION ${CORSIX_TH_DATADIR}
-    FILES_MATCHING REGEX ".*\\.(tab|pal|dat|png)$"
+    FILES_MATCHING REGEX ".*\\.(tab|pal|dat|png|pl8)$"
   )
   install(FILES CorsixTH.lua ../LICENSE.txt DESTINATION ${CORSIX_TH_DATADIR})
+
+  if(FETCH_SOUNDFONT)
+    install(FILES ${FLUIDR3_FILE} DESTINATION ${CORSIX_TH_DATADIR})
+  endif()
+  if(FETCH_UNICODE_FONT)
+    install(FILES ${GONOTO_FILE} DESTINATION ${CORSIX_TH_DATADIR})
+  endif()
 
   if(UNIX AND NOT APPLE)
     install(FILES corsix-th.6 DESTINATION ${CMAKE_INSTALL_MANDIR}/man6)

@@ -60,7 +60,7 @@ end
 --!param x (int) Vertical position of the tile to query in the map.
 --!return ID of the room at the queried tile.
 function Map:getRoomId(x, y)
-  return self.th:getCellFlags(math.floor(x), math.floor(y)).roomId
+  return self.th:getRoomId(math.floor(x), math.floor(y))
 end
 
 function Map:setPlayerCount(count)
@@ -417,8 +417,8 @@ function Map:loadMapConfig(filename, config, custom)
         for i = 2, nkeys + 1 do
           local key = parts[1] .. parts[i]
           local t, n
-          for name in key:gmatch("[^.%[%]]+") do
-            name = tonumber(name) or name
+          for match in key:gmatch("[^.%[%]]+") do
+            local name = tonumber(match) or match
             if t then
               if not t[n] then
                 t[n] = {}

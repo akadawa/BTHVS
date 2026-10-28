@@ -30,8 +30,10 @@ Artsen; Zusters; Conciërges; Receptionistes
 
 ---------------------------------------------------------------------------------]]
 
+Font("cp437")
 Language("Nederlands", "Dutch", "nl", "dut", "nld")
 Inherit("English")
+IsArabicNumerals(true)
 
 newspaper = {
   [1] = {
@@ -310,12 +312,10 @@ options_window = {
   back = "Terug",
   cancel = "Annuleren",
   folder = "Mappen",
-  audio = "Audio algemeen",
   customise = "Aangepast",
   capture_mouse = "Cursor Vangen",
   check_for_updates = "Controleren op Updates",
   hotkey = "Sneltoetsen",
-  jukebox = "Jukebox",
   option_disabled = "Uitgeschakeld",
   option_enabled = "Ingeschakeld",
   right_mouse_scrolling = "Muis Scrollen",
@@ -324,6 +324,11 @@ options_window = {
   scrollspeed = "Scrollsnelheid",
   shift_scrollspeed = "Shift Scrollsnelheid",
   zoom_speed = "Zoomsnelheid",
+}
+audio_window = {
+  audio = "Audio algemeen",
+  jukebox = "Jukebox",
+  back = "Terug",
 }
 load_game_window = {
   caption = "Spel laden (%1%)",
@@ -1299,9 +1304,7 @@ tooltip = {
     width = "Voer de gewenste horizontale resolutie in",
     language = "Kies %s als taal",
     back = "Sluit het instellingenvenster",
-    audio_button = "Zet alle spelgeluiden aan of uit.",
     folder_button = "Mapopties.",
-    audio_toggle = "Zet aan of uit.",
     customise_button = "Meer instellingen om je spel aan te passen.",
     apply_scrollspeed = "Pas de ingevoerde scrollsnelheid toe.",
     apply_shift_scrollspeed = "Pas de ingevoerde shift-scrollsnelheid toe.",
@@ -1312,12 +1315,16 @@ tooltip = {
     capture_mouse = "Klik om de cursor te vangen in het spelvenster",
     check_for_updates = "Stel in of het spel bij het opstarten naar updates moet zoeken.",
     hotkey = "Pas sneltoetsen aan.",
-    jukebox = "Open de Jukebox om de muziek te bedienen",
     language_dropdown_no_font = "Selecteer een lettertype in de spelinstellingen om deze taal in te schakelen",
     right_mouse_scrolling = "Wissel de muisknop die wordt gebruikt om door de kaart te scrollen",
     scrollspeed = "Stel de scrollsnelheid in tussen 1 (langzaamst) en 10 (snelst). De standaard waarde is 2",
     shift_scrollspeed = "Stel de shift-scrollsnelheid in tussen 1 (langzaamst) en 10 (snelst). De standaard waarde is 4",
     zoom_speed = "Stel de zoomsnelheid van de camera in van 10 (langzaamst) en 1000 (snelst). De standaard waarde is 80",
+  },
+  audio_window = {
+    audio_button = "Zet alle spelgeluiden aan of uit.",
+    audio_toggle = "Zet aan of uit.",
+    jukebox = "Open de Jukebox om de muziek te bedienen",
   },
   research_policy = {
     research_progress = "Voortgang tot de volgende ontdekking in deze categorie: %1%/%2%",
@@ -1351,7 +1358,7 @@ tooltip = {
     browse_screenshots = "Zoek naar een andere locatie voor je screenshots map ( huidige locatie: %1% ) ",
     not_specified = "Nog geen map ingesteld!",
     font_location = "Locatie van een lettertype bestand dat de Unicode karakters van je taal kan weergeven. Als dit niet is ingesteld is het niet mogelijk talen te kiezen die meer karakters nodig hebben dan het originele spel kan tonen. Bijvoorbeeld Russisch of Chinees.",
-    reset_to_default = "Herstel de map naar de standaard locatie.",
+    reset_to_default = "Herstel de map naar de standaard locatie ( %1% )",
     default = "Standaard locatie.",
     no_font_specified = "Nog geen lettertype locatie ingesteld!",
     music_location = "Selecteer de locatie van je MP3 bestanden. Deze moet van te voren zijn gemaakt, zoek vervolgens hier naar de locatie.",
@@ -2262,7 +2269,7 @@ errors = {
   load_prefix = "Fout bij het laden van het spel: ",
   save_prefix = "Fout bij het opslaan van het spel: ",
   map_file_missing = "Bestand %s voor dit level is niet gevonden!",
-  minimum_screen_size = "Voer een resolutie in van minstens 640x480.",
+  minimum_screen_size = "Voer een resolutie in van minstens %dx%d.",
   unavailable_screen_size = "De resolutie die je hebt ingevoerd is niet beschikbaar in fullscreen",
   alien_dna = "LET OP: Er zijn geen animaties voor alien patiënten die zitten, op deuren kloppenen, deuren openen, enz. Daarom veranderen ze naar een normaal mens als ze dit doen en veranderen dan weer terug, net als in Them Hospital.  Patiënten met alien-DNA verschijnen alleen wanneer dit in het level is toegestaan.",
   fractured_bones = "LET OP: De animatie voor vrouwelijke patiënten met gebrokken botten is niet goed.",

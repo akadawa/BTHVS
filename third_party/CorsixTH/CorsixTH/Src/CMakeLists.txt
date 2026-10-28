@@ -7,6 +7,7 @@ target_sources(CorsixTH_lib
     ${CMAKE_CURRENT_SOURCE_DIR}/bootstrap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/iso_fs.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_rnc.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/midi_player.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/persist_lua.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/run_length_encoder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sdl_audio.cpp
@@ -22,6 +23,7 @@ target_sources(CorsixTH_lib
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_iso.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_lfs_ext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_map.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_midi.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_movie.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_sound.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_strings.cpp
@@ -42,6 +44,7 @@ target_sources(CorsixTH_lib
     ${CMAKE_CURRENT_SOURCE_DIR}/bootstrap.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cp437_table.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cp936_table.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpmik_table.h
     ${CMAKE_CURRENT_SOURCE_DIR}/iso_fs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_rnc.h
     ${CMAKE_CURRENT_SOURCE_DIR}/lua_sdl.h
@@ -53,6 +56,7 @@ target_sources(CorsixTH_lib
     ${CMAKE_CURRENT_SOURCE_DIR}/th_gfx_sdl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua.h
     ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_internal.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/th_lua_ui.h
     ${CMAKE_CURRENT_SOURCE_DIR}/th_map.h
     ${CMAKE_CURRENT_SOURCE_DIR}/th_map_overlays.h
     ${CMAKE_CURRENT_SOURCE_DIR}/th_movie.h

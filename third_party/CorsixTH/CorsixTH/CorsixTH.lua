@@ -74,9 +74,9 @@ end
 corsixth.require("utility")
 
 -- Check Lua version
-local support = list_to_set({"Lua 5.1", "Lua 5.2", "Lua 5.3", "Lua 5.4"})
+local support = list_to_set({"Lua 5.1", "Lua 5.2", "Lua 5.3", "Lua 5.4", "Lua 5.5"})
 if not support[_VERSION] then
-  error "Please recompile CorsixTH and link against Lua version 5.1, 5.2, 5.3 or 5.4"
+  error "Please recompile CorsixTH and link against Lua version 5.1 to 5.5"
 end
 if _VERSION ~= "Lua 5.1" then
   -- Compatibility: Keep the global unpack function
@@ -102,14 +102,13 @@ strict_declare_global "TheApp"
 TheApp = App()
 TheApp:setCommandLine(
   "--bitmap-dir=" ..base_dir.. "Bitmap",
-  "--config-file=" .. select(1, corsixth.require("config_finder")),
-  "--hotkeys-file=" .. select(4, corsixth.require("config_finder")),
+  "--config-file=" .. corsixth.require("config_finder").config_filename,
+  "--hotkeys-file=" .. corsixth.require("config_finder").hotkeys_filename,
   -- If a command line option is given twice, the later one is used, hence
   -- if the user gave one of the above, that will be used instead.
   ...
 )
 assert(TheApp:init())
-return TheApp:run()
 
 --[[!file
 ! Application bootstrap code

@@ -30,6 +30,7 @@ object.build_preview_animation = 908
 object.default_strength = 10
 object.crashed_animation = 3362
 object.show_in_town_map = true
+object.smoke_animation = 3424
 local function copy_north_to_south(t)
   t.south = t.north
   return t
@@ -62,6 +63,7 @@ object.orientations = {
     footprint = { {-1, -1}, {0, -1, need_north_side = true}, {1, -1, only_passable = true},
                   {-1, 0}, {0, 0}, {1, 0, only_passable = true},
                   {-1, 1, only_passable = true}, {0, 1, only_passable = true}, {1, 1, only_passable = true} },
+    smoke_position = {0, 0},
   },
   east = {
     handyman_position = {-1, 1},
@@ -72,6 +74,7 @@ object.orientations = {
     footprint = { {-1, -1}, {0, -1}, {1, -1, only_passable = true},
                   {-1, 0, need_west_side = true}, {0, 0}, {1, 0, only_passable = true},
                   {-1, 1, only_passable = true}, {0, 1, only_passable = true}, {1, 1, only_passable = true} },
+    smoke_position = {0, 0},
   },
 }
 local anim_mgr = TheApp.animation_manager
@@ -80,5 +83,8 @@ anim_mgr:setPatientMarker(object.multi_usage_animations["Standard Male Patient -
 kf1, kf2 = {0, 0}, {1, 0}
 anim_mgr:setPatientMarker(object.multi_usage_animations["Standard Male Patient - Doctor"].north.finish_use, 1, kf1, 11, kf2)
 anim_mgr:setPatientMarker(object.idle_animations.north, {-0.9, -1.0})
+
+anim_mgr:setStaffMarker(object.usage_animations.north.in_use.Handyman, {59, -3, "px"})
+anim_mgr:setStaffMarker(object.usage_animations.south.in_use.Handyman, {59, -3, "px"})
 
 return object

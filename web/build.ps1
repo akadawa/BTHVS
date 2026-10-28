@@ -1,4 +1,4 @@
-# Builds the browser version of CorsixTH into dist/ (needs tools/emsdk, see README).
+# Builds the browser version of CorsixTH v0.70.2 into dist/ (needs tools/emsdk, see README).
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
@@ -11,7 +11,20 @@ $stage = "$build\stage\corsixth"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force $stage | Out-Null
 $src = "$root\third_party\CorsixTH\CorsixTH"
-foreach ($d in "Lua","Bitmap","Levels","Campaigns") { Copy-Item -Recurse "$src\$d" "$stage\$d" }
+
+# Stage Lua scripts and Levels; keep Campaigns directory empty (multiplayer-only)
+foreach ($d in "Lua","Levels") { Copy-Item -Recurse "$src\$d" "$stage\$d" }
+New-Item -ItemType Directory -Force "$stage\Campaigns" | Out-Null
+
+# Stage only runtime Bitmap assets (matching upstream CMakeLists.txt, excluding
+# developer .bmp/.spec/.lua source files and unused standalone mainmenu*.dat backgrounds)
+New-Item -ItemType Directory -Force "$stage\Bitmap" | Out-Null
+Get-ChildItem -File "$src\Bitmap" | Where-Object {
+  $_.Extension -match '^\.(tab|pal|dat|png|pl8)$' -and $_.Name -notmatch '^mainmenu\d+\.dat$'
+} | ForEach-Object {
+  Copy-Item $_.FullName "$stage\Bitmap\$($_.Name)"
+}
+
 Copy-Item "$src\CorsixTH.lua" "$stage\CorsixTH.lua"
 
 New-Item -ItemType Directory -Force "$build\wasm" | Out-Null
@@ -45,5 +58,4 @@ $manifest = [ordered]@{
 } | ConvertTo-Json
 [System.IO.File]::WriteAllText("$root\dist\game\build.json", $manifest, (New-Object System.Text.UTF8Encoding $false))
 
-Write-Host "Build done -> dist/game (hash: $combinedHash)"
-
+Write-Host "Build done -> dist/game (hash: $combinedHash | wasm: $($wasmFile.Length) B | data: $($dataFile.Length) B)"

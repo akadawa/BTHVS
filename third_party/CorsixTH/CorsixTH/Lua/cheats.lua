@@ -52,6 +52,8 @@ function Cheats:Cheats(hospital)
     {name = "decrease_prices", func = self.cheatDecreasePrices},
     {name = "reset_death_count", func = self.cheatResetDeathCount},
     {name = "max_reputation",  func = self.cheatMaxReputation},
+    {name = "repair_all_machines", func = self.cheatRepairAllMachines},
+    {name = "toggle_invulnerable_machines", func = self.cheatToggleInvulnerableMachines},
   }
 
   self.active_cheats = {} -- Toggle cheat status
@@ -209,6 +211,39 @@ function Cheats:cheatDecreasePrices()
   end
 end
 
+function Cheats:cheatResetDeathCount()
+  self.hospital:resetDeathCount()
+end
+
+function Cheats:cheatMaxReputation()
+  local hosp = self.hospital
+  hosp:unconditionalChangeReputation(hosp.reputation_max)
+end
+
+--! Instantly repairs all of the player's machines (regardless of condition, without decreasing strength)
+function Cheats:cheatRepairAllMachines()
+  local world = self.hospital.world
+  local machines = world:getPlayerMachines()
+
+  for _, machine in ipairs(machines) do
+    machine:machineRepaired(machine:getRoom(), false)
+  end
+end
+
+--! Toggles machine invulnerability (no wear or explosions)
+function Cheats:cheatToggleInvulnerableMachines()
+  local msg
+
+  if self:isCheatActive("invulnerable_machines") then
+    msg = _S.misc.invulnerable_machines_off
+  else
+    msg = _S.misc.invulnerable_machines_on
+  end
+
+  self.active_cheats["invulnerable_machines"] = not self.active_cheats["invulnerable_machines"]
+  return true, msg
+end
+
 --[[Begin toggle-based cheat functions]]
 
 --! Enable Roujin's challenge (spawn rate cheat)
@@ -238,6 +273,28 @@ function Cheats:noRestOff()
   self.active_cheats["no_rest_cheat"] = nil
 end
 
+--! Enable queue jump cheat (for nearly dead patients)
+function Cheats:queueJumpOn()
+  self.active_cheats.queuejump = true
+end
+
+--! Disable queue jump cheat (so that nearly dead patients queue regularly)
+function Cheats:queueJumpOff()
+  self.active_cheats.queuejump = false
+end
+
+--! Enable super doctors cheat (all doctors for hire have maximum skills)
+function Cheats:superDoctorOn()
+  self.active_cheats.super_doctor = true
+  self.hospital.world:makeAvailableStaff(self.hospital.world.game_date:monthOfGame())
+end
+
+--! Disable super doctors cheat (immediately return to the normal doctors available in the for hire dialog)
+function Cheats:superDoctorOff()
+  self.active_cheats.super_doctor = false
+  self.hospital.world:makeAvailableStaff(self.hospital.world.game_date:monthOfGame())
+end
+
 --[[End toggle-based cheat functions]]
 
 --[[ The toggle_cheats list (code operated cheats)
@@ -260,6 +317,22 @@ local toggle_cheats = {
     disableAnnouncement = _A.cheats.norest_off_cheat,
     lower = 185.5,
     upper = 185.6,
+  },
+  queuejump = {
+    enable = Cheats.queueJumpOn,
+    disable = Cheats.queueJumpOff,
+    enableAnnouncement = _A.cheats.queuejump_on_cheat,
+    disableAnnouncement = _A.cheats.queuejump_off_cheat,
+    lower = 200.5,
+    upper = 200.6,
+  },
+  super_doctor = {
+    enable = Cheats.superDoctorOn,
+    disable = Cheats.superDoctorOff,
+    enableAnnouncement = _A.cheats.superdoctor_on_cheat,
+    disableAnnouncement = _A.cheats.superdoctor_off_cheat,
+    lower = 301.5,
+    upper = 301.6,
   },
 }
 
@@ -306,13 +379,4 @@ function Cheats:toggleCheat(name)
   if cheatWindow then
     cheatWindow:updateCheatedStatus()
   end
-end
-
-function Cheats:cheatResetDeathCount()
-  self.hospital:resetDeathCount()
-end
-
-function Cheats:cheatMaxReputation()
-  local hosp = self.hospital
-  hosp:unconditionalChangeReputation(hosp.reputation_max)
 end

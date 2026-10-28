@@ -149,8 +149,8 @@ function UI:UI(app, minimal)
   if minimal then
     self.tooltip_font = app.gfx:loadBuiltinFont()
   else
-    local palette = app.gfx:loadPalette("QData", "PREF01V.PAL", true)
-    self.tooltip_font = app.gfx:loadFontAndSpriteTable("QData", "Font00V", false, palette)
+    local palette = app.gfx:getPalette("Pref01V.pal")
+    self.tooltip_font = app.gfx:loadFontAndSpriteTable("QData", "Font00V", false, palette, { apply_ui_scale = true })
   end
   self.tooltip = nil
   self.tooltip_counter = 0
@@ -193,9 +193,8 @@ function UI:UI(app, minimal)
   end
 
   self:setCursor(self.default_cursor)
-
-
   self:setupGlobalKeyHandlers()
+  self.casebook_selected_disease = false
 end
 
 function UI:runDebugScript()
@@ -215,6 +214,7 @@ function UI:setupGlobalKeyHandlers()
   self:addKeyHandler("global_cancel_alt", self, self.closeWindow)
   self:addKeyHandler("global_stop_movie", self, self.stopMovie)
   self:addKeyHandler("global_stop_movie_alt", self, self.stopMovie)
+  self:addKeyHandler("global_pause_movie", self, self.pauseMovie)
   self:addKeyHandler("global_screenshot", self, self.makeScreenshot)
   self:addKeyHandler("global_fullscreen_toggle", self, self.fullscreenHotkey)
   self:addKeyHandler("global_exitApp", self, self.exitApplication)
@@ -224,11 +224,28 @@ function UI:setupGlobalKeyHandlers()
   self:addOrRemoveDebugModeKeyHandlers()
 end
 
--- Used for everything except music and announcements
-function UI:playSound(name, played_callback, played_callback_delay)
+--! Play a sound effect
+--!param name (string) The name of the sound to be played. Can include
+--  wildcards (*).
+--!param played_callback (function) A function to be called when the sound has
+--  finished playing. Can be nil.
+--!param played_callback_delay (integer) An optional delay in milliseconds
+--  before the played_callback is called.
+--!param loops (integer) number of times to play the audio. -1 for infinite.
+--!return (table) A `sound` table for passing into functions that act on the
+--  playing sound. The fields are an implementation detail that should not be
+--  used outside of the Audio class.
+function UI:playSound(name, played_callback, played_callback_delay, loops)
   if self.app.config.play_sounds then
-    self.app.audio:playSound(name, nil, false, played_callback, played_callback_delay)
+    return self.app.audio:playSound(name, nil, false, played_callback, played_callback_delay, loops)
   end
+end
+
+--! Stop the given sound
+-- see Audio:stopSound
+--!param sound (table) sound to stop
+function UI:stopSound(sound)
+  self.app.audio:stopSound(sound)
 end
 
 -- Stub with args for subclass GameUI.
@@ -278,7 +295,7 @@ function UI:drawTooltip(canvas)
   end
 
   if self.tooltip_font then
-    self.tooltip_font:drawTooltip(canvas, self.tooltip.text, x, y)
+    self.tooltip_font:drawTooltip(canvas, self.tooltip.text, x, y, 200 * TheApp.config.ui_scale)
   end
 end
 
@@ -505,6 +522,10 @@ end
 --! set game window is selected. If no image fits that criteria the smallest
 --! available image is used.
 function UI:setMenuBackground()
+  if package.loaded.web then
+    self.background = false
+    return
+  end
   local screen_h = self.app.config.height
   local bg_size_idx = 1
 
@@ -571,8 +592,23 @@ function UI:unregisterHotkeyBox(box)
 end
 
 function UI:changeResolution(width, height)
+  local scale_changed = false
+  if package.loaded.web and TheApp.config.ui_scale and TheApp.config.ui_scale > 1 then
+    local max_scale = math.max(1, math.floor(math.min(
+        width / App.MIN_WINDOW_WIDTH,
+        height / App.MIN_WINDOW_HEIGHT)))
+    if TheApp.config.ui_scale > max_scale then
+      TheApp.config.ui_scale = max_scale
+      scale_changed = true
+    end
+  end
   self.app:prepareVideoUpdate()
-  local error_message = self.app.video:update(width, height, unpack(self.app.modes))
+  local error_message = self.app.video:update(
+      width,
+      height,
+      App.MIN_WINDOW_WIDTH * TheApp.config.ui_scale,
+      App.MIN_WINDOW_HEIGHT * TheApp.config.ui_scale,
+      unpack(self.app.modes))
   self.app:finishVideoUpdate()
 
   if error_message then
@@ -593,6 +629,9 @@ function UI:changeResolution(width, height)
   self.app:saveConfig()
 
   self:onChangeResolution()
+  if scale_changed then
+    TheApp.gfx:onChangeUIScale()
+  end
 
   return true
 end
@@ -670,7 +709,10 @@ function UI:toggleFullscreen()
 
   local success = true
   self.app:prepareVideoUpdate()
-  local error_message = self.app.video:update(self.app.config.width, self.app.config.height, unpack(modes))
+  local error_message = self.app.video:update(self.app.config.width, self.app.config.height,
+      self.app.MIN_WINDOW_WIDTH * self.app.config.ui_scale,
+      self.app.MIN_WINDOW_HEIGHT * self.app.config.ui_scale,
+      unpack(self.app.modes))
   self.app:finishVideoUpdate()
 
   if error_message then
@@ -695,22 +737,36 @@ function UI:toggleFullscreen()
   return success
 end
 
---! Called when the user presses a key on the keyboard
---!param rawchar (string) The name of the key the user pressed.
-function UI:onKeyDown(rawchar, modifiers)
-  local handled = false
+--! Private function to determine the key pressed based on current modifiers
+--!param rawchar (string) The key pressed as given by SDL
+--!param modifiers (table) Current key modifiers, e.g. numlock
+--!param btn_maps (table) Used for keydown events only, a table of keys that
+-- are designated to perform mouse actions.
+--!return (string, string) Modified raw character, or false if remapped to a button.
+-- And lowercase or remapped key
+function UI:_determineKeyPressed(rawchar, modifiers, btn_maps)
   -- Apply key-remapping and normalisation
   rawchar = string.sub(rawchar,1,6) == "Keypad" and
             modifiers["numlockactive"] and string.sub(rawchar,8) or rawchar
   local key = rawchar:lower()
-  do
-    local mapped_button = self.key_to_button_remaps[key]
-    if mapped_button then
-      self:onMouseDown(mapped_button, self.cursor_x, self.cursor_y)
-      return true
-    end
-    key = self.key_remaps[key] or key
+  if btn_maps and btn_maps[key] then
+    -- Buttons remaps to mouse
+    self:onMouseDown(btn_maps[key], self.cursor_x, self.cursor_y)
+    return false
   end
+  key = self.key_remaps[key] or key
+
+  return rawchar, key
+end
+
+--! Called when the user presses a key on the keyboard
+--!param rawchar (string) The name of the key the user pressed.
+--!param modifiers (table) The current applied modifiers to key input e.g. numlock
+function UI:onKeyDown(rawchar, modifiers)
+  local handled = false
+  local rawchar_transformed, key = self:_determineKeyPressed(
+      rawchar, modifiers, self.key_to_button_remaps)
+  if not rawchar_transformed then return end
 
   -- Remove numlock modifier
   modifiers["numlockactive"] = nil
@@ -718,14 +774,14 @@ function UI:onKeyDown(rawchar, modifiers)
   -- It will not process any text at this point though.
   for _, box in ipairs(self.textboxes) do
     if box.enabled and box.active and not handled then
-      handled = box:keyInput(key, rawchar)
+      handled = box:keyInput(key, rawchar_transformed)
     end
   end
 
   -- If there is a hotkey box
   for _, hotkeybox in ipairs(self.hotkeyboxes) do
     if hotkeybox.enabled and hotkeybox.active and not handled then
-      handled = hotkeybox:keyInput(key, rawchar, modifiers)
+      handled = hotkeybox:keyInput(key, rawchar_transformed, modifiers)
     end
   end
 
@@ -745,6 +801,7 @@ function UI:onKeyDown(rawchar, modifiers)
     end
   end
 
+  -- Store information about the key
   self.buttons_down[key] = true
   self.modifiers_down = modifiers
   self.key_press_handled = handled
@@ -753,12 +810,9 @@ end
 
 --! Called when the user releases a key on the keyboard
 --!param rawchar (string) The name of the key the user pressed.
-function UI:onKeyUp(rawchar)
-  rawchar = SDL.getKeyModifiers().numlockactive and
-            string.sub(rawchar,1,6) == "Keypad" and string.sub(rawchar,8) or
-            rawchar
-  local key = rawchar:lower()
-
+--!param modifiers (table) The current applied modifiers to key input e.g. numlock
+function UI:onKeyUp(rawchar, modifiers)
+  local _, key = self:_determineKeyPressed(rawchar, modifiers)
   self.buttons_down[key] = nil
 
   -- Go through all the hotkeyboxes.
@@ -801,6 +855,10 @@ function UI:onKeyUp(rawchar)
       end
     end
   end
+
+  -- Clean up
+  self.modifiers_down = nil
+  self.key_press_handled = nil
 end
 
 function UI:onEditingText(text, start, length)
@@ -1015,14 +1073,11 @@ function UI:addWindow(window)
     end
     self.modal_windows[window.modal_class] = window
   end
-  if self.app.world and window:mustPause() then
-    self.app.world:setSpeed("Pause")
-    self.app.video:setBlueFilterActive(false) -- mustPause windows shouldn't cause tainting
-  end
   if window.modal_class == "main" or window.modal_class == "fullscreen" then
     self.editing_allowed = false -- do not allow editing rooms if main windows (build, furnish, hire) are open
   end
   Window.addWindow(self, window)
+  self:_onAddWindow(window)
 end
 
 function UI:removeWindow(closing_window)
@@ -1031,24 +1086,37 @@ function UI:removeWindow(closing_window)
     if class and self.modal_windows[class] == closing_window then
       self.modal_windows[class] = nil
     end
-    if self.app.world and self.app.world:isCurrentSpeed("Pause") then
-      local pauseGame = self:checkForMustPauseWindows()
-      if not pauseGame and closing_window:mustPause() then
-        self.app.world:setSpeed(self.app.world.prev_speed)
-      end
-    end
     if closing_window.modal_class == "main" or closing_window.modal_class == "fullscreen" then
       self.editing_allowed = true -- allow editing rooms again when main window is closed
     end
+    self:_onRemoveWindow(closing_window)
     return true
   else
     return false
   end
 end
 
+-- Function for signaling that the window is added.
+-- To pause game if the necessary requirements are met.
+--!param window (object) window added
+function UI:_onAddWindow(window)
+  if self.app.world and window:mustPause() then
+    self.app.world:mustPauseWindowAdd()
+  end
+end
+
+-- Function for signaling that the window is to be removed.
+-- To unpause game if the necessary requirements are met.
+--!param window (object) window to be removed
+function UI:_onRemoveWindow(window)
+  if self.app.world and window:mustPause() then
+    self.app.world:mustPauseWindowRemoved()
+  end
+end
+
 --! Function to check if we have any must pause windows open
 --!return (bool) Returns true if a must pause window is found
-function UI:checkForMustPauseWindows()
+function UI:anyMustPauseWindowOpen()
   for _, window in pairs(self.windows) do
     if window:mustPause() then return true end
   end
@@ -1087,14 +1155,14 @@ function UI:afterLoad(old, new)
       local gfx = self.app.gfx
       gfx.cache.raw = {}
       gfx.cache.tabled = {}
-      gfx.cache.palette = {}
-      gfx.cache.palette_greyscale_ghost = {}
       gfx.cache.language_fonts = {}
       gfx.builtin_font = nil
-
-      local palette = gfx:loadPalette("QData", "PREF01V.PAL", true)
-      self.tooltip_font = gfx:loadFontAndSpriteTable("QData", "Font00V", false, palette)
     end
+  end
+  if old < 236 then
+    local gfx = self.app.gfx
+    local palette = gfx:getPalette("Pref01V.pal")
+    self.tooltip_font = gfx:loadFontAndSpriteTable("QData", "Font00V", false, palette, { apply_ui_scale = true })
   end
 
   self:setupGlobalKeyHandlers()
@@ -1110,16 +1178,20 @@ end
 function UI:tutorialStep(...)
 end
 
+--! Perform the Screenshot action (usually by key bind 'global_screenshot')
 function UI:makeScreenshot()
-   -- Find an index for screenshot which is not already used
-  local i = 0
-  local filename
-  repeat
-    filename = TheApp.screenshot_dir .. ("screenshot%i.bmp"):format(i)
-    i = i + 1
-  until lfs.attributes(filename, "size") == nil
-  print("Taking screenshot: " .. filename)
-  local res, err = self.app.video:takeScreenshot(filename) -- Take screenshot
+  -- Generate filename
+  local timestamp = os.date("%Y%m%d-%H%M%S")
+  local filename = TheApp.screenshot_dir .. ("Screenshot_%s.png"):format(timestamp)
+
+  -- It's very unlikely you intentionally want multiple screenshots a second
+  if lfs.attributes(filename, "size") ~= nil then
+    print("Screenshot failed: File already exists")
+    return
+  end
+
+  -- Take screenshot
+  local res, err = self.app.video:takeScreenshot(filename)
   if not res then
     print("Screenshot failed: " .. err)
   else
@@ -1161,9 +1233,9 @@ end
 
 --! Triggers reset of the application (reloads .lua files)
 function UI:resetApp()
-  debug.getregistry()._RESTART = true
-  TheApp.running = false
+  self.app:reset()
 end
+
 -- Added this function as quit does not exit the application, it only exits the game to the menu screen
 function UI:exitApplication()
   self.app:abandon()
@@ -1178,6 +1250,12 @@ end
 function UI:stopMovie()
   if self.app.moviePlayer.playing then
     self.app.moviePlayer:stop()
+  end
+end
+
+function UI:pauseMovie()
+  if self.app.moviePlayer.playing then
+    self.app.moviePlayer:togglePause()
   end
 end
 

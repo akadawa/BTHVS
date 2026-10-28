@@ -68,6 +68,8 @@ function GameUI:GameUI(app, local_hospital, map_editor)
   -- UI widgets
   self.menu_bar = UIMenuBar(self, self.map_editor)
   self:addWindow(self.menu_bar)
+  self.subtitles = Subtitles(self)
+  self:addWindow(self.subtitles)
 
   local scr_w = app.config.width
   local scr_h = app.config.height
@@ -94,6 +96,7 @@ function GameUI:GameUI(app, local_hospital, map_editor)
   self.recallpositions = {}
 
   self.speed_up_key_pressed = false
+  self.last_hovered_entity = nil
 
   -- The currently specified intensity value for earthquakes. To abstract
   -- the effect from the implementation this value is a number between 0
@@ -365,8 +368,8 @@ function GameUI:onKeyDown(rawchar, modifiers, is_repeat)
   end
 end
 
-function GameUI:onKeyUp(rawchar)
-  if UI.onKeyUp(self, rawchar) then
+function GameUI:onKeyUp(rawchar, modifiers)
+  if UI.onKeyUp(self, rawchar, modifiers) then
     return true
   end
 
@@ -509,6 +512,9 @@ function GameUI:onCursorWorldPositionChange()
     -- Set queue mood for patients queueing the new room
     if room then
       local queue = room.door.queue
+      if queue and #queue > 0 then
+        TheApp.ui:playSound("HLIGHTP2.wav")
+      end
       if queue then
         for _, humanoid in ipairs(queue) do
           humanoid:setMood("queue", "activate")
@@ -522,12 +528,23 @@ function GameUI:onCursorWorldPositionChange()
   if class.is(entity, Humanoid) then
     for _, value in pairs(entity.active_moods) do
       if value.on_hover then
-        entity:setMoodInfo(value)
+        if not self.mood_info then
+          if self.last_hovered_entity ~= entity then
+            TheApp.ui:playSound("HLIGHTP2.wav")
+            self.last_hovered_entity = entity
+          end
+          if entity.hover_moods then
+            entity:setMoodInfo(value)
+          end
+        end
         break
       end
     end
+  else
+    self.last_hovered_entity = nil
   end
-  -- Dynamic info
+
+  -- Dynamic Info
   if entity and self.bottom_panel then
     self.bottom_panel:setDynamicInfo(entity:getDynamicInfo())
   end
@@ -657,6 +674,7 @@ function GameUI:onMouseUp(code, x, y)
     return UI.onMouseUp(self, code, x, y)
   end
 
+  -- Controlling debug patients movement with a cursor
   local button = self.button_codes[code]
   if button == "right" and not self.map_editor and highlight_x then
     local window = self:getWindow(UIPatient)
@@ -767,7 +785,8 @@ function GameUI:onMouseWheel(x, y)
   local inside_window = false
   if self.windows then
     for _, window in ipairs(self.windows) do
-      if window:hitTest(self.cursor_x - window.x, self.cursor_y - window.y) then
+      local wx, wy = window:getRealXY()
+      if window:hitTest(self.cursor_x - wx, self.cursor_y - wy) then
         inside_window = true
         break
       end
@@ -966,11 +985,15 @@ function GameUI:scrollMap(dx, dy)
   self.screen_offset_y = floor(dy + 0.5)
 end
 
---! Start shaking the screen, e.g. an earthquake effect
+--! Start shaking the screen, e.g. an earthquake effect (unless disabled in config)
 --!param intensity (number) The magnitude of the effect, between 0 for no
 -- movement to 1 for significant shaking.
 function GameUI:beginShakeScreen(intensity)
-  self.shake_screen_intensity = intensity
+  if self.app.config.enable_screen_shake then
+    self.shake_screen_intensity = intensity
+  else
+    self.shake_screen_intensity = 0
+  end
 end
 
 --! Stop the screen from shaking after beginShakeScreen is called.
@@ -1294,6 +1317,10 @@ function GameUI:afterLoad(old, new)
   if old < 130 then
     self.ticks_since_last_announcement = nil -- cleanup
     self.announcer = Announcer(self.app)
+  end
+  if old < 240 then
+    self.subtitles = Subtitles(self)
+    self:addWindow(self.subtitles)
   end
 
   self.announcer.playing = false

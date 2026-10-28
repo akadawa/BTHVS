@@ -3371,7 +3371,6 @@ options_window = {
   custom_resolution = "自定义...",
   width = "宽度",
   height = "高度",
-  audio = "全局音效",
   customise = "自定义",
   folder = "文件夹",
   language = "语言",
@@ -3395,8 +3394,6 @@ tooltip.options_window = {
   height = "输入想要的屏幕高度",
   apply = "应用此分辨率",
   cancel = "返回而不更改分辨率",
-  audio_button = "开关所有的声音",
-  audio_toggle = "切换开关",
   customise_button = "更多可以改变游戏体验的选项",
   folder_button = "文件夹选项",
   language = "游戏文字使用的语言",
@@ -3414,6 +3411,16 @@ tooltip.options_window = {
   cancel_zoomspeed = "返回而不更改缩放速度。",
   hotkey = "更改键盘热键。",
   check_for_updates = "游戏启动时自动检查更新",
+}
+
+audio_window = {
+  audio = "全局音效",
+  back = "返回",
+}
+
+tooltip.audio_window = {
+  audio_button = "开关所有的声音",
+  audio_toggle = "切换开关",
 }
 
 customise_window = {
@@ -3473,7 +3480,7 @@ tooltip.folders_window = {
   no_font_specified = "没有指定字体的位置！",
   not_specified = "没有指定文件夹位置！",
   default = "默认位置",
-  reset_to_default = "重置到默认文件夹",
+  reset_to_default = "重置到默认文件夹 ( %1% )",
   back = "关闭此菜单，并返回设置菜单",
 }
 
@@ -3653,7 +3660,7 @@ errors = {
   no_games_to_contine = "无游戏存档。",
   load_quick_save = "错误，不存在快速存档，无法加载。不用担心，我们已经为您创建了一个！",
   map_file_missing = "找不到该关卡的地图文件 %s！",
-  minimum_screen_size = "最小屏幕大小为 640x480。",
+  minimum_screen_size = "最小屏幕大小为 %dx%d。",
   unavailable_screen_size = "您设置的屏幕大小无法应用于全屏模式。",
   alien_dna = "注意：对于外星人病人来说，坐下、打开或敲门等都没有动画。因此，像在主题医院中做这些事情一样，它们看起来会恢复正常外观，然后又变回原状。外星人 DNA 仅当它们在关卡文件中设置启动时才会显示",
   fractured_bones = "注意：女性骨折患者的动画效果不理想",

@@ -43,7 +43,7 @@ function Staff:tickDay()
   if not Humanoid.tickDay(self) then
     return false
   end
-  if self.humanoid_class == "Receptionist" then return true end
+  if class.is(self, Receptionist) then return true end
   -- Pay too low  --> unhappy
   -- Pay too high -->   happy
   local fair_wage = self.profile:getFairWage()
@@ -52,52 +52,55 @@ function Staff:tickDay()
 
   -- if you overwork your Dr's then there is a chance that they can go crazy
   -- when this happens, find him and get him to rest straight away
-  if not self:isVeryTired() and self:isResting() then
+  if self:isVeryTired() or not self:isResting() then
+    -- Working when you should be taking a break will make you unhappy
+    if self:getAttribute("fatigue") >= self.hospital.policies["goto_staffroom"] then
+      self:changeAttribute("happiness", -0.02)
+    end
+    -- You will also start to become unhappy as you become tired
+    if self:getAttribute("fatigue") >= 0.5 then
+      self:changeAttribute("happiness", -0.01)
+    end
+  else -- You are resting, and no longer very tired. Things can only get better!
     self:setMood("tired", "deactivate")
     self:changeAttribute("happiness", 0.006)
   end
-  -- Working when you should be taking a break will make you unhappy
-  if self:getAttribute("fatigue") >= self.hospital.policies["goto_staffroom"] then
-    self:changeAttribute("happiness", -0.02)
-  end
-  -- You will also start to become unhappy as you become tired
-  if self:getAttribute("fatigue") >= 0.5 then
-    self:changeAttribute("happiness", -0.01)
-  end
 
   -- It is nice to see plants, but dead plants make you unhappy
-  self.world:findObjectNear(self, "plant", 2, function(x, y)
-    local plant = self.world:getObject(x, y, "plant")
-    if plant then
-      self:changeAttribute("happiness", -0.003 + (plant:isPleasingFactor() * 0.001))
-    end
-  end)
-  -- It always makes you happy to see you are in safe place
-  self.world:findObjectNear(self, "extinguisher", 2, function()
-    self:changeAttribute("happiness", 0.002)
-  end)
-  -- Extra room items add to your happiness (some more than others)
-  self.world:findObjectNear(self, "bin", 2, function()
-    self:changeAttribute("happiness", 0.001)
-  end)
-  self.world:findObjectNear(self, "bookcase", 2, function()
-    self:changeAttribute("happiness", 0.003)
-  end)
-  self.world:findObjectNear(self, "skeleton", 2, function()
-    self:changeAttribute("happiness", 0.002)
-  end)
-  self.world:findObjectNear(self, "tv", 2, function()
-    self:changeAttribute("happiness", 0.0005)
-  end)
+  local plant = getRandomEntryFromArray(self:findObjectsInSquare(2, "plant"))
+  if plant then
+    self:changeAttribute("happiness", -0.003 + (plant:isPleasingFactor() * 0.001))
+  end
+
+  -- Seeing various nearby objects boost your happiness, some more than others
+  local good_objects = {
+    ["extinguisher"] = 0.002, -- Makes you feel safe
+    ["bin"]          = 0.001,
+    ["bookcase"]     = 0.003,
+    ["skeleton"]     = 0.002,
+    ["tv"]           = 0.0005,
+  }
+
+  -- Construct an array with the object names.
+  local happy_objects = {}
+  for name, _ in pairs(good_objects) do happy_objects[#happy_objects + 1] = name end
+
+  -- Look what's around the humanoid, and adapt the happiness.
+  happy_objects = self:findObjectsInSquare(2, happy_objects)
+  for obj_name, happiness_score in pairs(good_objects) do
+    self:changeAttribute("happiness", #happy_objects[obj_name] * happiness_score)
+  end
+
+  -- List of positive rest activities and their happiness effect
+  local recreation = {
+    ["video_game"] = 0.08,
+    ["pool_table"] = 0.074,
+    ["sofa"]       = 0.05,
+  }
   -- Being able to rest from work and play the video game or pool will make you happy
-  if (self:getCurrentAction().name == "use_object" and self:getCurrentAction().object.object_type.id == "video_game") then
-   self:changeAttribute("happiness", 0.08)
-  end
-  if (self:getCurrentAction().name == "use_object" and self:getCurrentAction().object.object_type.id == "pool_table") then
-   self:changeAttribute("happiness", 0.074)
-  end
-  if (self:getCurrentAction().name == "use_object" and self:getCurrentAction().object.object_type.id == "sofa") then
-   self:changeAttribute("happiness", 0.05)
+  if self:getCurrentAction().name == "use_object" then
+    local happiness = recreation[self:getCurrentAction().object.object_type.id]
+    if happiness then self:changeAttribute("happiness", happiness) end
   end
 
   local room = self:getRoom()
@@ -139,18 +142,15 @@ function Staff:tick()
   else
     self.timer_until_raise = nil
   end
+
   -- seeing litter will make you unhappy. If it is pee or puke it is worse
-  self.world:findObjectNear(self, "litter", 2, function(x, y)
-  local litter = self.world:getObject(x, y, "litter")
-  if not litter then
-    return
-  end
+  for _, litter in ipairs(self:findObjectsInSquare(2, "litter")) do
     if litter:anyLitter() then
       self:changeAttribute("happiness", -0.0002)
     else
       self:changeAttribute("happiness", -0.0004)
     end
-  end)
+  end
   self:updateSpeed()
 end
 
@@ -203,7 +203,7 @@ function Staff:isTiring()
     if room.room_info.id == "staff_room" and not self.on_call then
       tiring = false
     end
-  elseif self.humanoid_class ~= "Handyman" then
+  elseif not class.is(self, Handyman) then
     tiring = false
   end
 
@@ -355,7 +355,7 @@ function Staff:updateSpeed()
     level = 1
   elseif self.hospital and self.hospital.hosp_cheats:isCheatActive("no_rest_cheat") then
     level = 3 -- Cheat makes everyone speedy
-  elseif self.humanoid_class ~= "Receptionist" then
+  elseif not class.is(self, Receptionist) then
     if self:isCrackUpTired() then
       level = level - 2
     elseif self:isVeryTired() then
@@ -415,7 +415,7 @@ function Staff:checkIfNeedRest()
       return
     end
 
-    if self.humanoid_class ~= "Handyman" and room and room:getPatient() then
+    if not class.is(self, Handyman) and room and room:getPatient() then
       -- If occupied by patient, staff will go to the staffroom after the patient left.
       self.staffroom_needed = true
     else
@@ -535,9 +535,6 @@ function Staff:isIdle()
     return false
   end
 
-  if self.waiting_on_other_staff then
-    return false
-  end
   -- if they are using a door they are not idle, this stops doctors being considered for staff selection
   -- for rooms they have not completely left yet, fixes issue 810
   if self.user_of and self.user_of.object_type.id == "door" then
@@ -553,7 +550,7 @@ function Staff:isIdle()
     end
 
     -- For handyman - just check the on_call flag
-    if self.humanoid_class == "Handyman" then return not self.on_call end
+    if class.is(self, Handyman) then return not self.on_call end
 
     -- For other staff...
     -- Staff member might be leaving
@@ -563,15 +560,15 @@ function Staff:isIdle()
     -- or if the only one in sight is actually leaving.
     return not room:isRoomInDemand()
   else
-    -- In the corridor and not on_call (watering or going to room), the staff is free
-    -- unless going back to the training room or research department.
-    local x, y = self:getCurrentAction().x, self:getCurrentAction().y
-    if x then
-      room = self.world:getRoom(x, y)
-      if room and (room.room_info.id == "training" or room.room_info.id == "research") then
-        return false
-      end
+    -- In the corridor and not on_call (e.g. watering or going to room).
+    if class.is(self, Handyman) then return not self.on_call end
+
+    -- The staff is free, unless going back to the training/research.
+    room = self.last_room
+    if room and (room.room_info.id == "training" or room.room_info.id == "research") then
+      return false
     end
+
     return true
   end
 end
@@ -642,7 +639,7 @@ end
 function Staff:updateDynamicInfo()
   local dynamic_text = self.dynamic_text or ""
   local fatigue_text = _S.dynamic_info.staff.tiredness
-  if self.humanoid_class == "Receptionist" then
+  if class.is(self, Receptionist) then
     fatigue_text = nil
   else
     self:setDynamicInfo('progress', self:getAttribute("fatigue"))
@@ -675,7 +672,7 @@ function Staff:afterLoad(old, new)
 
   if old < 29 and new >= 29 then
     -- Handymen could have "staffroom_needed" flag set due to a bug, unset it.
-    if self.humanoid_class == "Handyman" then
+    if class.is(self, Handyman) then
       self.staffroom_needed = nil
     end
   end
@@ -685,7 +682,7 @@ function Staff:afterLoad(old, new)
     self.profile.world = self.world
   end
   if old < 68 and new >= 68 then
-    if self.humanoid_class ~= "Receptionist" and
+    if not class.is(self, Receptionist) and
         self:getAttribute("fatigue") >= self.hospital.policies["goto_staffroom"] then
       self:goToStaffRoom()
       self.going_to_staffroom = true
@@ -693,7 +690,7 @@ function Staff:afterLoad(old, new)
   end
 
   if old < 121 and new >= 121 then
-    if self.humanoid_class == "Handyman" and self.user_of and self.user_of.object_type.class == "Litter" then
+    if class.is(self, Handyman) and self.user_of and self.user_of.object_type.class == "Litter" then
       local litter = self.user_of
       local hospital = self.world:getHospital(litter.tile_x, litter.tile_y)
       local taskIndex = hospital:getIndexOfTask(litter.tile_x, litter.tile_y, "cleaning", litter)
@@ -702,11 +699,11 @@ function Staff:afterLoad(old, new)
   end
 
   if old < 133 and new >= 133 then
-    if self.humanoid_class == "Handyman" then
+    if class.is(self, Handyman) then
       setmetatable(self, Handyman._metatable)
-    elseif self.humanoid_class == "Receptionist" then
+    elseif class.is(self, Receptionist) then
       setmetatable(self, Receptionist._metatable)
-    elseif self.humanoid_class == "Nurse" then
+    elseif class.is(self, Nurse) then
       setmetatable(self, Nurse._metatable)
     else
       setmetatable(self, Doctor._metatable)
@@ -725,12 +722,18 @@ function Staff:afterLoad(old, new)
     self.mood_marker = 2
   end
 
+  if old < 250 then
+    -- Staff members picked up and moved to rest didn't reset the
+    -- staffroom_needed flag. If a staff member genuinely needed it they would
+    -- get it back again next tick.
+    if self:getAttribute("fatigue") < self.hospital.policies["goto_staffroom"] then
+      self.staffroom_needed = nil
+      self.going_to_staffroom = nil -- also clear for consistency
+    end
+  end
+
   self:updateDynamicInfo()
   Humanoid.afterLoad(self, old, new)
-end
-
-function Staff:getDrawingLayer()
-  return 4
 end
 
 --! Estimate staff service quality based on skills, restfulness (inverse of fatigue) and happiness.

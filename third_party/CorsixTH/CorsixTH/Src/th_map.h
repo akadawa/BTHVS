@@ -192,7 +192,7 @@ enum tile_layer : uint8_t {
 };
 
 struct map_tile {
-  map_tile();
+  map_tile() = default;
   ~map_tile() = default;
 
   // Linked list for entities rendered at this tile
@@ -209,24 +209,24 @@ struct map_tile {
   //! Layer 2 is for the west wall
   //! Layer 3 is for the UI
   //! NB: In Lua, layers are numbered 1 - 4 rather than 0 - 3
-  uint16_t tile_layers[tile_layer::num_tile_layers];
+  uint16_t tile_layers[tile_layer::num_tile_layers]{};
 
   //! Parcels (plots) of land have an ID, with each tile in the plot having
   //! that ID. Parcel 0 is the outside.
-  uint16_t iParcelId;
+  uint16_t iParcelId{0};
 
   //! Rooms have an ID, with room #0 being the corridor (and the outside).
-  uint16_t iRoomId;
+  uint16_t iRoomId{0};
 
   //! A value between 0 (extreme cold) and 65535 (extreme heat) representing
   //! the temperature of the tile. To allow efficient calculation of a tile's
   //! heat based on the previous tick's heat of the surrounding tiles, the
   //! previous temperature is also stored, with the array indices switching
   //! every tick.
-  uint16_t aiTemperature[2];
+  uint16_t aiTemperature[2]{8192, 8192};
 
   //! Flags for information and object type
-  map_tile_flags flags;
+  map_tile_flags flags{};
 
   //! objects in this tile
   std::list<object_type> objects;
@@ -234,7 +234,7 @@ struct map_tile {
   static constexpr int raw_length = 8;
 
   //! raw data from map file for debugging
-  std::uint8_t raw[raw_length];
+  std::uint8_t raw[raw_length]{};
 };
 
 //! Prototype for object callbacks from THMap::loadFromTHFile
@@ -251,7 +251,7 @@ typedef void (*map_load_object_callback_fn)(void*, int, int, object_type,
 
 class level_map {
  public:
-  level_map();
+  level_map() = default;
   ~level_map();
 
   bool set_size(int iWidth, int iHeight);
@@ -402,6 +402,22 @@ class level_map {
   void set_overlay(map_overlay* pOverlay, bool bTakeOwnership);
 
  private:
+  void draw_floor(render_target* pCanvas, int iScreenX, int iScreenY,
+                  int iWidth, int iHeight, int iCanvasX, int iCanvasY) const;
+  void draw_north_wall(const map_tile* tile, int tile_x, int tile_y,
+                       render_target* pCanvas) const;
+
+  int draw_layer(const map_tile* tile, int tile_x, int tile_y, tile_layer layer,
+                 render_target* pCanvas) const;
+
+  //! Check that the sprite indicated by the layer can be found and has height.
+  /*
+   *  @param layer Layer to investigate.
+   *  @param [out] height Height of the sprite if the method returns \c true.
+   *  @return Whether the sprite exists and is not empty.
+   */
+  bool layer_exists(uint16_t layer, int& height) const;
+
   drawable* hit_test_drawables(link_list* pListStart, int iXs, int iYs,
                                int iTestX, int iTestY) const;
   void read_tile_index(const uint8_t* pData, int& iX, int& iY) const;
@@ -432,30 +448,30 @@ class level_map {
 
   int count_parcel_tiles(int iParcelId) const;
 
-  map_tile* cells;
-  map_tile* original_cells;  // Cells at map load time, before any changes
-  sprite_sheet* wall_blocks;
-  map_overlay* overlay;
-  bool owns_overlay;
-  int* plot_owner;  // 0 for unowned, 1 for player 1, etc.
-  int width;
-  int height;
-  int player_count;
-  int initial_camera_x[4];
-  int initial_camera_y[4];
-  int heliport_x[4];
-  int heliport_y[4];
-  int parcel_count;
-  int current_temperature_index;
-  temperature_theme current_temperature_theme;
-  int* parcel_tile_counts;
+  map_tile* cells{};
+  map_tile* original_cells{};  // Cells at map load time, before any changes
+  sprite_sheet* wall_blocks{};
+  map_overlay* overlay{};
+  bool owns_overlay{};
+  int* plot_owner{};  // 0 for unowned, 1 for player 1, etc.
+  int width{};
+  int height{};
+  int player_count{};
+  int initial_camera_x[4]{};
+  int initial_camera_y[4]{};
+  int heliport_x[4]{};
+  int heliport_y[4]{};
+  int parcel_count{};
+  int current_temperature_index{};
+  temperature_theme current_temperature_theme{temperature_theme::red};
+  int* parcel_tile_counts{};
 
   // 2D symmetric array giving true if there is a path between two parcels
   // which doesn't go into any other parcels.
-  bool* parcel_adjacency_matrix;
+  bool* parcel_adjacency_matrix{};
 
   // 4 by N matrix giving true if player can purchase parcel.
-  bool* purchasable_matrix;
+  bool* purchasable_matrix{};
 };
 
 enum class map_scanline_iterator_direction {
@@ -476,7 +492,7 @@ enum class map_scanline_iterator_direction {
 */
 class map_tile_iterator {
  public:
-  map_tile_iterator();
+  map_tile_iterator() = delete;
 
   /*!
       @arg pMap The map whose tiles should be iterated
@@ -540,12 +556,12 @@ class map_tile_iterator {
 
   friend class map_scanline_iterator;
 
-  const map_tile* tile;
+  const map_tile* tile{nullptr};
   const level_map* container;
 
   // TODO: Consider removing these, they are trivial to calculate
-  int x_relative_to_screen;
-  int y_relative_to_screen;
+  int x_relative_to_screen{};
+  int y_relative_to_screen{};
 
   const int screen_offset_x;
   const int screen_offset_y;
@@ -555,7 +571,7 @@ class map_tile_iterator {
   int base_y;
   int world_x;
   int world_y;
-  int scanline_count;
+  int scanline_count{};
   map_scanline_iterator_direction direction;
 
   void advance_until_visible();
@@ -596,7 +612,7 @@ class map_scanline_iterator {
   int x_step;
   int x_relative_to_screen;
   int y_relative_to_screen;
-  int steps_taken;
+  int steps_taken{0};
 };
 
 #endif  // CORSIX_TH_TH_MAP_H_

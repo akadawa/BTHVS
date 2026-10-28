@@ -64,10 +64,11 @@ because the letters ø and Ø is not included in the original ingame-font.
 
 -- 1. Global settings (do not edit!)
 --Font("unicode") --todo: Add unicode/freefont
+Font("cp437")
 Language("Norsk", "Norwegian", "nb", "nob")
 Inherit("english")
 Encoding(utf8)
-
+IsArabicNumerals(true)
 
 -- 2. Faxes
 fax = {
@@ -182,13 +183,14 @@ tooltip = {
     select_language = "Velg språk",
     select_resolution = "Velg en ny opplösning",
     resolution = "Opplösningen spillet skal kjöres i.",
-    audio_button = "Slå av eller på all lyd",
     folder_button = "Mappeinnstillinger",
-    audio_toggle = "Slå av eller på",
     customise_button = "¨Flere innstillinger", --todo: mer utfyllende beskrivelse? var "More settings you can change to customise your game play experience"
     capture_mouse = "Slå av eller på låsing av musepeker i spillvinduet",
   },
-
+  audio_window = {
+    audio_button = "Slå av eller på all lyd",
+    audio_toggle = "Slå av eller på",
+  },
   folders_window = { --todo: skrive mer konsekvent på "se etter", "velg" osv.
     browse_font = "Se etter en annen font-fil ( nåværende beliggenhet: %1% )",
     screenshots_location = "Skjermdumper er normalt lagret i en mappe sammen med konfigurasjonsfila. Om du önsker kan du plassere den et annet sted.",
@@ -203,7 +205,7 @@ tooltip = {
     browse_screenshots = "Se etter en annen lokasjon for skjermdumper  ( nåværende beliggenhet: %1% ) ",
     not_specified = "Ingen mappe er valgt enda!",
     font_location = "Lokasjon for en font som kan vise Unicode-bokstaver som er nödvendig for ditt språk. Om denne ikke velges så er bokstavtyåene begrenset til de som er i Theme Hospital.",
-    reset_to_default = "Tilbakestill mappen til standard lokasjon",
+    reset_to_default = "Tilbakestill mappen til standard lokasjon ( %1% )",
     default = "Standard lokasjon",
     no_font_specified = "Ingen font-fil er valgt enda!",
   },
@@ -838,11 +840,14 @@ options_window = {
   apply = "Bruk",
   resolution = "Opplösning",
   folder = "Mapper",
-  audio = "Global lyd",
   customise = "Tilpass",
   capture_mouse = "Lås musepeker",
 }
 
+audio_window = {
+  audio = "Global lyd",
+  back = "Tilbake",
+}
 
 folders_window = {
   screenshots_location = "Velg banen du vil bruke for skjermdumper",
@@ -952,7 +957,7 @@ errors = {
   load_prefix = "Feil under lasting av spill: ",
   load_quick_save = "Spillet kunne ikke laste inn sist hurtiglagring, siden den ikke eksisterer. Vi har ikke tenkt til å lage en for deg!",
   map_file_missing = "Kunne ikke finne kartfilen %s for dette nivået!",
-  minimum_screen_size = "Vennligst sett opplösningen til minst 640x480.",
+  minimum_screen_size = "Vennligst sett opplösningen til minst %dx%d.",
   unavailable_screen_size = "Skjermopplösningen du valgte er ikke tilgjengelig i fullskjermmodus.",
   alien_dna = "Merk: Det er ingen originale animasjoner for utenomjordiske pasienter som sitter, åpner eller banker på dörer osv. Utenomjordiske vil bare komme på besök om det er slått på i levelfila", --todo: bedre beskrivelse? levelfila? var "NOTE: There are no animations for Alien patients for sitting down, opening or knocking on doors etc. So, like with Theme Hospital to do these things they will appear to change to normal looking and then change back.  Patients with Alien DNA will only appear if they are set to in the level file"
   fractured_bones = "Merk: De originale animasjonene for kvinnelige personer med benbrudd er ikke perfekte",

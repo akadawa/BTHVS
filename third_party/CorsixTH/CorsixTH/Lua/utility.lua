@@ -18,6 +18,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
+local lfs = require("lfs")
+
 --[[ Iterator factory for iterating over the deep children of a table.
   For example: for fn in values(_G, "*.remove") do fn() end
   Will call os.remove() and table.remove()
@@ -66,13 +68,19 @@ function values(root_table, wildcard)
   return f
 end
 
--- Can return the length of any table, where as #table_name is only suitable for use with arrays of one contiguous part without nil values.
-function table_length(table)
-  local count = 0
-  for _,_ in pairs(table) do
-    count = count + 1
-  end
-  return count
+--! Check whether the table is empty.
+--!return (bool) Whether the table has no entries of any kind.
+function isTableEmpty(table)
+  return next(table) == nil
+end
+
+--! Get a random item from an array.
+--!param array Array with 0 or more items.
+--!return (nil or an item)
+function getRandomEntryFromArray(array)
+  if #array == 0 then return nil end
+  if #array == 1 then return array[1] end
+  return array[math.random(1, #array)]
 end
 
 -- Variation on loadfile() which allows for the loaded file to have global
@@ -106,7 +114,20 @@ function loadfile_envcall(filename)
   return loadstring_envcall(result, "@" .. filename)
 end
 
-if _G._VERSION == "Lua 5.2" or _G._VERSION == "Lua 5.3" or _G._VERSION == "Lua 5.4" then
+if _G._VERSION == "Lua 5.1" then
+  function loadstring_envcall(contents, chunkname)
+    -- Lua 5.1 has setfenv(), which allows environments to be set at runtime
+    local result, err = loadstring(contents, chunkname)
+    if result then
+      return function(env, ...)
+        setfenv(result, env)
+        return result(...)
+      end
+    else
+      return result, err
+    end
+  end
+else
   function loadstring_envcall(contents, chunkname)
     -- Lua 5.2+ lacks setfenv()
     -- load() still only allows a chunk to have an environment set once, so
@@ -118,19 +139,6 @@ if _G._VERSION == "Lua 5.2" or _G._VERSION == "Lua 5.3" or _G._VERSION == "Lua 5
       return function(env, ...)
         env_mt.__index = env
         env_mt.__newindex = env
-        return result(...)
-      end
-    else
-      return result, err
-    end
-  end
-else
-  function loadstring_envcall(contents, chunkname)
-    -- Lua 5.1 has setfenv(), which allows environments to be set at runtime
-    local result, err = loadstring(contents, chunkname)
-    if result then
-      return function(env, ...)
-        setfenv(result, env)
         return result(...)
       end
     else
@@ -212,15 +220,102 @@ DrawFlags.Alpha50         = 2^2
 DrawFlags.Alpha75         = 2^3
 DrawFlags.AltPalette      = 2^4
 DrawFlags.EarlyList       = 2^10
-DrawFlags.ListBottom      = 2^11
 DrawFlags.BoundBoxHitTest = 2^12
 DrawFlags.Crop            = 2^13
+DrawFlags.Nearest         = 2^14
+
+-- Order of animations within a tile. Animations with a smaller number are
+-- drawn first.
+DrawingLayers = {}
+DrawingLayers.Litter = 0
+DrawingLayers.Door = 0
+DrawingLayers.RatHole = 0
+DrawingLayers.NorthSideObject = 1
+DrawingLayers.WestSideObject = 2
+DrawingLayers.AtomAnalyser = 3
+DrawingLayers.ReceptionistFacingUser = 3 -- Facing east or south.
+DrawingLayers.Entity = 4 -- All 'normal' animations.
+DrawingLayers.ReceptionistFacingAway = 5 -- Facing west or north.
+DrawingLayers.MachineSmoke = 6 -- smoke animation should be in front of machine (entity)
+DrawingLayers.FloatingDollars = 7
+DrawingLayers.EastSideObject = 8
+DrawingLayers.SouthSideObject = 9
 
 -- Keep in sync with animation_effect in th_gfx_common.h
 AnimationEffect = {}
 AnimationEffect.None = 0
 AnimationEffect.Glowing = 1
 AnimationEffect.Jelly = 2
+
+-- Predefined colours
+Colours = {}
+Colours.PanelDefault = { -- CorsixTH's default panel colour (pale purple)
+  red = 154, green = 146, blue = 198
+}
+Colours.Disabled = { -- Specific grey with purplish aspect
+  red = 127, green = 123, blue = 149
+}
+Colours.Setting = Colours.PanelDefault
+Colours.SettingHover = { -- Slightly darkened from a pale purple
+  red = 133, green = 128, blue = 183,
+}
+Colours.SettingActive = Colours.SettingHover
+Colours.HotkeyBox = { -- Purple
+  red = 081, green = 076, blue = 150,
+}
+Colours.HotkeyBoxActive = { -- Deep purple
+  red = 041, green = 036, blue = 090,
+}
+Colours.Textbox = { -- Black
+  red = 000, green = 000, blue = 000
+}
+Colours.Scrollbar = { -- Purple
+  red = 081, green = 076, blue = 150,
+}
+Colours.Title = { -- Very pale purple
+  red = 174, green = 166, blue = 218
+}
+Colours.Caption = { -- Murky purple
+  red = 134, green = 126, blue = 178
+}
+Colours.AdviserPanelBackground = { -- Aqua Blue
+  red = 060, green = 174, blue = 201
+}
+Colours.AdviserPanelHighlight = {
+  red = 047, green = 154, blue = 190
+}
+Colours.AdviserPanelShadow = {
+  red = 036, green = 138, blue = 158
+}
+Colours.AdviserPanelDeleteButton = {
+  red = 219, green = 036, blue = 036
+}
+
+-- Include the standard colours also
+Colours.White = {
+  red = 255, green = 255, blue = 255
+}
+Colours.Black = {
+  red = 000, green = 000, blue = 000
+}
+Colours.Red = {
+  red = 255, green = 000, blue = 000
+}
+Colours.Green = {
+  red = 000, green = 255, blue = 000
+}
+Colours.Blue = {
+  red = 000, green = 000, blue = 255
+}
+Colours.Magenta = {
+  red = 255, green = 000, blue = 255
+}
+Colours.Cyan = {
+  red = 000, green = 255, blue = 255
+}
+Colours.Yellow = {
+  red = 255, green = 255, blue = 000
+}
 
 -- Compare values of two simple (non-nested) tables
 function compare_tables(t1, t2)
@@ -251,12 +346,17 @@ end
 --!param number (number) Value to accept by the bucket.
 --!param buckets (list) Available buckets, pairs of {upper=x, value=y} tables,
 --  in increasing x value, where nil is taken as infinite. The y value is
---  returned for the first bucket in the list where number <= x. If y is nil,
---  the index of the bucket in the list is returned.
+--  returned for the first bucket in the list where number <= x (in normal mode).
+--  If y is nil, the index of the bucket in the list is returned.
+--!param alt_mode (boolean) If true, the comparison becomes number < x instead.
 --!return (number) Value or index of the matching bucket.
-function rangeMapLookup(number, buckets)
+function rangeMapLookup(number, buckets, alt_mode)
+  local function boundaryCheck(upper)
+    return alt_mode and upper > number or upper >= number
+  end
+
   for index, bucket in ipairs(buckets) do
-    if not bucket.upper or bucket.upper >= number then
+    if not bucket.upper or boundaryCheck(bucket.upper) then
       return bucket.value or index
     end
   end
@@ -309,6 +409,27 @@ function array_join(array, separator)
   end
 
   return result
+end
+
+--! Merge tables in one table
+function table_merge(...)
+  local result = {}
+   for _, t in ipairs({...}) do
+      for _, v in ipairs(t) do
+        table.insert(result, v)
+      end
+  end
+  return result
+end
+
+--! Checks if the table contains item
+function table_contains(table, value)
+  for _, val in pairs(table) do
+    if val == value then
+      return true
+    end
+  end
+  return false
 end
 
 local function serialize_string(val, options)
@@ -425,4 +546,72 @@ function shallow_clone(tbl)
   end
   setmetatable(target, meta)
   return target
+end
+
+--! Complete key removal and pause collection for the duration of the function
+--! call.
+--!
+--! Note that the function is run as a pcall, so any error will be caught and
+--! returned.
+--!param fn (function) Function to call while GC is paused.
+--!param ... Arguments to pass to fn.
+function pause_gc_and_use_weak_keys(fn, ...)
+  -- In Lua 5.2 and later tables with weak keys (__mode = "k") may hold keys
+  -- that have already been finalized. According to the Lua reference manual
+  -- the objects are marked and finalized in one cycle and collected and
+  -- removed from the weak table keys in the next cycle. So to ensure that
+  -- all finalized keys are removed from weak tables we need to run GC for 2
+  -- complete cycles. We then stop the GC to prevent it from running during
+  -- the function call to ensure that pairs on weak tables work as expected.
+  -- Finally we restart the GC after the function call.
+  collectgarbage()
+  collectgarbage()
+  collectgarbage("stop")
+  local res = {pcall(fn, ...)}
+  collectgarbage("restart")
+
+  return unpack(res)
+end
+
+--! Strip trailing slashes from a path.
+--!param path (string) The path to strip.
+--!return (string) The path without trailing slashes.
+function stripTrailingSlashes(path)
+  -- Remove one or more trailing / or \ characters, preserving root "/" or "C:\"
+  local stripped = path:gsub("[/\\]+$", "")
+  if stripped == "" then
+    return path:sub(1, 1)
+  end
+  return stripped
+end
+
+--! Checks if a given path is a directory.
+--! param path (string) The path to check.
+--! return (boolean) True if the path is a directory, false otherwise.
+function isDirectory(path)
+  return lfs.attributes(path, "mode") == "directory"
+end
+
+--! Checks if a given path is a directory and can be opened.
+--! param path (string) The path to check.
+--! return (boolean) True if the path is a directory and is accessible, false otherwise.
+function canOpenDirectory(path)
+  local ok, _ = pcall(lfs.dir, path)
+  return ok
+
+  -- "lfs.dir()" will throw an error if the directory isn't accessible/doesn't exist
+  -- (it does the same job of the "isDirectory()" function, but also checks if the directory can be opened)
+end
+
+-- Tracy Profiler stubs
+if not tracy then
+  local function noop() end
+  tracy = {
+    ZoneBegin = noop,
+    ZoneBeginN = noop,
+    ZoneBeginS = noop,
+    ZoneBeginNS = noop,
+    ZoneEnd = noop,
+    Message = noop
+  }
 end

@@ -13,7 +13,7 @@ This document is the authoritative project reference for AI agents and human dev
 - **Name**: BTHVS – Browser THospital Versus
 - **Current Version**: `0.0.1`
 - **Core Technology**:
-  - Open-source **CorsixTH** engine (v0.69.2) compiled to WebAssembly via Emscripten.
+  - Open-source **CorsixTH** engine (**v0.70.2**, `SAVEGAME_VERSION = 254`, Lua API `2717`) compiled to WebAssembly via Emscripten (`-O3`).
   - Lua 5.4 scripting layer with fixed random seed for deterministic simulation.
   - Serverless WebRTC Peer-to-Peer (DataChannels via PeerJS) + WebSocket relay fallback.
   - Vanilla HTML5 / modern CSS (glassmorphism dark hospital theme) / vanilla ES2022 JavaScript.
@@ -95,38 +95,47 @@ BrowserTHospital/
 │   ├── favicon.png             # 32x32 PNG browser tab icon
 │   ├── apple-touch-icon.png    # 180x180 mobile touch icon
 │   ├── assets/                 # Backgrounds, map preview PNGs
-│   ├── game/                   # Precompiled CorsixTH WebAssembly binaries
-│   │   ├── corsixth.wasm       # Wasm binary compiled from C++/Lua
+│   ├── game/                   # Precompiled CorsixTH v0.70.2 WebAssembly binaries
+│   │   ├── build.json          # SHA-256 cache-busting manifest + exact asset byte sizes
+│   │   ├── corsixth.wasm       # Wasm binary compiled from C++/Lua (-O3)
 │   │   ├── corsixth.js         # Emscripten JS runtime loader
-│   │   └── corsixth.data       # Preloaded Lua scripts, levels, bitmaps
+│   │   └── corsixth.data       # Stripped & preloaded Lua scripts, levels, runtime bitmaps (~6.81 MB)
 │   └── vendor/
 │       ├── peerjs.min.js       # WebRTC P2P DataChannels library
 │       └── fflate.js           # Fast browser ZIP decompressor for HOSP.zip
 ├── server/
-│   └── server.js               # Node.js static server + WebSocket room relay fallback (port 8085)
+│   └── server.js               # Node.js static server (with gzip streaming) + WebSocket room relay fallback
 ├── third_party/
-│   ├── CorsixTH/               # Vendored CorsixTH v0.69.2 source tree
+│   ├── CorsixTH/               # Vendored CorsixTH v0.70.2 source tree
 │   │   └── CorsixTH/Lua/
-│   │       ├── multiplayer.lua # Custom versus state synchronization & packet routing
-│   │       ├── app.lua         # Engine lifecycle hooks & pause management
+│   │       ├── multiplayer.lua # Custom versus state synchronization, speed & modal pause isolation
+│   │       ├── app.lua         # Engine lifecycle hooks, root VFS path handling & exit management
+│   │       ├── ui.lua          # High-DPI UI scale viewport clamping & web fullscreen delegation
 │   │       └── game_ui.lua     # UI overlays & window positioning
 │   ├── lua/                    # Lua 5.4 runtime source
 │   ├── lfs/                    # LuaFileSystem
 │   └── lpeg/                   # LPeg parser library
 ├── web/
 │   ├── CMakeLists.txt          # Emscripten CMake build configuration
-│   ├── build.ps1               # Automated WebAssembly compilation script
+│   ├── build.ps1               # Automated WebAssembly compilation & asset-stripping script
 │   └── src/
 │       ├── web_main.cpp        # WebAssembly entry point
+│       ├── web_loop.h          # Direct C++ -> Lua frame/event dispatch loop
 │       └── web_bridge.cpp      # JS <-> Lua bridge (_th_resize, _th_eval_lua)
 ├── tests/
 │   ├── lib.js                  # Shared Playwright test runner & local server helpers
-│   ├── test_game_language_and_notes.js
+│   ├── test_v0702_upgrade_and_perf.js
+│   ├── test_fullscreen_leave.js
+│   ├── test_corsix_menu_and_speed.js
+│   ├── test_wasm_cache_bust.js
 │   ├── test_quests_and_leaderboard_multiplayer.js
+│   ├── test_invite_link_and_leds.js
+│   ├── test_game_language_and_notes.js
 │   ├── test_patchnotes_drawer.js
 │   ├── test_leaderboard_and_username.js
 │   ├── test_ui_improvements_oct28.js
-│   └── test_simulation_sync.js
+│   ├── test_p2p_versus.js
+│   └── test_map_preview_modal.js
 └── scripts/
     ├── generate_favicon.js     # Headless renderer for browser favicons
     ├── push_github.ps1         # Syncs origin with AGENTS.md and github without AGENTS.md
@@ -169,7 +178,7 @@ BrowserTHospital/
   4. `lobbies`: Lobbies Hosted
   5. `wins`: Versus Match Victories
 - Initial state starts completely clean at zero (`DEFAULT_LEADERBOARD = []`, all stats start at 0).
-
+- No Reset, Export, or Import buttons exist in the UI.
 - Single-recording match guard (`state.vs.matchRecorded`) guarantees match statistics are recorded at most once per match, preventing stat runaway.
 
 ### E. Minimalist In-Game HUD, Leave Match Flow & Window Persistence
@@ -194,6 +203,7 @@ BrowserTHospital/
   - Speed is strictly limited to **Normal** (`app.world:setSpeed("Normal")`) and **Pause** (`app.world:setSpeed("Pause")`).
   - Speed adjustments in `_S.menu_options.game_speed` (`third_party/CorsixTH/CorsixTH/Lua/dialogs/menu.lua`) were pruned to strictly `pause` and `normal`. Faster/slower presets (`slowest`, `slower`, `max_speed`, `and_then_some_more`) and speed-up key handlers (`GameUI:keySpeedUp`) are disabled.
   - Simulation netcode in `multiplayer.lua` enforces speed clamping so any out-of-bounds speed defaults to `Normal` and emits `speed:` packets with namespaced banners (`Pause (Player)` / `Normal (Player)`).
+  - Local modal dialogs (`UIFax`, `UIAnnualReport`, `UIStaffRise`) have `World:mustPause*` overridden during active multiplayer so opening a fax or year-end report never pauses rivals or blocks speed sync, and `updateScreenBlueFilter()` keeps the hospital view clear (`allow_user_actions_while_paused = true`).
 - **File Menu Pruning (Save / Load / Restart / Quit)**:
   - The File menu (`_S.menu.file`) was removed from the top in-game menu bar (`UIMenuBar:makeGameMenu`).
   - Bottom panel hotkeys and actions for quicksave, quickload, save, load, restart, and quit in `bottom_panel.lua` are disabled/no-ops.
@@ -212,18 +222,21 @@ BrowserTHospital/
   - UI inputs (`#join-code` with `maxlength="8"`, placeholder `ABCDEFGH`) and lobby banners (`#room-code`) are scaled and styled with responsive font-size and letter-spacing.
 - **Non-Repeating Code Guarantee & Storage**:
   - In the browser client (`dist/app.js`), every created room code is recorded in `localStorage` under `bth_used_room_codes` and checked against known public lobbies. `newCode()` verifies that newly generated codes are never re-issued.
-  - In the WebSocket relay server (`server/server.js`), `allHostedCodes` stores all historical codes created or registered during the session, guaranteeing that `newCode()` generates unique room codes without repetition.
 - **Pure Join Invite Links (Zero Query Param Clutter)**:
   - Shared invite links (`#btn-copy-link`) and browser address bar state (`history.replaceState`) strictly encode `?join=CODE` (plus optional `server` parameter only if using a custom relay).
-  - Game modes, level layouts, and win conditions (`curedPatients`, `cashBalance`, `timeLimit`, `level`) are completely excluded from URL queries. Win conditions and match configurations are seamlessly and authoritatively synchronized across peers via the network protocol (`joined`/`config` and `set_config` packets).
 
-### I. WebAssembly Package Cache-Busting & Integrity Verification
-- **Automatic Build Manifest (`dist/game/build.json`)**:
-  - `web/build.ps1` computes a 12-character SHA-256 fingerprint across `corsixth.js`, `corsixth.wasm`, and `corsixth.data` along with exact byte sizes (`dataSize`, `wasmSize`, `jsSize`) and writes `dist/game/build.json` on every build.
-- **Synchronized Cache-Busted Loading**:
-  - `startGame` in `dist/app.js` fetches `game/build.json` with `{ cache: "no-store" }`, appends `?v=<hash>` to `corsixth.js`, `corsixth.wasm`, and `corsixth.data`, verifies `corsixth.data` byte length against `dataSize` (re-fetching with `cache: "no-store"` on mismatch), and supplies the verified buffer via `getPreloadedPackage` so `corsixth.js` byte offsets and `corsixth.data` can never drift out of sync across deployments.
-- **Vercel Cache Headers (`vercel.json`)**:
-  - `/game/build.json` uses `no-cache, no-store, must-revalidate`; `/game/corsixth.{js,wasm,data}` use `public, max-age=0, must-revalidate` (ETag revalidation instead of unhashed `immutable`).
+### I. WebAssembly Package Cache-Busting, Bundle Stripping & Runtime Optimizations
+- **Automatic Build Manifest (`dist/game/build.json`) & 54.6% Data Package Reduction**:
+  - `web/build.ps1` strips build-time `.bmp`/`.spec`/`.lua` bitmap sources, unused standalone `mainmenu*.dat` bitmaps, and singleplayer `Campaigns/` saves during staging, shrinking `corsixth.data` from `15.71 MB` to `7.14 MB` (`6.81 MiB`, `1.86 MiB` gzipped) and computes a 12-character SHA-256 fingerprint across `corsixth.js`, `corsixth.wasm`, and `corsixth.data`.
+- **Parallel Asset Download & VFS Directory Memoization**:
+  - `startGame` in `dist/app.js` downloads `corsixth.js` and `corsixth.data` concurrently via `Promise.all`, verifies `corsixth.data` byte length against `dataSize` (re-fetching with `cache: "no-store"` on mismatch), and memoizes created VFS directories (`FS._bthDirs`) in `mkdirp` to avoid thousands of thrown `FS.mkdir` exceptions when mounting `HOSP.zip`.
+- **Server Gzip Streaming (`server/server.js`)**:
+  - Compresses `.html`, `.js`, `.mjs`, `.css`, `.json`, `.wasm`, and `.data` responses (>1 KB) via streaming gzip (`level: 1`), cutting wire transfer size by 53%–73%.
+- **DOM Diff Memoization & Telemetry Deduplication**:
+  - `updateQuestUI()` skips rendering when `#quest-win` is hidden and uses `setHtmlIfChanged` to guarantee zero redundant DOM rewrites when stats haven't changed.
+  - `multiplayer.lua` deduplicates `vstats:` / `vs.mystats` payloads across unchanged ticks (with a 5s heartbeat) and auto-hides transient `#net-banner` notifications after 3.5s.
+- **High-DPI UI Scaling (`1x`–`3x`) with Viewport Safety Clamping**:
+  - Supports CorsixTH `v0.70.2` `ui_scale` (`window.__bth.setGameUIScale(scale)`) and automatically clamps `ui_scale` in `UI:changeResolution(w, h)` so `640 * scale <= w` and `480 * scale <= h` whenever the browser window resizes.
 
 ---
 
@@ -231,6 +244,9 @@ BrowserTHospital/
 
 Run tests before committing any changes:
 ```powershell
+# Run CorsixTH v0.70.2 upgrade, High-DPI scale clamp, gzip, and runtime performance verification
+node tests/test_v0702_upgrade_and_perf.js
+
 # Run Fullscreen & Leave Match (zero browser beforeunload dialog) verification
 node tests/test_fullscreen_leave.js
 
@@ -257,35 +273,16 @@ node tests/test_leaderboard_and_username.js
 
 # Run the UI improvements regression test (checks top-right HUD, window persistence, play badge)
 node tests/test_ui_improvements_oct28.js
+
+# Run WebRTC P2P Versus and Map Preview Modal tests
+node tests/test_p2p_versus.js
+node tests/test_map_preview_modal.js
 ```
 
 ---
 
-## 7. TODO: CorsixTH v0.70.1 / v0.70.2 Engine Upgrade (DO NOT IMPLEMENT YET)
+## 7. CorsixTH v0.70.2 Engine Upgrade Summary (Completed)
 
-> STATUS: PREPARED AS ROADMAP TODO — DO NOT EXECUTE UNTIL EXPLICIT USER INSTRUCTION.
-
-The current game engine runs on CorsixTH **v0.69.2** (savegame version 222).
-Upstream release **v0.70.1** and the upcoming hotfix milestone **v0.70.2** introduce:
-- 2x and 3x UI scaling for high-resolution displays.
-- Announcer speech subtitles.
-- Option to disable earthquake screen shake.
-- Pathfinding performance improvements for large hospitals.
-- Bug fixes for rare patient stuck states, staff hiring crashes, and MIDI/JACK audio stability.
-- Post-0.70.1 hotfix patches (v0.70.2 milestone) for minor simulation glitches and lower-drawer save compatibility.
-
-### Step-by-Step Upgrade Roadmap (When Greenlit):
-1. **Target Selection & Source Diff**:
-   - Check upstream repository `https://github.com/CorsixTH/CorsixTH` for the latest available tag: use **v0.70.2** if published, or pull the latest `v0.70.2` hotfix commits on top of release tag **v0.70.1**.
-   - Diff upstream tree against `third_party/CorsixTH`.
-2. **Rebase Custom Multiplayer Netcode**:
-   - Port custom changes from `third_party/CorsixTH/CorsixTH/Lua/multiplayer.lua` onto the updated Lua files.
-   - Port web lifecycle modifications from `CorsixTH/Lua/app.lua` and `CorsixTH/Lua/game_ui.lua`.
-   - Update `SAVEGAME_VERSION` checks in `app.lua` (v0.70.x increments savegame version to 223+).
-3. **WebAssembly Bridge Verification**:
-   - Check compatibility of `web/src/web_main.cpp` and `web/src/web_bridge.cpp` with updated C++ headers.
-4. **Recompile WebAssembly**:
-   - Execute `powershell -ExecutionPolicy Bypass -File web/build.ps1` using `tools/emsdk`.
-   - Ensure `dist/game/corsixth.wasm`, `corsixth.js`, and `corsixth.data` are updated without errors.
-5. **Multiplayer Sync Verification**:
-   - Run `node tests/test_simulation_sync.js` and `node tests/test_coop_actions.js` to ensure zero desyncs across network peers.
+- Upgraded `third_party/CorsixTH` from `v0.69.2` (`SAVEGAME_VERSION = 222`) to `v0.70.2` (`release/v0.70` hotfix commit `22040b6`, `SAVEGAME_VERSION = 254`, Lua API `2717`).
+- Migrated C++/WASM mainloop (`sdl_core.cpp`, `web_loop.h`, `web_main.cpp`) from coroutine yield/resume to direct C++ `push_app_dispatch` + `lua_pcall` execution (including `v0.70.2` `SDL_KEYUP` modifier table hotfix #3535 and root `"/"` VFS path normalization in `utility.lua` / `app.lua`).
+- Verified across 12 automated Playwright suites with zero regressions.

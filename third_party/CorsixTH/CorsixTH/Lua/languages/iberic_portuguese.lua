@@ -20,9 +20,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
-
+Font("cp437")
 Language(utf8 "Português", "Portuguese", "pt", "pt")
 Inherit("english")
+IsArabicNumerals(true)
 
 -------------------------------  OVERRIDE  ----------------------------------
 adviser.warnings.money_low = "Estás a ficar sem dinheiro!" -- Funny. Exists in German translation, but not existent in english?
@@ -45,15 +46,16 @@ confirmation.maximum_screen_size = "A resolução de ecrã que escolheu é maior
 confirmation.music_warning = "Antes de escolher usar mp3 para a música dentro do jogo, necessita de ter o smpeg.dll ou equivalente para o seu sistema operativo, caso contrário, não terá música no jogo. Deseja continuar?"
 menu_options_wage_increase.deny = "    NEGAR "
 menu_options_wage_increase.grant = "    PERMITIR "
-tooltip.options_window.audio_button = "Ligar ou desligar todo o som do jogo"
-tooltip.options_window.audio_toggle = "Ligar ou desligar"
+tooltip.audio_window.audio_button = "Ligar ou desligar todo o som do jogo"
+tooltip.audio_window.audio_toggle = "Ligar ou desligar"
 tooltip.options_window.folder_button = "Opções de pastas"
 tooltip.options_window.customise_button = "Mais opões que pode alterar para personalizar a sua experiência de jogo."
 tooltip.update_window.download = "Vá para a página de transferências para a última versão de CorsixTH"
 tooltip.update_window.ignore = "Ignorar esta actualização agora. Será notificado de novo na próxima vez que inicializar CorsixTH"
 tooltip.folders_window.browse_font = "Procurar outro tipo de letra (localização actual: %1% )"
 tooltip.folders_window.screenshots_location = "Por defeito, as capturas de ecrã são armazenadas numa pasta junto do ficheiro de configuração. Caso isto não seja apropriado, pode escolher a sua própria, simplesmente indique qual a pasta que deseja utilizar."
-tooltip.folders_window.reset_to_default = "Reinicializar a directoria para a localização por defeito"
+tooltip.folders_window.reset_to_default = "Reinicializar a directoria para a localização por defeito ( %1% )"
+tooltip.folders_window.clear_directory = "Limpar seleção de diretório atual"
 tooltip.folders_window.back = "Fechar este menu e voltar às definições."
 tooltip.folders_window.music_location = "Escolha a localização dos seus ficheiros mp3. A pasta já deve ter sido criada, e agora escolha o directório que acabou de criar."
 tooltip.folders_window.font_location = "Localização de um tipo de letra capaz de mostrar caracteres Unicode requeridos pela sua língua. Se isto não for especificado, não será capaz de escolher línguas que necessitam de mais caracteres que o jogo original consegue fornecer. Exemplo: Russo e Chinês."
@@ -107,7 +109,7 @@ customise_window.aliens = "Pacientes Extraterrestres"
 customise_window.fractured_bones = "Ossos Partidos"
 options_window.folder = "Pastas"
 options_window.customise = "Personalizar"
-options_window.audio = "Som Geral"
+audio_window.audio = "Som Geral"
 menu_options.twentyfour_hour_clock = "  RELÓGIO DE 24 HORAS  "
 menu_options.wage_increase = "  EXIGÊNCIAS SALARIAIS"
 install.ok = "OK"
@@ -382,7 +384,7 @@ errors = {
   unavailable_screen_size = "Esta resolução não está disponível no modo de tela cheia.",
   maximum_screen_size = "Resolução máxima de 3000x2000.",
   map_file_missing = "Não foi encontrado o ficheiro do mapa %s para este nível!",
-  minimum_screen_size = "Resolução mínima de 640x480.",
+  minimum_screen_size = "Resolução mínima de %dx%d.",
 }
 
 
@@ -488,6 +490,10 @@ options_window = {
   height = "Altura",
   new_th_directory = "Aqui podes escolher uma nova localizaçao da instalaçao de Theme Hospital,assim que o fizeres o jogo será reiniciado.",
   change_resolution = "Alterar resoluçao",
+  back = "Voltar",
+}
+
+audio_window = {
   back = "Voltar",
 }
 
@@ -802,4 +808,3 @@ room_classes = {
   clinics    = "Clínicas",
   facilities = "Acomodaçoes",
 }
-

@@ -71,8 +71,10 @@ because the letters ø and Ø is not included in the original ingame-font.
 -------------------------------------------------------------------------------
 
 -- 1. Global settings (do not edit!)
+Font("cp437")
 Language("Dansk", "Danish", "da", "dk")
 Inherit("english")
+IsArabicNumerals(true)
 
 date_format = {
   daymonth = "%1% %2:months%",
@@ -293,7 +295,7 @@ dialog_missing_graphics = "Undskyld, men demo datafilerne har ikke en tekst.",
   save_prefix = "Fejl under gem af spil: ",
   load_prefix = "Fejl under indlæsning af spil: ",
   map_file_missing = "Kunne ikke finde kort filen %s for denne bane!",
-  minimum_screen_size = "Indtast en oplösning på mindst 640x480.",
+  minimum_screen_size = "Indtast en oplösning på mindst %dx%d.",
    maximum_screen_size = "Indtast en oplösning på maksimalt 3000x2000.",
   unavailable_screen_size = "Skærmoplösningen du valgte er ikke tilgængelig i fuldskærmsvisning.",
 }
@@ -2632,15 +2634,15 @@ confirmation.maximum_screen_size = "Skærmopløsningen du har valgt er større e
 confirmation.music_warning = "Før du  vælger at bruge mp3'er til musikken i spillet, har du brug for smpeg.dll eller lignende til dit styresystem, ellers vil du ikke have musik i spillet. Vil du fortsætte?"
 menu_options_wage_increase.deny = "    AFVIS "
 menu_options_wage_increase.grant = "    TILLAD "
-tooltip.options_window.audio_button = "Slå alle lyde til og fra i spillet "
-tooltip.options_window.audio_toggle = "Slå til og fra"
+tooltip.audio_window.audio_button = "Slå alle lyde til og fra i spillet "
+tooltip.audio_window.audio_toggle = "Slå til og fra"
 tooltip.options_window.folder_button = "Mappeindstillinger"
 tooltip.options_window.customise_button = "Flere indstillinger som du kan ændre for at tilpasse din spiloplevelse."
 tooltip.update_window.download = "Gå til downloadsiden for den nyeste version af CorsixTH"
 tooltip.update_window.ignore = "Ignorer denne opdatering for nu. Du vil blive påmindet igen næste gang du åbner CorsixTH"
 tooltip.folders_window.browse_font = "Led efter en anden skrifttype fil ( nuværende placering: %1% )"
 tooltip.folders_window.screenshots_location = "Normalt er skærmbilleder gemt i samme mappe som konfigurationsfilen. Hvis du gerne vil have skærmbilleder gemt et andet sted, skal du blot navigere til den pågældende mappe."
-tooltip.folders_window.reset_to_default = "Gendan biblioteket til standard placeringen"
+tooltip.folders_window.reset_to_default = "Gendan biblioteket til standard placeringen ( %1% )"
 tooltip.folders_window.back = "Luk denne menu og gå tilbage til indstillinger"
 tooltip.folders_window.browse = "Find placering af mappe"
 tooltip.folders_window.browse_screenshots = "Find en anden mappe til dine skærmbilleder ( nuværende placering: %1% ) "
@@ -2681,7 +2683,7 @@ customise_window.aliens = "Fremmede patienter"
 customise_window.fractured_bones = "Brækkede knogler"
 options_window.folder = "Mapper"
 options_window.customise = "Tilpasse"
-options_window.audio = "Global Lyd"
+audio_window.audio = "Global Lyd"
 menu_options.twentyfour_hour_clock = "  24-TIMERS UR  "
 menu_options.wage_increase = "  LØN ANMODNING"
 install.ok = "OK"

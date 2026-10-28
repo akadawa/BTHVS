@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=2c1fcc3ee4ae">
+  <link rel="stylesheet" href="style.css?v=b6b1bf366297">
 </head>
 <body>
   <!-- ======================= Landing / Lobby ======================= -->
@@ -75,7 +75,7 @@
                 This open-source project is hosted on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a> — bug reports, feedback, and feature requests are welcome and will gladly be implemented. Currently running serverless on Vercel for prototype testing, while a dedicated multiplayer server is in active roadmap development to deliver persistent matches and authoritative synchronization.
               </div>
               <div class="note-summary-pause">
-                Note: During essential in-game decisions requiring player input (such as incoming fax messages, salary reviews, or modal dialogs), the CorsixTH engine momentarily pauses the match for all players as intended by design.
+                Note: Local hospital faxes and year-end reports run seamlessly without interrupting rivals. Explicit game speed toggles (Pause / Normal via Options or P) synchronize across all players.
               </div>
             </div>
           </details>
@@ -248,7 +248,7 @@
         <p id="level-compat-hint" class="status warn small" hidden></p>
 
         <div class="match-notice-banner muted small" style="margin-top: 10px;">
-          Note: Mandatory simulation dialogs (such as incoming faxes) temporarily pause the game for all players.
+          Note: Local faxes do not interrupt rivals. Manual Pause / Normal toggles synchronize across all players.
         </div>
       </div>
 
@@ -264,7 +264,7 @@
           </div>
         </div>
         <div class="match-notice-banner muted small" style="margin-top: 8px;">
-          Note: Mandatory simulation dialogs (such as incoming faxes) temporarily pause the game for all players.
+          Note: Local faxes do not interrupt rivals. Manual Pause / Normal toggles synchronize across all players.
         </div>
         <p id="guest-wait" class="muted">Waiting for the host to start the game …</p>
       </div>
@@ -279,7 +279,7 @@
 
     <footer class="card footer-card">
       <div class="footer-links-line">
-        Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.69.2</a> (MIT License) &middot; <span class="footer-version-tag" id="footer-bthvs-version">BTHVS v0.0.1</span>
+        Based on <a href="https://corsixth.com" target="_blank" rel="noopener">CorsixTH v0.70.2</a> (MIT License) &middot; <span class="footer-version-tag" id="footer-bthvs-version">BTHVS v0.0.1</span>
       </div>
       <div class="footer-links-line muted small">
         Have feedback or ideas? Please join us on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub</a>.
@@ -512,6 +512,6 @@
 
   <script src="vendor/peerjs.min.js"></script>
   <script src="vendor/fflate.js"></script>
-  <script src="app.js?v=2c1fcc3ee4ae"></script>
+  <script src="app.js?v=b6b1bf366297"></script>
 </body>
 </html>

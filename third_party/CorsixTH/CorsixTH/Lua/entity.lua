@@ -125,9 +125,8 @@ function Entity:setTile(x, y)
 
   self.tile_x = x
   self.tile_y = y
-  self.th:setDrawingLayer(self:getDrawingLayer())
-  -- NB: (x, y) can be nil, in which case th:setTile expects all nil arguments
-  self.th:setTile(x and self.world.map.th, x, y)
+  -- NB: map can be nil, in which case th:setTile expects all nil arguments
+  self.th:setTile(x and self.world.map.th, x, y, self:getDrawingLayer())
   if self.mood_info then
     self.mood_info:setParent(self.th, self.mood_marker or 1)
   end
@@ -283,10 +282,15 @@ function Entity:onDestroy()
   -- Clear any mood
   self:setMoodInfo()
   self:setTile(nil)
-  self.world.dispatcher:dropFromQueue(self)
+  self:onPickUp()
   if self.waiting_for_sound_effects_to_be_turned_on then
     TheApp.audio:entityNoLongerWaitingForSoundsToBeTurnedOn(self)
   end
+end
+
+-- Function which is called when entity is picked up
+function Entity:onPickUp()
+  self.world.dispatcher:dropFromQueue(self)
 end
 
 -- Function which is called at the end of each ingame day. Should be used to
@@ -353,9 +357,8 @@ function Entity:eraseObject()
 end
 
 function Entity:resetAnimation()
-  self.th:setDrawingLayer(self:getDrawingLayer())
   local x, y = self.tile_x, self.tile_y
-  self.th:setTile(x and self.world.map.th, x, y)
+  self.th:setTile(x and self.world.map.th, x, y, self:getDrawingLayer())
 end
 
 --[[
@@ -366,5 +369,5 @@ end
   objects layer 9.
 ]]
 function Entity:getDrawingLayer()
-  return 4
+  return DrawingLayers.Entity
 end

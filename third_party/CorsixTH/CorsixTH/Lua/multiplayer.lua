@@ -1,5 +1,5 @@
 --[[
-Versus / Rival Hospital Multiplayer Manager for Browser Theme Hospital
+Versus / Rival Hospital Multiplayer Manager for Browser Theme Hospital (CorsixTH v0.70.2)
 Each player manages their own hospital in real-time, racing to complete the match goals.
 ]]
 
@@ -35,6 +35,8 @@ function Multiplayer:Multiplayer(app)
   self.sim_started = false
   self.internal_speed_change = false
   self.last_stats_send = 0
+  self.last_force_send = 0
+  self.last_payload = nil
   self.hooks_installed = false
   self.font = nil
 end
@@ -62,7 +64,7 @@ function Multiplayer:init()
   self.session = sess
   self.id = sess.id
   self.code = sess.code
-  self.name = clean_name(sess.name or "Dr. Spieler")
+  self.name = clean_name(sess.name or "Player")
   self.players = sess.players or {}
   self.host_id = sess.host
   self.is_host = (self.id == self.host_id)
@@ -80,10 +82,11 @@ function Multiplayer:init()
   -- Deterministic RNG seed for identical starting layout and prices
   math.randomseed(self.seed)
 
-  -- Always keep real economy active
+  -- Always keep real economy active and allow local actions even while paused
   self.app.config.free_build_mode = false
+  self.app.config.allow_user_actions_while_paused = true
 
-  self.web.call("ui.banner", "oVersus-Match: Raum " .. self.code)
+  self.web.call("ui.banner", "oVersus Match: Room " .. self.code)
   self.web.call("ui.sync", "oSync")
   return true
 end
@@ -101,6 +104,27 @@ function Multiplayer:installHooks()
     UIStaffRise.mustPause = function() return false end
   end
 
+  -- Prevent local faxes, annual reports, or dialogs from forcing global match pause
+  if World then
+    local orig_mustPause = World.mustPause
+    World.mustPause = function(world_self)
+      if mp.active then return false end
+      return orig_mustPause and orig_mustPause(world_self) or false
+    end
+
+    local orig_mustPauseWindowAdd = World.mustPauseWindowAdd
+    World.mustPauseWindowAdd = function(world_self)
+      if mp.active then return end
+      if orig_mustPauseWindowAdd then return orig_mustPauseWindowAdd(world_self) end
+    end
+
+    local orig_mustPauseWindowRemoved = World.mustPauseWindowRemoved
+    World.mustPauseWindowRemoved = function(world_self)
+      if mp.active then return end
+      if orig_mustPauseWindowRemoved then return orig_mustPauseWindowRemoved(world_self) end
+    end
+  end
+
   -- Synchronize game speed between competitors so the race is fair
   if World and World.setSpeed then
     local orig_setSpeed = World.setSpeed
@@ -110,8 +134,11 @@ function Multiplayer:installHooks()
         speed = "Normal"
       end
       local res = orig_setSpeed(world_self, speed)
-      -- Always guarantee user actions remain allowed in multiplayer
+      -- Always guarantee user actions remain allowed and blue pause filter stays off in MP
       world_self.user_actions_allowed = true
+      if world_self.updateScreenBlueFilter then
+        world_self:updateScreenBlueFilter()
+      end
       if mp.active and not mp.internal_speed_change then
         mp.web.call("net.send", "all|speed:" .. tostring(speed))
       end
@@ -178,6 +205,9 @@ function Multiplayer:start()
     self.internal_speed_change = true
     self.app.world:setSpeed("Normal")
     self.internal_speed_change = false
+    if self.app.world.updateScreenBlueFilter then
+      self.app.world:updateScreenBlueFilter()
+    end
   end
 
   -- Close any modal information / briefing windows that opened during level load
@@ -192,7 +222,7 @@ function Multiplayer:start()
   self.sim_started = true
   -- Signal to server that this client's engine is loaded and ready
   self.web.call("game.ready", "")
-  self.web.call("ui.banner", "oWettkampf gestartet! Baue dein Krankenhaus und erfülle das Ziel!")
+  self.web.call("ui.banner", "oMatch started! Build your hospital and complete the goals!")
   return true
 end
 
@@ -211,7 +241,7 @@ function Multiplayer:onTick()
     end
   end
 
-  -- 2. Periodically send local hospital telemetry (~1000ms)
+  -- 2. Periodically send local hospital telemetry (~1000ms, deduplicated if unchanged)
   local now = self.web.now()
   if self.app.world and (now - self.last_stats_send > 1000) then
     self.last_stats_send = now
@@ -238,8 +268,15 @@ function Multiplayer:onTick()
       end
 
       local payload = string.format("%d,%d,%d,%d,%d,%d,%d", bal, rep, room_count, staff_count, cured, deaths, val)
-      self.web.call("net.send", "all|vstats:" .. payload)
-      self.web.call("vs.mystats", payload)
+      if payload ~= self.last_payload then
+        self.last_payload = payload
+        self.last_force_send = now
+        self.web.call("net.send", "all|vstats:" .. payload)
+        self.web.call("vs.mystats", payload)
+      elseif (now - self.last_force_send > 5000) then
+        self.last_force_send = now
+        self.web.call("net.send", "all|vstats:" .. payload)
+      end
     end
   end
 end
@@ -254,8 +291,11 @@ function Multiplayer:handleMessage(from, data)
       self.internal_speed_change = true
       self.app.world:setSpeed("Normal")
       self.internal_speed_change = false
+      if self.app.world.updateScreenBlueFilter then
+        self.app.world:updateScreenBlueFilter()
+      end
     end
-    self.web.call("ui.banner", "oWettkampf gestartet! Erreiche als Erster das Ziel!")
+    self.web.call("ui.banner", "oMatch started! Be the first to complete the goals!")
     return
   end
 
@@ -276,9 +316,12 @@ function Multiplayer:handleMessage(from, data)
       self.internal_speed_change = true
       self.app.world:setSpeed(speed_name)
       self.app.world.user_actions_allowed = true
+      if self.app.world.updateScreenBlueFilter then
+        self.app.world:updateScreenBlueFilter()
+      end
       self.internal_speed_change = false
       local p = self:getPlayer(from)
-      local name = p and p.name or "Gegner"
+      local name = p and p.name or "Rival"
       if speed_name == "Pause" then
         self.web.call("ui.banner", "wPause (" .. name .. ")")
       else

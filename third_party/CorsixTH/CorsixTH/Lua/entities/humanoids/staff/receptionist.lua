@@ -71,10 +71,11 @@ function Receptionist:onPlaceInCorridor()
   Staff.onPlaceInCorridor(self)
 
   local world = self.world
-  world:findObjectNear(self, "reception_desk", nil, function(x, y)
+  world:findObjectNear(self, "reception_desk", nil, true, function(x, y)
     local obj = world:getObject(x, y, "reception_desk")
     return obj and obj:occupy(self)
   end)
+  self.hospital:buildReceptionDesksCache() -- Rebuild cache of staffed desks
 end
 
 
@@ -87,9 +88,19 @@ end
 function Receptionist:getDrawingLayer()
   local direction = self.last_move_direction
   if direction == "west" or direction == "north" then
-    return 5
+    return DrawingLayers.ReceptionistFacingAway
   end
-  return 3
+  return DrawingLayers.ReceptionistFacingUser
+end
+
+function Receptionist:onPickup()
+  Staff.onPickup(self)
+  self.hospital:buildReceptionDesksCache() -- Rebuild cache of staffed desks
+end
+
+function Receptionist:fire()
+  Staff.fire(self)
+  self.hospital:buildReceptionDesksCache() -- Rebuild cache of staffed desks
 end
 
 function Receptionist:afterLoad(old, new)
@@ -99,4 +110,3 @@ function Receptionist:afterLoad(old, new)
   end
   Staff.afterLoad(self, old, new)
 end
-

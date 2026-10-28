@@ -71,7 +71,7 @@ const { listen, launch, newPage, loadDemo, sleep, root } = require("./lib");
     // Check that fatal overlay is hidden (no utility.lua syntax error!)
     const fatalHidden = await p1.$eval("#fatal", (el) => el.hidden);
     if (!fatalHidden) {
-      const fatalMsg = await p1.textContent("#fatal-msg");
+      const fatalMsg = await p1.textContent("#fatal-text");
       throw new Error(`FAIL: Engine hit fatal error: ${fatalMsg}`);
     }
     console.log("✓ Engine booted cleanly with #fatal hidden (zero utility.lua syntax errors).");

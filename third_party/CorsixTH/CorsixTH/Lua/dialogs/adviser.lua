@@ -41,6 +41,9 @@ function UIAdviser:UIAdviser(ui)
   self.queued_messages = {}        -- There might be many messages in a row
   self.timer = nil                 -- Timer which hides adviser at the end
 
+  self.message_history = {}        -- Store past messages to be able to view them later
+  self.message_history_limit = 20  -- Limit the number of messages stored
+
   -- There are 5 phases the adviser might be in on a given time point.
   -- Not visible, getting up, talking, idling, getting_down.
   self.phase = 0
@@ -52,17 +55,63 @@ function UIAdviser:UIAdviser(ui)
   self.y = -16
   self.balloon_width = 0
   self.panel_sprites = app.gfx:loadSpriteTable("Data", "Panel02V", true)
-  self.black_font = app.gfx:loadFontAndSpriteTable("QData", "Font50V")
+  self.black_font = app.gfx:loadFontAndSpriteTable("QData", "Font50V", nil, nil, { apply_ui_scale = true })
 
   local th = TH.animation()
   self.th = th
+end
+
+function UIAdviser:messageIndexInHistory(message)
+  for index, msg in ipairs(self.message_history) do
+    if msg == message then
+      return index
+    end
+  end
+  return nil
+end
+
+--! Adds a message to the adviser's message history.
+--! If the history exceeds a certain limit, the oldest messages are removed.
+function UIAdviser:addMessageToHistory(speech)
+  local message_index_in_history = self:messageIndexInHistory(speech)
+
+  if message_index_in_history then
+    -- If the message is already in history, remove it first
+    table.remove(self.message_history, message_index_in_history)
+  end
+
+  -- Add the message at the top of the history
+  table.insert(self.message_history, 1, speech)
+
+  -- If the history exceeds the limit, remove the oldest messages (the last ones in the list)
+  while #self.message_history > self.message_history_limit do
+    table.remove(self.message_history, #self.message_history)
+  end
+end
+
+--! Adds all queued messages to the adviser's message history.
+function UIAdviser:addQueuedMessagesToHistory()
+  for _, message in ipairs(self.queued_messages) do
+
+    self:addMessageToHistory(message.speech)
+  end
+end
+
+--! Removes a message from the adviser's message history.
+function UIAdviser:removeMessageFromHistory(index)
+  table.remove(self.message_history, index)
+end
+
+--! Deletes all messages from the adviser's message history.
+function UIAdviser:deleteAllMessagesFromHistory()
+  self.message_history = {}
 end
 
 -- Shows the adviser by running the "popup" animation.
 -- Then moves on to the next phase automatically.
 function UIAdviser:show()
   self.phase = 1
-  self.th:setAnimation(self.ui.app.world.anims, 438)
+  self.th:setAnimation(self.ui.app.world.anims, 438, DrawFlags.Nearest)
   self.frame = 1
   self.number_frames = 4
 end
@@ -71,7 +120,11 @@ end
 -- from the queue.
 function UIAdviser:talk()
   self.phase = 2
-  self.th:setAnimation(self.ui.app.world.anims, 460)
+
+  -- Preferably without the Nearest draw flag for a less pixelated look but
+  -- without it if direct zoom is enabled and ui_scale is > 1 then there is
+  -- artifacting around the mouth of the adviser.
+  self.th:setAnimation(self.ui.app.world.anims, 460, DrawFlags.Nearest)
   self.frame = 1
   self.timer = nil -- Reset the idle timer
   self.number_frames = 45
@@ -79,7 +132,8 @@ function UIAdviser:talk()
   local best = 1
   if self.queued_messages[1].priority then
     for i = 1, #self.queued_messages do
-      if best ~= i and self.queued_messages[best].priority < self.queued_messages[i].priority then
+      if best ~= i and self.queued_messages[i].priority and
+          self.queued_messages[best].priority < self.queued_messages[i].priority then
         best = i
       end
     end
@@ -87,6 +141,7 @@ function UIAdviser:talk()
   local speech = self.queued_messages[best].speech
   self.stay_up = self.queued_messages[best].stay_up
   table.remove(self.queued_messages, best)
+  self:addMessageToHistory(speech)
   self.speech = speech
   -- Calculate number of lines needed for the text.
   -- Each "/" at end of string indicates a blank line
@@ -120,7 +175,7 @@ end
 function UIAdviser:hide()
   self.timer = nil
   self.phase = 4
-  self.th:setAnimation(self.ui.app.world.anims, 440)
+  self.th:setAnimation(self.ui.app.world.anims, 440, DrawFlags.Nearest)
   self.frame = 1
   self.number_frames = 4
 end
@@ -180,19 +235,23 @@ end
 function UIAdviser:draw(canvas, x, y)
   Window.draw(self, canvas, x, y)
 
-  x, y = x + self.x, y + self.y
-  self.th:draw(canvas, x + 200, y)
+  local s = TheApp.config.ui_scale
+  x, y = x + self.x * s, y + self.y * s
+
+  self.th:setScaleFactor(s)
+  self.th:draw(canvas, x + 200 * s, y)
+
   if self.phase == 2 then
     -- Draw balloon only in the "talk" phase.
     local x_left_sprite
-    for dx = 0, self.balloon_width, 16 do
-      x_left_sprite = x + 139 - dx
-      self.panel_sprites:draw(canvas, 38, x_left_sprite, y - 25)
+    for dx = 0, self.balloon_width * s, 16 * s do
+      x_left_sprite = x + 139 * s - dx
+      self.panel_sprites:draw(canvas, 38, x_left_sprite, y - 25 * s, { scaleFactor = s })
     end
-    self.panel_sprites:draw(canvas, 37, x_left_sprite - 16, y - 25)
-    self.panel_sprites:draw(canvas, 39, x + 155, y - 40)
+    self.panel_sprites:draw(canvas, 37, x_left_sprite - 16 * s, y - 25 * s, { scaleFactor = s })
+    self.panel_sprites:draw(canvas, 39, x + 155 * s, y - 40 * s, { scaleFactor = s })
     -- Draw text
-    self.black_font:drawWrapped(canvas, self.speech, x_left_sprite - 8, y - 20, self.balloon_width + 60)
+    self.black_font:drawWrapped(canvas, self.speech, x_left_sprite - 8 * s, y - 20 * s, self.balloon_width * s + 60 * s)
   end
 end
 
@@ -201,11 +260,13 @@ function UIAdviser:onMouseDown(button, x, y)
   if self.phase == 0 or self.phase == 4 then
     return Window.onMouseDown(self, button, x, y)
   end
+  local s = TheApp.config.ui_scale
+
   -- Normal operation outside the adviser bounds
-  if x + self.balloon_width < 128 or x > 200 or
-      y + self.y > 0 or y + self.y + 40 < 0 then
-    if x < self.x - 200 or y < self.y - 40 or
-        x > self.x - 200 + self.width or y > self.y + self.height - 40 then
+  if x + self.balloon_width * s < 128 * s or x > 200 * s or
+      y + self.y * s > 0 or y + self.y * s + 40 * s < 0 then
+    if x < self.x * s - 200 * s or y < self.y * s - 40 * s or
+        x > self.x * s - 200 * s + self.width * s or y > self.y * s + self.height * s - 40 * s then
       return Window.onMouseDown(self, button, x, y)
     end
   end
@@ -220,6 +281,8 @@ function UIAdviser:onMouseDown(button, x, y)
     end
   elseif button == "right" then
     self:hide()
+    -- Dump dismissed messages to history
+    self:addQueuedMessagesToHistory()
     self.queued_messages = {}
   end
 end
@@ -273,6 +336,13 @@ end
 function UIAdviser:afterLoad(old, new)
   if old < 47 then
     self.enabled = true
+  end
+  if old < 236 then
+    self.black_font = TheApp.gfx:loadFontAndSpriteTable("QData", "Font50V", nil, nil, { apply_ui_scale = true })
+  end
+  if old < 246 then
+    self.message_history = {}
+    self.message_history_limit = 20
   end
   Window.afterLoad(self, old, new)
 end

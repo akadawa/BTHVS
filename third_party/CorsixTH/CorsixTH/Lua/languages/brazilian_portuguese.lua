@@ -23,15 +23,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
+Font("cp437")
 Language("Português Brasileiro", "Brazilian Portuguese", "pt_br", "br")
 Inherit("English")
 Encoding(utf8)
+IsArabicNumerals(true)
 
 --Note: All strings should use a single space after full-stops. Only exception is level descriptions.
 -------------------------------  OVERRIDE  ----------------------------------
-adviser.warnings.money_low = "Você está ficando sem dinheiro!" -- Funny. Exists in German translation, but not existent in english?
-tooltip.graphs.reputation = "Alternar reputaçäo" -- Incorrectly said "toggle hospital value"
-tooltip.status.close = "Fechar janela de status" -- Incorrectly said "close overview window"
+adviser.warnings.money_low = "Você está ficando sem dinheiro!"
+tooltip.graphs.reputation = "Alternar reputaçäo"
+tooltip.status.close = "Fechar janela de status"
 
 -- tooltip.staff_list.next_person, prev_person is rather next/prev page (also in german, maybe more languages?)
 tooltip.staff_list.next_person = "Mostrar a página seguinte"
@@ -454,7 +456,6 @@ options_window = {
   custom_resolution = "Personalizar...",
   width = "Largura",
   height = "Altura",
-  audio = "Audio Geral",
   customise = "Personalizar",
   folder = "Pastas",
   language = "Idioma do Jogo",
@@ -466,7 +467,6 @@ options_window = {
   zoom_speed = "Veloc. do Zoom",
   hotkey = "Atalhos",
   check_for_updates = "Verificar Atualizaçöes",
-  jukebox = "Jukebox",
 }
 
 tooltip.options_window = {
@@ -480,8 +480,6 @@ tooltip.options_window = {
   height = "Insira a altura da tela desejada",
   apply = "Aplicar a resoluçäo inserida",
   cancel = "Retornar sem alterar a resoluçäo",
-  audio_button = "Ligar ou desligar todo o áudio do jogo",
-  audio_toggle = "Ativar ou desativar",
   customise_button = "Você pode alterar mais configuraçöes para personalizar sua experiência de jogo",
   folder_button = "Opçöes de pastas",
   language = "O idioma em que os textos do jogo apareceräo",
@@ -500,6 +498,17 @@ tooltip.options_window = {
   cancel_zoomspeed = "Retorne sem alterar a velocidade de aproximaçäo.",
   hotkey = "Altere as teclas de atalho do teclado.",
   check_for_updates = "Define se o jogo deve procurar atualizaçöes ao iniciar.",
+}
+
+audio_window = {
+  audio = "Audio Geral",
+  jukebox = "Jukebox",
+  back = "Voltar",
+}
+
+tooltip.audio_window = {
+  audio_button = "Ligar ou desligar todo o áudio do jogo",
+  audio_toggle = "Ativar ou desativar",
   jukebox = "Abrir a Jukebox para controlar a música",
 }
 
@@ -560,7 +569,8 @@ tooltip.folders_window = {
   no_font_specified = "Pasta de fontes näo especificada!",
   not_specified = "Pasta näo especificada!",
   default = "Localizaçäo padräo",
-  reset_to_default = "Volta a atribuir a pasta a sua localizaçäo padräo",
+  reset_to_default = "Volta a atribuir a pasta a sua localizaçäo padräo ( %1% )",
+  clear_directory = "Limpar seleção de diretório atual",
   back  = "Fechar este menu e voltar para o menu de Configuraçöes",
 }
 
@@ -742,7 +752,7 @@ errors = {
   no_games_to_contine = "Näo há jogos salvos.",
   load_quick_save = "Erro, näo foi possível carregar o carregamento rápido já que ele näo existe, näo se preocupe nós criamos um agora para você!",
   map_file_missing = "Näo foi possível encontrar o arquivo de mapa %s para esta fase!",
-  minimum_screen_size = "Por favor, insira um tamanho de tela de pelo menos 640x480.",
+  minimum_screen_size = "Por favor, insira um tamanho de tela de pelo menos %dx%d.",
   unavailable_screen_size = "O tamanho da tela que você digitou näo está disponível em tela cheia.",
   alien_dna = "NOTA: Os pacientes alienígenas näo têm animaçöes para se sentar, abrir portas, bater nas portas, etc. portanto, assim como no Theme Hospital original, ao fazer estas coisas aparentaräo mudar para uma imagem normal e logo voltaräo para o seu estado.  Os pacientes com DNA alienígena só apareceräo se o arquivo de fase o indicar",
   fractured_bones = "NOTA: A animaçäo das pacientes femininas com Fraturas ósseas näo é perfeita",

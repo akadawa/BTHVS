@@ -256,37 +256,12 @@ function UIEditRoom:confirm(force)
   end
 end
 
-local function isHumanoidObscuringArea(humanoid, x1, x2, y1, y2)
-  if humanoid.tile_x then
-    if x1 <= humanoid.tile_x and humanoid.tile_x <= x2 and
-        y1 <= humanoid.tile_y and humanoid.tile_y <= y2 then
-      if (x1 == humanoid.tile_x or x2 == humanoid.tile_x) or
-          (y1 == humanoid.tile_y or y2 == humanoid.tile_y) then
-        -- Humanoid not in the rectangle, but might be walking into it
-        local action = humanoid:getCurrentAction()
-        if action.name ~= "walk" then
-          return false
-        end
-        if action.path_x then -- in a (rare) special case, path_x is nil (see action_walk_start)
-          local next_x = action.path_x[action.path_index]
-          local next_y = action.path_y[action.path_index]
-          if x1 >= next_x or next_x >= x2 or y1 >= next_y or next_y >= y2 then
-            return false
-          end
-        end
-      end
-      return true
-    end
-  end
-  return false
-end
-
 function UIEditRoom:clearArea()
   self.confirm_button:enable(false)
   local rect = self.blueprint_rect
   local world = self.ui.app.world
   world:clearCaches() -- To invalidate idle tiles in case we need to move people
-  local humanoids_to_watch = setmetatable({}, {__mode = "k"})
+  local humanoids_to_watch = {}
   do
     local x1 = rect.x - 1
     local x2 = rect.x + rect.w
@@ -294,7 +269,7 @@ function UIEditRoom:clearArea()
     local y2 = rect.y + rect.h
     for _, entity in ipairs(world.entities) do
       if class.is(entity, Humanoid) and
-          isHumanoidObscuringArea(entity, x1, x2, y1, y2) then
+          entity:isObscuringArea(x1, x2, y1, y2) then
         humanoids_to_watch[entity] = true
 
         -- Try to make the humanoid leave the area
@@ -366,7 +341,7 @@ function UIEditRoom:onTick()
           if not humanoid.hospital then
             self.humanoids_to_watch[humanoid] = nil
           end
-        elseif not isHumanoidObscuringArea(humanoid, x1, x2, y1, y2) then
+        elseif not humanoid:isObscuringArea(x1, x2, y1, y2) then
           self.humanoids_to_watch[humanoid] = nil
         end
       end
@@ -738,7 +713,7 @@ function UIEditRoom:removeRoom(save_objects, room, world)
       self.objects_backup[k] = { object = o.object, qty = o.qty, state = o.state }
     end
 
-    UIPlaceObjects.removeAllObjects(self, true)
+    UIPlaceObjects.removeAllObjects(self)
   end
 
   self:_remove_wall_line(room.x, room.y, 0, 1, room.height, 3, -1,  0, world)
@@ -948,8 +923,11 @@ function UIEditRoom:enterDoorPhase()
 
   -- check if all adjacent tiles of the rooms are still connected
   if not self:checkReachability() then
-    if self.ui.app.config.allow_blocking_off_areas then
-      print("Blocking off areas is allowed with room " .. self.blueprint_rect.x .. ", " .. self.blueprint_rect.y .. ".")
+    if self.ui.app.config.blocking_off_areas == 3 then
+      -- all-permissive placing approach
+      -- This could lead to crashes, so we'll record this in the log so that during investigation
+      -- we'll be able to know that safe placement was disabled.
+      TheApp.world:gameLog("Blocking off areas is allowed with room " .. self.blueprint_rect.x .. ", " .. self.blueprint_rect.y .. ".")
     else
       -- undo passable flags and go back to walls phase
       self.phase = "walls"
@@ -1072,31 +1050,94 @@ function UIEditRoom:draw(canvas, ...)
   UIPlaceObjects.draw(self, canvas, ...)
 end
 
+--25 north wall, west
+--26 north wall, east
+--27 east wall, south
+--28 east wall, north
+--29 south wall, west
+--30 south wall, east
+--31 west wall, south
+--32 west wall, north
+-- single door blue print values matching TH
+local door_floor_blueprint_markers = {
+  north = 26,
+  east = 27,
+  south = 30,
+  west = 31
+}
+
+local window_floor_blueprint_markers = {
+  north = 33,
+  east = 34,
+  south = 35,
+  west = 36,
+}
+
+function UIEditRoom:onLeftButtonDown(x, y)
+  local s = TheApp.config.ui_scale
+  if self.phase == "walls" then
+    if 0 <= x and x < self.width * s and 0 <= y and y < self.height * s then -- luacheck: ignore 542
+    else
+      local mouse_x, mouse_y = self.ui:ScreenToWorld(self.x * s + x, self.y * s + y)
+      self.mouse_down_x = math.floor(mouse_x)
+      self.mouse_down_y = math.floor(mouse_y)
+      if self.move_rect then
+        self.move_rect_x = self.mouse_down_x - self.blueprint_rect.x
+        self.move_rect_y = self.mouse_down_y - self.blueprint_rect.y
+      elseif not self.resize_rect then
+        self:setBlueprintRect(self.mouse_down_x, self.mouse_down_y, 1, 1)
+      end
+    end
+  elseif self.phase == "door" then
+    if self.blueprint_door.valid then
+      self.ui:playSound("buildclk.wav")
+      self:confirm(true)
+    else
+      self.ui:tutorialStep(3, 9, 10)
+    end
+  elseif self.phase == "windows" then
+    self:placeWindowBlueprint()
+  end
+end
+
+--! Attempt to remove a window placed on the room blueprints
+--!param x coordinate
+--!param y coordinate
+function UIEditRoom:tryRemoveWindowFromWall(x, y)
+  local cell_x, cell_y, wall_dir = self:screenToWall(self.x + x, self.y + y)
+  if not cell_x then
+    return
+  end
+
+  local map = TheApp.map.th
+  local cell_flag = map:getCell(cell_x, cell_y, 4)
+  if cell_flag == window_floor_blueprint_markers[wall_dir] then -- right click on a wall with a window
+    local wall_x, wall_y = cell_x, cell_y
+    local direction_flag = (wall_dir == "south" or wall_dir == "north") and 0 or 1
+    if wall_dir == "south" then
+      wall_y = cell_y + 1
+    elseif wall_dir == "east" then
+      wall_x = cell_x + 1
+    end
+
+    local anim = self.blueprint_wall_anims[wall_x][wall_y]
+    if anim then
+      -- reset tile to basic floor/wall
+      map:setCell(cell_x, cell_y, 4, 24)
+      anim:setAnimation(self.anims, 120, direction_flag)
+      anim:setTag(nil)
+      self.ui:playSound("de_build.wav")
+    end
+  end
+end
+
 function UIEditRoom:onMouseDown(button, x, y)
   if self.world.user_actions_allowed and not self.confirm_dialog_open then
     if button == "left" then
-      if self.phase == "walls" then
-        if 0 <= x and x < self.width and 0 <= y and y < self.height then -- luacheck: ignore 542
-        else
-          local mouse_x, mouse_y = self.ui:ScreenToWorld(self.x + x, self.y + y)
-          self.mouse_down_x = math.floor(mouse_x)
-          self.mouse_down_y = math.floor(mouse_y)
-          if self.move_rect then
-            self.move_rect_x = self.mouse_down_x - self.blueprint_rect.x
-            self.move_rect_y = self.mouse_down_y - self.blueprint_rect.y
-          elseif not self.resize_rect then
-            self:setBlueprintRect(self.mouse_down_x, self.mouse_down_y, 1, 1)
-          end
-        end
-      elseif self.phase == "door" then
-        if self.blueprint_door.valid then
-          self.ui:playSound("buildclk.wav")
-          self:confirm(true)
-        else
-          self.ui:tutorialStep(3, 9, 10)
-        end
-      elseif self.phase == "windows" then
-        self:placeWindowBlueprint()
+      self:onLeftButtonDown(x, y)
+    elseif button == "right" then
+      if self.phase == "windows" then
+        self:tryRemoveWindowFromWall(x, y)
       end
     end
   end
@@ -1165,29 +1206,6 @@ function UIEditRoom:setBlueprintRect(x, y, w, h)
   rect.w = w
   rect.h = h
 end
-
---25 north wall, west
---26 north wall, east
---27 east wall, south
---28 east wall, north
---29 south wall, west
---30 south wall, east
---31 west wall, south
---32 west wall, north
--- single door blue print values matching TH
-local door_floor_blueprint_markers = {
-  north = 26,
-  east = 27,
-  south = 30,
-  west = 31
-}
-
-local window_floor_blueprint_markers = {
-  north = 33,
-  east = 34,
-  south = 35,
-  west = 36,
-}
 
 --! Check walls for having room for the door
 --!param x (int) X tile position of the door.

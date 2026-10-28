@@ -467,7 +467,7 @@ tooltip = {
     browse_screenshots = "다른 스크린샷 디렉토리를 지정합니다 ( 현재 위치: %1% )",
     not_specified = "폴더 위치 지정되지 않음!",
     font_location = "사용중인 언어를 표시하는데 필요한 폰트 파일의 위치를 지정합니다. 이것을 설정하지 않으면 오리지널 게임에 포함되지 않은 문자들은 표시되지 않습니다 (예: 러시아어, 중국어)",
-    reset_to_default = "디렉토리를 기본 위치로 되돌립니다",
+    reset_to_default = "디렉토리를 기본 위치로 되돌립니다 ( %1% )",
     default = "기본 위치",
     no_font_specified = "폰트 위치 지정되지 않음!",
   },
@@ -593,9 +593,11 @@ tooltip = {
     resolution = "게임이 실행될 해상도",
     audio_button = "게임 전체의 오디오를 켜고 끕니다",
     folder_button = "폴더 옵션",
-    audio_toggle = "켜고 끄기",
     customise_button = "게임 플레이 경험을 커스터마이즈 하기 위한 세부 설정",
   },
+  audio_window = {
+    audio_toggle = "켜고 끄기",
+  }
 }
 menu_charts = {
   bank_manager =    "  (%1%) 은행 지점장  ",
@@ -770,7 +772,7 @@ errors = {
   load_quick_save = "에러, 빠른 저장이 존재하지 않아 읽어올 수 없습니다. 지금 막 빠른 저장 파일을 생성했습니다!",
   save_prefix = "게임을 저장하는 중 오류 발생: ",
   map_file_missing = "이 레벨의 맵 파일(%s)을 찾을 수 없습니다!",
-  minimum_screen_size = "최소 640x480 의 화면 크기를 입력해 주세요.",
+  minimum_screen_size = "최소 %dx%d 의 화면 크기를 입력해 주세요.",
   alien_dna = "주의: 외계인 환자들이 앉을 때, 문을 열거나 두드릴 때 등의 애니메이션이 없습니다. 따라서, 원본 테마 병원에서와 같이 환자들은 이런 행동을 취할 때 잠시동안 평상시의 모습으로 변했다가 되돌아오게 됩니다. 외계 DNA 환자들은 해당 레벨에서 나타나도록 설정되어 있을 경우에만 나타납니다",
   fractured_bones = "주의: 여성 골절 환자들의 애니메이션은 완전하지 못합니다",
 }
@@ -1712,8 +1714,11 @@ options_window = {
   height = "높이",
   resolution = "해상도",
   folder = "폴더",
-  audio = "오디오",
   customise = "커스터마이즈",
+}
+audio_window = {
+  audio = "오디오",
+  back = "뒤로",
 }
 trophy_room = {
   all_cured = {

@@ -142,7 +142,7 @@ function Epidemic:infectOtherPatients()
 
     -- 'victim' is already infected or is going home.
     if victim.infected or victim.cured or victim.vaccinated then return false end
-    -- Don't infect victim if it alredy under another attempt to be infected
+    -- Don't infect victim if it is already under another attempt to be infected
     if victim.under_infection_attempt then return false end
     -- Don't infect emergencies.
     if victim.is_emergency then return false end
@@ -247,7 +247,7 @@ function Epidemic:checkInfectedLeftHospital()
   for _, infected_patient in ipairs(self.infected_patients) do
     local px, py = infected_patient.tile_x, infected_patient.tile_y
     -- If leaving and no longer in the hospital.
-    if infected_patient.going_home and not infected_patient.cured and
+    if (infected_patient.going_home or infected_patient.going_to_die) and not infected_patient.cured and
         px and py and not self.hospital:isInHospital(px,py) then
       -- Patient escaped from the hospital, discovery is inevitable.
       self:finishCoverUp()
@@ -274,7 +274,7 @@ otherwise a player may never win the epidemic in such a case.]]
 function Epidemic:checkPatientsForRemoval()
   for i = #self.infected_patients, 1, -1 do
     local infected_patient = self.infected_patients[i]
-    if (not self.coverup_selected and infected_patient.going_home) or
+    if (not self.coverup_selected and (infected_patient.going_home or infected_patient.going_to_die)) or
         infected_patient.dead or infected_patient.tile_x == nil then
       table.remove(self.infected_patients,i)
     end
@@ -513,7 +513,7 @@ end
 --as they leave the reception desks.]]
 function Epidemic:markPatientsAsPassedReception()
   local queuing_patients = {}
-  for _, desk in ipairs(self.hospital:findReceptionDesks()) do
+  for _, desk in ipairs(self.hospital:getReceptionDesks()) do
     for _, patient in ipairs(desk.queue) do
       -- Use patient as map key to speed up lookup
       queuing_patients[patient] = true
@@ -532,8 +532,10 @@ end
 --[[ Forces evacuation of the hospital - it makes ALL patients leave and storm out. ]]
 function Epidemic:evacuateHospital()
   for _, patient in ipairs(self.hospital.patients) do
-    if patient.has_passed_reception and not patient.going_home then
-      patient:goHome("evacuated")
+    if patient.has_passed_reception and
+      not patient.going_home and
+      not patient.going_to_die then
+        patient:goHome("evacuated")
     end
   end
 end
@@ -677,7 +679,7 @@ end
 --[[When the nurse is interrupted unreserve the patient and unassign the call.
   @param nurse (Nurse) the nurse whose vaccination actions we are interrupting]]
 function Epidemic:interruptVaccinationActions(nurse)
-  assert(nurse.humanoid_class == "Nurse")
+  assert(class.is(nurse, Nurse))
   local call = nurse.on_call
   if call then
     local patient = call.object
@@ -733,7 +735,7 @@ end
 --[[ For Cheat - Cancel the epidemic. ]]
 function Epidemic:cancelEpidemic()
   -- Remove init epidemic fax
-  self.world.ui.bottom_panel:removeMessage(self)
+  self.world.ui.bottom_panel:deleteMessage(self)
   -- Turn vaccination mode off if enabled
   self:turnOffVaccinationMode()
   -- Remove epidemic timer

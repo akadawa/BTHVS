@@ -62,6 +62,9 @@ function UIResizable:UIResizable(ui, width, height, colour, no_borders, backgrou
   self:setColour(colour)
 end
 
+--! Apply the initial width and height of the window
+--!param width (int) The initial width
+--!param height (int) The initial height
 function UIResizable:setSize(width, height)
   width = math.max(self.min_width, width)
   height = math.max(self.min_height, height)
@@ -78,6 +81,14 @@ function UIResizable:setSize(width, height)
   self.border_pos.corner_lower = self.height - border_size_y
 end
 
+--! Must be called before UIResizable:setSize
+--!param min_width (int) The new minimum width of the window
+--!param min_height (int) The new minimum height of the window
+function UIResizable:overrideMinSize(min_width, min_height)
+  self.min_width = min_width
+  self.min_height = min_height
+end
+
 function UIResizable:setColour(colour)
   self.colour = colour
   self.background_panel:setColour(colour)
@@ -86,26 +97,23 @@ end
 function UIResizable:draw(canvas, x, y)
   local sprites = self.border_sprites
   if sprites then
-    local draw = sprites.draw
-    local xabs = self.x + x
-    local yabs = self.y + y
+    local s = TheApp.config.ui_scale
+    local xabs = self.x * s + x
+    local yabs = self.y * s + y
 
-    canvas:nonOverlapping(true)
-    draw(sprites, canvas, 10, xabs + self.border_pos.left        , yabs + self.border_pos.upper) -- upper left corner
-    draw(sprites, canvas, 12, xabs + self.border_pos.corner_right, yabs + self.border_pos.upper) -- upper right corner
-    draw(sprites, canvas, 15, xabs + self.border_pos.left        , yabs + self.border_pos.corner_lower) -- lower left corner
-    draw(sprites, canvas, 17, xabs + self.border_pos.corner_right, yabs + self.border_pos.corner_lower) -- lower right corner
-
-    for xpos = xabs + border_size_x, xabs + self.border_pos.corner_right - 1, border_size_x do
-      draw(sprites, canvas, 11, xpos, yabs + self.border_pos.upper) -- upper edge
-      draw(sprites, canvas, 16, xpos, yabs + self.border_pos.lower) -- lower edge
+    for xpos = xabs + border_size_x * s, xabs + self.border_pos.corner_right * s - 1, border_size_x * s do
+      sprites:draw(canvas, 11, xpos, yabs + self.border_pos.upper * s, { scaleFactor = s }) -- upper edge
+      sprites:draw(canvas, 16, xpos, yabs + self.border_pos.lower * s, { scaleFactor = s }) -- lower edge
     end
-    for ypos = yabs + border_size_y, yabs + self.border_pos.corner_lower - 1, border_size_y do
-      draw(sprites, canvas, 13, xabs + self.border_pos.left, ypos)  -- left edge
-      draw(sprites, canvas, 14, xabs + self.border_pos.right, ypos) -- right edge
+    for ypos = yabs + border_size_y * s, yabs + self.border_pos.corner_lower * s - 1, border_size_y * s do
+      sprites:draw(canvas, 13, xabs + self.border_pos.left * s, ypos, { scaleFactor = s })  -- left edge
+      sprites:draw(canvas, 14, xabs + self.border_pos.right * s, ypos, { scaleFactor = s }) -- right edge
     end
 
-    canvas:nonOverlapping(false)
+    sprites:draw(canvas, 10, xabs + self.border_pos.left * s, yabs + self.border_pos.upper * s, { scaleFactor = s }) -- upper left corner
+    sprites:draw(canvas, 12, xabs + self.border_pos.corner_right * s, yabs + self.border_pos.upper * s, { scaleFactor = s }) -- upper right corner
+    sprites:draw(canvas, 15, xabs + self.border_pos.left * s, yabs + self.border_pos.corner_lower * s, { scaleFactor = s }) -- lower left corner
+    sprites:draw(canvas, 17, xabs + self.border_pos.corner_right * s, yabs + self.border_pos.corner_lower * s, { scaleFactor = s }) -- lower right corner
   end
   -- Draw window components
   Window.draw(self, canvas, x, y)
@@ -121,17 +129,18 @@ function UIResizable:onMouseDown(button, x, y)
 end
 
 function UIResizable:hitTest(x, y)
-  if x >= 0 and y >= 0 and x < self.width and y < self.height then -- inside window
+  local s = TheApp.config.ui_scale
+  if x >= 0 and y >= 0 and x < self.width * s and y < self.height * s then -- inside window
     return Window.hitTest(self, x, y)
   end
   local sprites = self.border_sprites
   if not sprites then
     return false
   end
-  if x < -9 or y < -9 or x >= self.width + 9 or y >= self.height + 9 then -- outside border bounds
+  if x < -9 * s or y < -9 * s or x >= self.width * s + 9 * s or y >= self.height * s + 9 * s then -- outside border bounds
     return false
   end
-  if (0 <= x and x < self.width) or (0 <= y and y < self.height) then -- edges (upper/lower/left/right)
+  if (0 <= x and x < self.width * s) or (0 <= y and y < self.height * s) then -- edges (upper/lower/left/right)
     return true
   end
   return self:hitTestCorners(x, y) and true
@@ -143,8 +152,9 @@ end
 --!return (boolean or string) false if not hit, else a string to denote which corner was hit (can be "ul", "ur", "ll" or "lr")
 function UIResizable:hitTestCorners(x, y)
   if self.border_sprites then
-    local yzone = (-9 <= y and y < 0) and "u" or (self.height <= y and y < self.height + 9) and "l"
-    local xzone = (-9 <= x and x < 0) and "l" or (self.width  <= x and x < self.width  + 9) and "r"
+    local s = TheApp.config.ui_scale
+    local yzone = (-9 * s <= y and y < 0) and "u" or (self.height * s <= y and y < self.height * s + 9 * s) and "l"
+    local xzone = (-9 * s <= x and x < 0) and "l" or (self.width * s <= x and x < self.width * s + 9 * s) and "r"
 
     local sprite_ids = {ul = 10, ur = 12, ll = 15, lr = 17}
     if yzone and xzone then

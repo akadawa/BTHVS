@@ -10,6 +10,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const { WebSocketServer } = require("ws");
 
 const args = process.argv.slice(2);
@@ -179,8 +180,21 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(file).toLowerCase();
+    const contentType = MIME[ext] || "application/octet-stream";
+    const acceptEnc = String(req.headers["accept-encoding"] || "");
+    const compressible = st.size > 1024 && [".html", ".js", ".mjs", ".css", ".json", ".wasm", ".data"].includes(ext);
+    if (compressible && acceptEnc.includes("gzip")) {
+      res.writeHead(200, {
+        "content-type": contentType,
+        "content-encoding": "gzip",
+        "vary": "Accept-Encoding",
+        "cache-control": "no-cache",
+      });
+      fs.createReadStream(file).pipe(zlib.createGzip({ level: 1 })).pipe(res);
+      return;
+    }
     res.writeHead(200, {
-      "content-type": MIME[ext] || "application/octet-stream",
+      "content-type": contentType,
       "content-length": st.size,
       "cache-control": "no-cache",
     });

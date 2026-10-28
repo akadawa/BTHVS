@@ -3,7 +3,7 @@
 name: Bug report
 description: Create a report to help us improve
 title: "[Bug] Give a summary of the problem"
-labels: ["bug"]
+type: Bug
 ### Questions
 # What happened?
 body:
@@ -44,7 +44,7 @@ body:
       description: Select all that apply
       options:
         - label: Right mouse panning
-        - label: Falling actions
+        - label: Falling actions (applies to CorsixTH versions < 0.70.0)
 # Save Game Upload
   - type: textarea
     id: savegame

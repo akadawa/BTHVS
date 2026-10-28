@@ -216,10 +216,10 @@ void luaT_setenvfield(lua_State* L, int index, const char* k);
 */
 void luaT_getenvfield(lua_State* L, int index, const char* k);
 
-template <class T>
+template <class T, typename... Args>
 inline T* luaT_stdnew(lua_State* L, int mt_idx = luaT_environindex,
-                      bool env = false) {
-  T* p = luaT_new<T>(L);
+                      bool env = false, Args&&... args) {
+  T* p = luaT_new<T>(L, std::forward<Args>(args)...);
   lua_pushvalue(L, mt_idx);
   lua_setmetatable(L, -2);
   if (env) {
@@ -286,13 +286,11 @@ struct luaT_classinfo<bitmap_font> {
   static inline const char* name() { return "BitmapFont"; }
 };
 
-#ifdef CORSIX_TH_USE_FREETYPE2
 class freetype_font;
 template <>
 struct luaT_classinfo<freetype_font> {
   static inline const char* name() { return "FreeTypeFont"; }
 };
-#endif
 
 struct layers;
 template <>
@@ -370,6 +368,12 @@ class iso_filesystem;
 template <>
 struct luaT_classinfo<iso_filesystem> {
   static inline const char* name() { return "ISO Filesystem"; }
+};
+
+class th_lua_midi_player;
+template <>
+struct luaT_classinfo<th_lua_midi_player> {
+  static inline const char* name() { return "MidiPlayer"; }
 };
 
 template <class T>

@@ -8,34 +8,28 @@
     },
     "sdl2",
     "luafilesystem",
-    "lpeg"
-  ],
-  "features": {
-    "audio": {
-      "description": "In game audio support",
-      "dependencies": [
-         {
-           "name": "fluidsynth",
-           "platform": "!osx",
-           "features": [
-             "sndfile"
-           ]
-        },
-        {
-          "name": "sdl2-mixer",
-          "features": [
-            "libmodplug",
-            {
-              "name": "fluidsynth",
-              "platform": "!osx"
-            },
-            "libflac",
-            "mpg123",
-            "opusfile"
-          ]
-        }
+    "lpeg",
+    "libpng",
+    "zlib",
+    {
+       "name": "fluidsynth",
+       "features": [
+         "sndfile"
+       ]
+    },
+    {
+      "name": "sdl2-mixer",
+      "features": [
+        "libmodplug",
+        "fluidsynth",
+        "libflac",
+        "mpg123",
+        "opusfile"
       ]
     },
+    "freetype"
+  ],
+  "features": {
     "animview": {
       "description": "Support building AnimView",
       "dependencies": [
@@ -69,10 +63,10 @@
         }
       ]
     },
-    "freetype": {
-      "description": "In game freetype font support",
+    "midi": {
+      "description": "Support MIDI devices",
       "dependencies": [
-        "freetype"
+        "rtmidi"
       ]
     },
     "catch2": {
@@ -80,6 +74,15 @@
       "dependencies": [
         "catch2"
       ]
+    },
+    "tracy": {
+      "description": "Support Tracy profiling",
+      "dependencies": [{
+        "name": "tracy",
+        "features": [
+          "cli-tools"
+        ]
+      }]
     }
   }
 }

@@ -22,14 +22,15 @@ SOFTWARE.
 
 #include "config.h"
 
+#include <zlib.h>
+#ifdef WITH_UPDATE_CHECK
+#include <curl/curl.h>
+#endif
+
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
 #include <string>
-
-#ifdef WITH_UPDATE_CHECK
-#include <curl/curl.h>
-#endif
 
 #include "bootstrap.h"
 #include "lua.hpp"
@@ -49,6 +50,7 @@ void lua_register_strings(const lua_register_state* pState);
 void lua_register_ui(const lua_register_state* pState);
 void lua_register_lfs_ext(const lua_register_state* pState);
 void lua_register_iso_fs(const lua_register_state* pState);
+void lua_register_midi(const lua_register_state* pState);
 
 //! Set a field on the environment table of an object
 void luaT_setenvfield(lua_State* L, int index, const char* k) {
@@ -250,19 +252,26 @@ int l_get_compile_options(lua_State* L) {
   lua_pushliteral(L, CORSIX_TH_ARCH);
   lua_setfield(L, -2, "arch");
 
-#ifdef CORSIX_TH_USE_SDL_MIXER
-  lua_pushboolean(L, 1);
-#else
-  lua_pushboolean(L, 0);
-#endif
-  lua_setfield(L, -2, "audio");
-
 #ifdef WITH_UPDATE_CHECK
   lua_pushboolean(L, 1);
 #else
   lua_pushboolean(L, 0);
 #endif
   lua_setfield(L, -2, "update_check");
+
+#ifdef CORSIX_TH_USE_FFMPEG
+  lua_pushboolean(L, 1);
+#else
+  lua_pushboolean(L, 0);
+#endif
+  lua_setfield(L, -2, "movies");
+
+#ifdef WITH_MIDI_DEVICE
+  lua_pushboolean(L, 1);
+#else
+  lua_pushboolean(L, 0);
+#endif
+  lua_setfield(L, -2, "midi_device");
 
   lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
   lua_getfield(L, -1, "jit");
@@ -287,6 +296,16 @@ int l_get_compile_options(lua_State* L) {
   lua_pushliteral(L, CORSIX_TH_FONT);
   lua_setfield(L, -2, "font");
 #endif
+
+  return 1;
+}
+
+int l_crc32(lua_State* L) {
+  size_t iDataLen;
+  const uint8_t* pData = luaT_checkfile(L, 1, &iDataLen);
+
+  lua_pushinteger(L, static_cast<lua_Integer>(crc32(
+                         0L, pData, static_cast<unsigned int>(iDataLen))));
 
   return 1;
 }
@@ -320,6 +339,7 @@ int luaopen_th(lua_State* L) {
   add_lua_function(pState, bootstrap_lua_resources, "GetBuiltinFont");
   add_lua_function(pState, l_fetch_latest_version_info,
                    "FetchLatestVersionInfo");
+  add_lua_function(pState, l_crc32, "CRC32File");
 
   // Classes
   lua_register_map(pState);
@@ -331,6 +351,7 @@ int luaopen_th(lua_State* L) {
   lua_register_ui(pState);
   lua_register_lfs_ext(pState);
   lua_register_iso_fs(pState);
+  lua_register_midi(pState);
 
   lua_settop(L, oState.main_table);
   return 1;

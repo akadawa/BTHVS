@@ -177,7 +177,7 @@ function ReceptionDesk:checkForNearbyStaff()
   local nearest_staff, nearest_d
   local use_x, use_y = self:getSecondaryUsageTile()
   for _, entity in ipairs(self.world.entities) do
-    if entity.humanoid_class == "Receptionist" and not entity.associated_desk and not entity.fired then
+    if class.is(entity, Receptionist) and not entity.associated_desk and not entity.fired then
       local distance = self.world.pathfinder:findDistance(entity.tile_x, entity.tile_y, use_x, use_y)
       if not nearest_d or distance < nearest_d then
         nearest_staff = entity
@@ -208,12 +208,19 @@ function ReceptionDesk:setTile(x, y)
   Object.setTile(self, x, y)
   if x and y then
     self:checkForNearbyStaff()
+    self.hospital:buildReceptionDesksCache()
   end
   return self
 end
 
-function ReceptionDesk:onDestroy()
+function ReceptionDesk:onPickUp()
+  self.hospital:buildReceptionDesksCache()
+  Object.onPickUp(self)
+end
+
+function ReceptionDesk:resetUsageAndReservaton()
   self.being_destroyed = true -- temporary flag for receptionist (re-)routing logic
+
   local receptionist = self.receptionist or self.reserved_for
   if receptionist then
     receptionist:handleRemovedObject(self)
@@ -221,7 +228,7 @@ function ReceptionDesk:onDestroy()
     self.reserved_for = nil
 
     -- Find a new reception desk for the receptionist
-    self.world:findObjectNear(receptionist, "reception_desk", nil,
+    self.world:findObjectNear(receptionist, "reception_desk", nil, false,
         function(x, y)
           local obj = self.world:getObject(x, y, "reception_desk")
           -- Make sure we are not selecting the same desk again
@@ -233,7 +240,7 @@ function ReceptionDesk:onDestroy()
   self.queue:rerouteAllPatients(nil)
 
   self.being_destroyed = nil
-  return Object.onDestroy(self)
+  Object.resetUsageAndReservaton(self)
 end
 
 --[[ Create orders for the specified receptionist to walk to and then staff the reception desk,

@@ -175,7 +175,7 @@ function Announcer:playAnnouncement(name, priority, decay_hours, played_callback
   entry.played_callback = played_callback
   entry.played_callback_delay = played_callback_delay
 
-  if self.app.world:getLocalPlayerHospital():hasStaffedDesk() or priority == AnnouncementPriority.Critical then
+  if self.app.world:getLocalPlayerHospital():hasReceptionDesk(true) or priority == AnnouncementPriority.Critical then
     self.entries:push(new_priority, entry)
   end
 end
@@ -184,7 +184,7 @@ end
 -- Plays the actual sound of the announcements, if available.
 -- Also queues random announcements if no announcements have been played for a while.
 function Announcer:onTick()
-  local staffedDesk = self.app.world:getLocalPlayerHospital():hasStaffedDesk()
+  local staffedDesk = self.app.world:getLocalPlayerHospital():hasReceptionDesk(true)
   local criticalAnnounces = #self.entries.priorities[AnnouncementPriority.Critical]
   if not self.app.world:isCurrentSpeed("Pause") then
     local ticks_since_last_announcement = self.ticks_since_last_announcement
@@ -237,7 +237,9 @@ end
 --!param entry (AnnouncementEntry) The announcement to play.
 function Announcer:_play(entry)
   self.playing = true
-  self.app.audio:playSound(entry.name, nil, true, function () self:_onPlayed(entry) end, entry.played_callback_delay)
+  local name = self.app.audio:resolveFilenameWildcard(entry.name)
+  self.app.audio:playSound(name, nil, true, function () self:_onPlayed(entry) end, entry.played_callback_delay)
+  self.app.ui.subtitles:queueSubtitle(name)
   self.ticks_since_last_announcement = 0
 end
 

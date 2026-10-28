@@ -80,7 +80,7 @@ local relaxation = {
 -- main function of the staffroom action
 local function use_staffroom_action_start(action, humanoid)
   assert(class.is(humanoid, Staff), "use_staffroom action called for non-staff humanoid")
-  assert(humanoid.humanoid_class ~= "Receptionist", "use_staffroom action called for receptionist")
+  assert(not class.is(humanoid, Receptionist), "use_staffroom action called for receptionist")
 
   -- For initial call of this function we have to decide a new target now
   -- Else, there should be already a new target defined
@@ -129,6 +129,11 @@ local function use_staffroom_action_start(action, humanoid)
         humanoid:setDynamicInfoText(_S.dynamic_info.staff.actions.heading_for:format(room.room_info.name))
       else
         -- Send the staff out of the room
+        if room and room.is_active and
+          (room.room_info.id == "research" or room.room_info.id == "training") then
+          -- Clear the last room if it was training/research as we can't go back here anymore
+          humanoid.last_room = nil
+        end
         humanoid:queueAction(MeanderAction())
       end
     else

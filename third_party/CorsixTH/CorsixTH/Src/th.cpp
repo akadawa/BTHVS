@@ -29,11 +29,9 @@ SOFTWARE.
 
 #include "cp437_table.h"
 #include "cp936_table.h"
+#include "cpmik_table.h"
 
-link_list::link_list() {
-  prev = nullptr;
-  next = nullptr;
-}
+link_list::link_list() = default;
 
 link_list::~link_list() { remove_from_list(); }
 
@@ -98,6 +96,20 @@ void CopyStringCP437(const uint8_t*& sIn, uint8_t*& sOut) {
   } while (cChar != 0);
 }
 
+void CopyStringMIK(const uint8_t*& sIn, uint8_t*& sOut) {
+  uint8_t cChar;
+  do {
+    cChar = *sIn;
+    ++sIn;
+    if (cChar < 0x80) {
+      *sOut = cChar;
+      ++sOut;
+    } else {
+      utf8encode(sOut, cpmik_to_unicode_table[cChar - 0x80]);
+    }
+  } while (cChar != 0);
+}
+
 void CopyStringCP936(const uint8_t*& sIn, uint8_t*& sOut) {
   uint8_t cChar1, cChar2;
   do {
@@ -125,12 +137,37 @@ void CopyStringCP936(const uint8_t*& sIn, uint8_t*& sOut) {
   } while (cChar1 != 0);
 }
 
+enum class encoding { cp437, cp936, mik };
+
+encoding detect_encoding(const uint8_t* data, size_t length) {
+  const uint8_t mik_prefix[] = {0x8C, 0xA5, 0xA4, 0xB1, 0xA5};
+  if (length >= sizeof(mik_prefix) &&
+      std::equal(mik_prefix, mik_prefix + sizeof(mik_prefix), data)) {
+    // The MIK encoding is used in the Russian version of the game, and has a
+    // fixed length of 0x1619D bytes.
+    return encoding::mik;
+  }
+
+  // The range of bytes 0xB0 through 0xDF are box drawing characters in CP437
+  // which shouldn't occur much (if ever) in TH strings, whereas they are
+  // commonly used in GB2312 encoding. We use 10% as a threshold.
+  size_t iBCDCount = 0;
+  for (size_t i = 0; i < length; ++i) {
+    if (0xB0 <= data[i] && data[i] <= 0xDF) ++iBCDCount;
+  }
+  if (iBCDCount * 10 >= length)
+    return encoding::cp936;
+  else
+    return encoding::cp437;
+}
+
 }  // namespace
 
+// https://github.com/CorsixTH/theme-hospital-spec/blob/master/format-specification.md#strings
 th_string_list::th_string_list(const uint8_t* data, size_t length) {
   if (length < 2) throw std::invalid_argument("length must be 2 or larger");
 
-  size_t iSectionCount = *reinterpret_cast<const uint16_t*>(data);
+  size_t iSectionCount = bytes_to_uint16_le(data);
   size_t iHeaderLength = (iSectionCount + 1) * 2;
 
   if (length < iHeaderLength)
@@ -140,19 +177,17 @@ th_string_list::th_string_list(const uint8_t* data, size_t length) {
   const uint8_t* sStringData = data + iHeaderLength;
   const uint8_t* sDataEnd = sStringData + iStringDataLength;
 
-  // Determine whether the encoding is CP437 or GB2312 (CP936).
-  // The range of bytes 0xB0 through 0xDF are box drawing characters in CP437
-  // which shouldn't occur much (if ever) in TH strings, whereas they are
-  // commonly used in GB2312 encoding. We use 10% as a threshold.
-  size_t iBCDCount = 0;
-  for (size_t i = 0; i < iStringDataLength; ++i) {
-    if (0xB0 <= sStringData[i] && sStringData[i] <= 0xDF) ++iBCDCount;
-  }
   void (*fnCopyString)(const uint8_t*&, uint8_t*&);
-  if (iBCDCount * 10 >= iStringDataLength)
-    fnCopyString = CopyStringCP936;
-  else
-    fnCopyString = CopyStringCP437;
+  switch (detect_encoding(sStringData, iStringDataLength)) {
+    case encoding::cp437:
+      fnCopyString = CopyStringCP437;
+      break;
+    case encoding::cp936:
+      fnCopyString = CopyStringCP936;
+      break;
+    case encoding::mik:
+      fnCopyString = CopyStringMIK;
+  }
 
   // String buffer sized to accept the largest possible reencoding of the
   // characters interpreted as CP936 or CP437 (2 bytes per character).
@@ -161,9 +196,18 @@ th_string_list::th_string_list(const uint8_t* data, size_t length) {
   uint8_t* sDataOut = string_buffer.data();
   sections.resize(iSectionCount);
   for (size_t i = 0; i < iSectionCount; ++i) {
-    size_t section_size = reinterpret_cast<const uint16_t*>(data)[i + 1];
-    sections[i].reserve(section_size);
-    for (size_t j = 0; j < section_size; ++j) {
+    // The section sizes start at offset 2 in the data, after the section count.
+    // Each section size is 2 bytes.
+    size_t sectionSizeOffset = (i + 1) * 2;
+    size_t sectionSize = bytes_to_uint16_le(data + sectionSizeOffset);
+
+    // Read the strings for the section.
+    //
+    // All of the strings get stored in string_buffer which sDataOut points
+    // into. The sections vectors get filled with the pointers to the start of
+    // each string in string_buffer.
+    sections[i].reserve(sectionSize);
+    for (size_t j = 0; j < sectionSize; ++j) {
       sections[i].push_back(reinterpret_cast<char*>(sDataOut));
       if (sStringData != sDataEnd) {
         fnCopyString(sStringData, sDataOut);
@@ -174,13 +218,13 @@ th_string_list::th_string_list(const uint8_t* data, size_t length) {
   *sDataOut = 0;
 }
 
-size_t th_string_list::get_section_count() { return sections.size(); }
+size_t th_string_list::get_section_count() const { return sections.size(); }
 
-size_t th_string_list::get_section_size(size_t section) {
+size_t th_string_list::get_section_size(size_t section) const {
   return section < sections.size() ? sections[section].size() : 0;
 }
 
-const char* th_string_list::get_string(size_t section, size_t index) {
+const char* th_string_list::get_string(size_t section, size_t index) const {
   if (index < get_section_size(section)) {
     return sections[section][index];
   }

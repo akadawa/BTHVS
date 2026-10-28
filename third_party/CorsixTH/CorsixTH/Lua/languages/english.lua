@@ -18,8 +18,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. --]]
 
+Font("cp437")
 Language("English", "English", "en", "eng")
 Inherit("original_strings", 0)
+IsArabicNumerals(true)
 
 --Note: All strings should use a single space after full-stops. Only exception is level descriptions.
 -------------------------------  OVERRIDE  ----------------------------------
@@ -42,6 +44,16 @@ adviser.goals.lose.kill = "Kill another %d patients to lose the level!"
 -- Improve tooltips in staff window to mention hidden features
 tooltip.staff_window.face = "This person's face - click to open management screen"
 tooltip.staff_window.center_view = "Left click to zoom to staff, right click to cycle through staff members"
+
+-- Improve tooltips in Build Rooms menu
+tooltip.rooms.inflation = "A Doctor uses the Inflation Room to cure patients with Bloaty Head"
+tooltip.rooms.tongue_clinic = "A Doctor uses the Slack Tongue Clinic to cure Slack Tongue"
+tooltip.rooms.fracture_clinic = "A Nurse uses the Fracture Clinic to repair Fractured Bones"
+tooltip.rooms.hair_restoration = "A Doctor uses the Hair Restoration Room to cure Baldness"
+tooltip.rooms.decontamination = "A Doctor uses the Decontamination Shower to cure Serious Radiation"
+tooltip.rooms.ward = "Wards are useful for both diagnosis and treatment. Patients are sent here for observation and also prepare for operations in a Ward with a Nurse"
+tooltip.rooms.research_room = "Doctors with Research skills can discover new drugs and machines in the Research Dept"
+tooltip.objects.reception_desk = "Reception Desk: requires a Receptionist who directs patients to the GP's office"
 
 -- Improve tooltips in Research Screen
 tooltip.research.cure_dec = "Decrease Cure research percentage"
@@ -196,6 +208,7 @@ menu_charts = {
   graphs        = "  (%1%) GRAPHS  ",
   policy        = "  (%1%) POLICY  ",
   machine_menu  = "  (%1%) MACHINES MENU",
+  adviser_history = "  (%1%) ADVISER HISTORY ",
 }
 
 menu_debug = {
@@ -205,7 +218,6 @@ menu_debug = {
   limit_camera                = "  LIMIT CAMERA  ",
   disable_salary_raise        = "  DISABLE SALARY RAISE  ",
   allow_blocking_off_areas    = "  ALLOW BLOCKING OFF AREAS  ",
-  allow_falling               = "  ALLOW FALLING  ",
   make_debug_fax              = "  MAKE DEBUG FAX  ",
   make_debug_patient          = "  MAKE DEBUG PATIENT  ",
   cheats                      = "  (%1%) CHEATS  ",
@@ -216,6 +228,11 @@ menu_debug = {
   dump_gamelog                = "  (%1%) DUMP GAME LOG  ",
   map_overlay                 = "  MAP OVERLAY  ",
   sprite_viewer               = "  SPRITE VIEWER  ",
+}
+menu_debug_overlay_blocking_off_areas = {
+  choice_1 = "  TOTALLY FORBIDDEN  ",
+  choice_2 = "  PARTIALLY ALLOWED  ",
+  choice_3 = "  COMPLETELY ALLOWED  ",
 }
 menu_debug_overlay = {
   none                        = "  NONE  ",
@@ -237,6 +254,11 @@ menu_player_count = {
   players_3 = "  3 PLAYERS  ",
   players_4 = "  4 PLAYERS  ",
 }
+
+tooltip.toolbar = {
+  machine_menu = "Machine menu",
+}
+
 adviser = {
   room_forbidden_non_reachable_parts = "Placing the room in this location would result in parts of the hospital not being reachable.",
   warnings = {
@@ -279,6 +301,10 @@ adviser = {
     roujin_off_cheat = "Roujin's challenge deactivated. Everything will be back to normal soon.",
     norest_on_cheat = "Oh no! It appears your staff have consumed too much caffeine and no longer feel a need to rest.",
     norest_off_cheat = "Phew! Looks like that buzz finally wore off. Your staff will now rest properly.",
+    queuejump_on_cheat = "Your patients know how to queue. They let nearly dead patients go to the front of the line.",
+    queuejump_off_cheat = "People have turned selfish and are no longer letting nearly dead patients jump the queues.",
+    superdoctor_on_cheat = "A superb medical school has recommended you to their graduates! Check the staff for hire.",
+    superdoctor_off_cheat = "The medical school chief no longer recommends you to their graduates.",
   },
   staff_place_advice = {
     not_enough_lecture_chairs = "Each student doctor needs a lecture chair to sit in!",
@@ -343,6 +369,8 @@ misc = {
   epidemic_no_icon_to_toggle = "Unable to show/hide infected icons - no epidemics in progress that are not revealed",
   epidemic_no_diseases = "Cannot create epidemic - no contagious diseases available",
   epidemic_no_receptionist = "Cannot create epidemic - no staffed reception desk",
+  invulnerable_machines_off = "Machines will wear and break down again.",
+  invulnerable_machines_on = "Machines will no longer wear or break down.",
 }
 
 main_menu = {
@@ -457,6 +485,7 @@ options_window = {
   option_disabled = "Disabled",
   fullscreen = "Fullscreen",
   resolution = "Resolution",
+  scale_ui = "UI Scale",
   capture_mouse = "Capture Mouse",
   right_mouse_scrolling = "Mouse Scrolling",
   right_mouse_scrolling_option_middle = "Middle Button",
@@ -464,7 +493,6 @@ options_window = {
   custom_resolution = "Custom...",
   width = "Width",
   height = "Height",
-  audio = "Global Audio",
   customise = "Customise",
   folder = "Folders",
   language = "Game Language",
@@ -474,9 +502,22 @@ options_window = {
   scrollspeed = "Scroll Speed",
   shift_scrollspeed = "Shift Scroll Speed",
   zoom_speed = "Zoom Speed",
+  autosave_frequency = "Autosave Frequency",
   hotkey = "Hotkeys",
   check_for_updates = "Check for Updates",
-  jukebox = "Jukebox",
+  sound = "Sound",
+}
+
+autosave_frequency = {
+    monthly = "Monthly",
+    weekly = "Weekly",
+    daily = "Daily",
+}
+
+tooltip.autosave_frequency = {
+    monthly = "Autosave once per month, on the first day of each month. A total of 12 saves with a depth of 1 year.",
+    weekly = "Autosave once per week on the 1st, 7th, 14th, 21nd, and 28th of each month. A total of 60 saves with a depth of 1 year.",
+    daily = "Autosave once per day at the start of each in-game day. A total of 365 saves with a depth of 1 year. Please note that a typical save can take up to 1 megabyte or even more. This way your autosaves folder can grow to 300-500 MB.",
 }
 
 tooltip.options_window = {
@@ -484,14 +525,16 @@ tooltip.options_window = {
   fullscreen_button = "Click to toggle fullscreen mode",
   resolution = "The resolution the game should run in",
   select_resolution = "Select a new resolution",
+  resolution_unavailable = "Resolution unavailable at current UI Scale",
+  scale_ui = "Scale the user interface. Only scale options that fit the display are shown, for more increase the resolution.",
+  select_ui_scale = "Select a new user interface scale",
+  ui_scale_unavailable = "User interface scaling not available, please select a higher resolution first.",
   capture_mouse = "Click to toggle capturing the cursor while in game",
   right_mouse_scrolling = "Toggle the mouse button that is used to scroll the map",
   width = "Enter desired screen width",
   height = "Enter desired screen height",
   apply = "Apply the entered resolution",
   cancel = "Return without changing the resolution",
-  audio_button = "Turn on or off all game audio",
-  audio_toggle = "Toggle on or off",
   customise_button = "More settings you can change to customise your game play experience",
   folder_button = "Folder Options",
   language = "The language texts in the game will appear in",
@@ -502,6 +545,7 @@ tooltip.options_window = {
   scrollspeed = "Set the scroll speed between 1 (slowest) to 10 (fastest). The default is 2.",
   shift_scrollspeed = "Set the speed of scrolling while the shift key is pressed. 1 (slowest) to 10 (fastest). The default is 4.",
   zoom_speed = "Set the camera zoom speed from 10 (slowest) to 1000 (fastest). The default is 80.",
+  autosave_frequency = "Set how often the game will make autosaves.",
   apply_scrollspeed = "Apply the entered scroll speed.",
   cancel_scrollspeed = "Return without changing the scroll speed.",
   apply_shift_scrollspeed = "Apply the entered shift scroll speed.",
@@ -510,33 +554,75 @@ tooltip.options_window = {
   cancel_zoomspeed = "Return without changing the zoom speed.",
   hotkey = "Change keyboard hotkeys.",
   check_for_updates = "Sets whether the game should look for updates on launch.",
-  jukebox = "Open the Jukebox to control the music"
+  sound = "Change audio settings",
+}
+
+audio_window = {
+  caption = "Sound Settings",
+  audio = "Global Audio",
+  sound_volume = "Sound Volume",
+  announcement_volume = "Announcement Volume",
+  music_volume = "Music Volume",
+  midi_api = "MIDI API",
+  midi_port = "MIDI Port",
+  soundfont = "SoundFont",
+  default_midi_api = "Default (Software)",
+  default_midi_port = "Default",
+  jukebox = "Jukebox",
+  back = "Back",
+  soundfont_location_caption = "Choose soundfont (%1%)",
+}
+
+tooltip.audio_window = {
+  audio_button = "Turn on or off all game audio",
+  audio_toggle = "Toggle on or off",
+  sound_volume = "Sound volume",
+  announcement_volume = "Announcement volume",
+  music_volume = "Music volume",
+  midi_api = "The API to use for in game music. Not used with custom music folder.",
+  midi_port = "Device port to use for in game music.",
+  soundfont_location = "Location of a Soundfont file for playing MIDI music. A default Soundfont is used if not specified.",
+  browse = "Browse for folder location",
+  browse_soundfont = "Browse for another Soundfont file (sf2, or sf3) ( Current location: %1% ) ",
+  no_soundfont_specified = "Using default soundfont",
+  jukebox = "Open the Jukebox to control the music",
+  back = "Close the window",
 }
 
 customise_window = {
   caption = "Custom Settings",
   option_on = "On",
   option_off = "Off",
+  emergency_only = "Emergency Only",
+  regular_patients = "Regular Patients",
+  male_only = "Male Only",
+  male_and_female = "Male and Female",
   back = "Back",
-  movies = "Global Movie Control",
+  movies = "Movies",
   intro = "Play Intro Movie",
-  paused = "Build on Paused",
+  paused = "Build While Paused",
   volume = "Volume Down Hotkey",
   aliens = "Alien Patients",
   fractured_bones = "Fractured Bones",
   average_contents = "Average Contents",
   remove_destroyed_rooms = "Remove destroyed rooms",
+  machine_menu_button = "Machine menu button",
+  enable_screen_shake = "Screen Shake",
+  enable_announcer_subtitles = "Announcer Subtitles",
 }
 
 tooltip.customise_window = {
-  movies = "Global movie control, this will allow you to disable all the movies",
-  intro = "Turn off or on the intro movie, global movies will need to be on if you want the intro movie to play each time you load CorsixTH",
-  paused = "In Theme Hospital the player would only be allowed to use the top menu if the game was paused. That is the default setting in CorsixTH too, but by turning this on everything is allowed while the game is paused",
-  volume = "If the volume down button is also opening the casebook, turn this on to change the hotkey for the casebook to Shift + C",
-  aliens = "Because of the lack of proper animations we have by default made patients with Alien DNA only come from an emergency. To allow patients with Alien DNA to visit your hospital, other than by an emergency, turn this off",
-  fractured_bones = "Because of a poor animation we have by default made it so there are no female patients with Fractured Bones. To allow female patients with Fractured Bones to visit your hospital, turn this off",
-  average_contents = "If you would like the game to remember what extra objects you usually add when you build rooms, then turn this option on",
-  remove_destroyed_rooms = "If you would like to be able to remove destroyed rooms, for a fee, turn this option on",
+  movies = "Global movie control. This will allow you to enable or disable all movies",
+  intro = "Turn the intro movie on and off. Global movies must be on if you want the intro movie to play each time you launch CorsixTH",
+  paused = "In the original Theme Hospital, the player could only use the top menu while the game was paused. This is the default behaviour in CorsixTH, but turning this option on will allow you to build rooms and pick up objects while the game is paused",
+  volume = "If the volume down button causes the Casebook to open, turn this option on to change the hotkey for the Casebook to Shift + C",
+  aliens = "Due to incomplete animations, patients with Alien DNA will only appear via Emergencies by default. To allow patients with Alien DNA to visit your hospital normally, set this option to Regular Patients",
+  fractured_bones = "Due to poor animation, female patients with Fractured Bones will not appear by default. To allow female patients with Fractured Bones to visit your hospital, set this option to Male and Female",
+  average_contents = "If you would like the game to remember which extra objects you usually add while building rooms, turn this option on",
+  remove_destroyed_rooms = "In the original Theme Hospital, exploded machines made rooms permanently unusable. If you would like to be able to remove destroyed rooms for a fee, turn this option on",
+  machine_menu_button = "If you would like to have a machine menu button in bottom panel, turn this option on. Keep in mind that this button will not be available in small screen resolutions",
+  enable_screen_shake = "Earthquakes will cause the entire screen to shake. If you would prefer the screen to remain still, turn this option off",
+  enable_announcer_subtitles = "If you would like the game to display subtitles for your hospital's announcements, turn this option on",
   back = "Close this menu and go back to the Settings Menu",
 }
 
@@ -570,7 +656,8 @@ tooltip.folders_window = {
   no_font_specified = "No font location specified yet!",
   not_specified = "No folder location specified yet!",
   default = "Default location",
-  reset_to_default = "Reset the directory to its default location",
+  reset_to_default = "Reset the directory to its default location ( %1% )",
+  clear_directory = "Clear current directory selection",
   back  = "Close this menu and go back to the Settings Menu",
 }
 
@@ -641,6 +728,7 @@ hotkey_window = {
   ingame_panel_charts = "Charts",
   ingame_panel_policy = "Policy",
   ingame_panel_machineMenu = "Machines Menu",
+  ingame_panel_adviserHistory = "Adviser History",
   ingame_panel_map_alt = "Town Map 2",
   ingame_panel_research_alt = "Research 2",
   ingame_panel_casebook_alt = "Casebook 2",
@@ -664,6 +752,7 @@ hotkey_window = {
   ingame_poopLog = "Dump Log",
   ingame_poopStrings = "Dump Strings",
   ingame_patient_gohome = "Send Home",
+  ingame_sellPickedUpItem = "Sell Picked-up Item",
   ingame_storePosition_1 = "1",
   ingame_storePosition_2 = "2",
   ingame_storePosition_3 = "3",
@@ -760,7 +849,7 @@ errors = {
   no_games_to_contine = "There are no saved games.",
   load_quick_save = "Error, cannot load the quicksave as it does not exist, not to worry as we have now created one for you!",
   map_file_missing = "Could not find the map file %s for this level!",
-  minimum_screen_size = "Please enter a screen size of at least 640x480.",
+  minimum_screen_size = "Please enter a screen size of at least %dx%d.",
   unavailable_screen_size = "The screen size you requested is not available in fullscreen mode.",
   alien_dna = "NOTE: There are no animations for Alien patients for sitting down, opening or knocking on doors etc. Like with Theme Hospital, performing those actions will change the patient to normal then back to Alien. Patients with Alien DNA will only appear if they are set to in the level file.",
   fractured_bones = "NOTE: The animation for female patients with Fractured Bones is not perfect",
@@ -890,6 +979,8 @@ cheats_window = {
     decrease_prices = "Decrease prices",
     reset_death_count = "Reset death count",
     max_reputation = "Max reputation",
+    repair_all_machines = "Repair all machines",
+    toggle_invulnerable_machines = "Toggle invulnerable machines",
   },
   close = "Close",
 }
@@ -915,6 +1006,8 @@ tooltip.cheats_window = {
     decrease_prices = "Decrease all prices by 50% (min. 50%)",
     reset_death_count = "Reset the hospital death count to zero",
     max_reputation = "Set the hospital reputation to the maximum",
+    repair_all_machines = "Repairs all machines in the hospital",
+    toggle_invulnerable_machines = "Toggle whether machines wear down when used",
   }
 }
 
@@ -945,11 +1038,10 @@ tooltip.calls_dispatcher = {
 }
 
 machine_menu = {
-  percentage = "%d%",
   machine = "Machine",
+  status = "Status",
   remaining_strength = "Remain",
   total_strength = "Strength",
-  ratio = "Ratio",
   close = "Close",
 }
 
@@ -960,16 +1052,30 @@ tooltip.machine_menu = {
   assigned = "This box is marked if a handyman is assigned to fix corresponding machine. Click to show assigned handyman.",
   remaining_strength = "This value shows remaining strength of the machine",
   total_strength = "This value shows total strength of the machine",
-  ratio = "This value shows ratio of remaining strength and total strength",
   header = {
     smoking = "Danger Indicator",
     assigned = "Repair assignment Indicator",
     machine = "Machine name",
     remaining_strength = "Remaining Strength of the machines.",
+    status = "Status of the machines.",
     total_strength = "Total Strength of the machines.",
-    ratio = "Remaining Strength to Total Strength percentage ratio of the machines.",
   },
   close = "Close the machine list dialog",
+}
+
+adviser_history = {
+  message = "Message",
+  close = "Close",
+}
+
+tooltip.adviser_history = {
+  delete_message = "Click to dismiss this message",
+  message = "List of adviser messages - Newest messages appear first",
+  header = {
+    message = "Adviser messages",
+    delete_message = "Click to delete all messages"
+  },
+  close = "Close the adviser history dialog",
 }
 
 
@@ -1035,13 +1141,173 @@ tooltip.status = {
     patient_happiness = "Your average patient happiness should not be less than %d%. Currently it's %d%",
   }
 }
+
+subtitles = {
+  alien001 = "Red alert! Alien attack!", --unused
+  alien002 = "Aliens have landed, help!", --unused
+  alien003 = "Aliens do exist and are in the building!", --unused
+  alien004 = "Aliens are requested not to disrupt the hospital too much!", --unused
+  alien005 = "Aliens, please sign the visitors book.", --unused
+  cheat001 = "Hospital administrator is cheating!",
+  cheat002 = "Warning! A cheat is running the hospital!",
+  cheat003 = "Cheat alert! Cheat alert!",
+  emerg001 = "Staff announcement: incoming patients with Heaped Piles.",
+  emerg002 = "Staff announcement: patients with The Squits are on the way.",
+  emerg003 = "Staff announcement: incoming patients with Television Personalities.",
+  emerg004 = "Staff announcement: patients with Uncommon Cold on the way.",
+  emerg005 = "Staff announcement: incoming patients with Fractured Bones.",
+  emerg006 = "Staff announcement: patients with Invisibility arriving.",
+  emerg007 = "Staff announcement: incoming patients with Bloaty Head.",
+  emerg008 = "Staff announcement: patients with Hairyitis on the way.",
+  emerg009 = "Staff announcement: incoming patients with the King Syndrome.",
+  emerg010 = "Staff announcement: patients arriving with Serious Radiation.",
+  emerg011 = "Staff announcement: incoming patients with Slack Tongue.",
+  emerg012 = "Staff announcement: incoming patients with Baldness.",
+  emerg013 = "Staff announcement: patients with Discrete Itching arriving.",
+  emerg014 = "Staff announcement: incoming patients with Jellitis.",
+  emerg015 = "Staff announcement: incoming patients with Sleeping Illness.",
+  emerg016 = "Staff announcement: patients with Broken Wind arriving.",
+  emerg017 = "Staff announcement: incoming patients with Sweaty Palms.",
+  emerg018 = "Staff announcement: incoming patients with Unexpected Swelling.",
+  emerg019 = "Staff announcement: patients with Gut Rot arriving.",
+  emerg020 = "Staff announcement: incoming patients with Alien DNA.",
+  emerg021 = "Staff announcement: patients arriving with Pregnancy.",
+  emerg022 = "Staff announcement: incoming patients with Transparency.",
+  emerg023 = "Staff announcement: patients with Spare Ribs incoming.",
+  emerg024 = "Staff announcement: incoming patients with Kidney Beans.",
+  emerg025 = "Staff announcement: patients with Broken Hearts arriving.",
+  emerg026 = "Staff announcement: incoming patients with Ruptured Nodules.",
+  emerg027 = "Staff announcement: incoming patients with Infectious Laughter.",
+  emerg028 = "Staff announcement: patients with Corrugated Ankles on the way.",
+  emerg029 = "Staff announcement: incoming patients with Chronic Nosehair.",
+  emerg030 = "Staff announcement: incoming patients with 3rd Degree Sideburns.",
+  emerg031 = "Staff announcement: patients with Fake Blood incoming.",
+  emerg032 = "Staff announcement: incoming patients with Gastric Ejections.",
+  emerg033 = "Staff announcement: patients arriving with Iron Lungs.",
+  emerg034 = "Staff announcement: incoming patients with Golf Stones.",
+  epid001 = "Epidemic alert, standby!",
+  epid002 = "Staff announcement: epidemic warning!",
+  epid003 = "Warning, epidemic alert!",
+  epid004 = "Warning!",
+  epid005 = "Epidemic over, stand down.",
+  epid006 = "Epidemic now under control.",
+  epid007 = "Epidemic contained.",
+  epid008 = "Epidemic emergency over.",
+  machwarn = "*Machine Alarm*",
+  maint004 = "Handyman call to repair Tongue Slicer.",
+  maint005 = "Handyman to repair X-Ray please.",
+  maint006 = "Handyman call to repair DNA Fixer.",
+  maint007 = "Maintenance required in Hair Restorer.",
+  maint008 = "Handyman, please repair Electrolysis machine.",
+  maint009 = "Maintenance required in Jelly Vat.",
+  maint010 = "Handyman call to Cardio machine.",
+  maint011 = "Handyman, please repair Diagnosis machine.",
+  maint012 = "Maintenance required in Decontamination.",
+  maint013 = "Handyman, please maintain Inflator.",
+  maint014 = "Maintenance required in Fracture machine.",
+  maint015 = "Handyman call to Blood Machine.",
+  maint016 = "Handyman to attend Ultrascanner.",
+  quake001 = "Warning! Earthquake reported.",
+  quake002 = "Warning! Earthquake imminent.",
+  quake003 = "Attention! Earthquake warning.",
+  quake004 = "Attention! Earthquake on the way.",
+  rand001 = "White courtesy phone.",
+  rand002 = "Doctor Jekyll to psychiatry please.",
+  rand003 = "No smoking in the hospital please.",
+  rand005 = "Patients are reminded not to die in the corridors.",
+  rand006 = "Coughs and sneezes spread diseases.",
+  rand008 = "Patient message: chequebooks required.",
+  rand009 = "Patient message: credit cards required.",
+  rand010 = "Quiet please, people are sick.",
+  rand012 = "Patients are asked not to vomit too much.",
+  rand013 = "Warning: This is a warning.",
+  rand016 = "Patients are here at their own risk.",
+  rand017 = "Mad patients are asked to be as quiet as possible.",
+  rand018 = "Patients are asked to be patient.",
+  rand019 = "Patients are asked to wait quietly.",
+  rand021 = "Please do not litter the hospital.",
+  rand022 = "Dropping litter's against the rules.",
+  rand024 = "Patients, please keep your germs to yourself.",
+  rand025 = "Patients must have their chequebooks ready.",
+  rand026 = "Patients, have your credit cards ready.",
+  rand027 = "Terminal patients to the front of the queue.",
+  rand028 = "Please form orderly queues.",
+  rand029 = "Look out for other Bullfrog products.",
+  rand030 = "No loitering.",
+  rand031 = "No littering.",
+  rand032 = "No vomiting.",
+  rand033 = "Staff members are reminded to rest frequently.",
+  rand034 = "Today's special offer: half price hair replacement.",
+  rand035 = "Messrs Burke and Hare to the rear exit please.",
+  rand036 = "Please don't feed the vermin, thank you!",
+  rand037 = "Patients are kindly reminded to groan quietly, thank you!",
+  rand040 = "Litterbomb warning!",
+  rand041 = "I'm fed up with announcing, I want to go home.",
+  rand044 = "Could people please try not to be sick in the corridors.",
+  rand045 = "Doctor Lecter report to security please, Doctor Lecter to security.",
+  rand046 = "Your sound card is working.",
+  reqd001 = "Doctor, attend immediately in Cardio please.",
+  reqd002 = "Doctor, attend in the Scanner room please.",
+  reqd003 = "Doctor, attend in Psychiatry please.",
+  reqd004 = "Nurse required in Fracture Clinic please.",
+  reqd005 = "Doctor needed in Slack Tongue clinic.",
+  reqd006 = "Doctor required in Blood Machine room.",
+  reqd007 = "Doctor wanted in Ultrascan.",
+  reqd008 = "Doctor required in GP's Office.",
+  reqd009 = "Nurse required in Ward.",
+  reqd010 = "Two surgeons required in Operating Theatre.",
+  reqd011 = "Another surgeon required in Operating Theatre.", --unused
+  reqd012 = "Nurse required in Pharmacy.",
+  reqd013 = "Doctor required in X-Ray.",
+  reqd014 = "Doctor required in Inflator room.",
+  reqd015 = "Doctor required in DNA Fixer.",
+  reqd016 = "Doctor needed in Hair Restoration.",
+  reqd017 = "Doctor required in Training.", --unused
+  reqd019 = "Doctor wanted in Electrolysis.",
+  reqd020 = "Doctor required in Jelly Vat.",
+  reqd021 = "Doctor required in General Diagnosis.",
+  reqd023 = "Researcher needed in Research Department.",
+  reqd024 = "Doctor required in Decontamination.",
+  sack001 = "Doctor dismissed.",
+  sack002 = "Doctor is leaving.",
+  sack003 = "Doctor on the way out.",
+  sack004 = "Nurse is leaving.",
+  sack005 = "Nurse is leaving now.",
+  sack006 = "Sacked handyman on the way out.",
+  sack007 = "Receptionist has been asked to leave.",
+  sack008 = "Receptionist is leaving.",
+  sack009 = "Staff member has been poached.", --unused
+  sack010 = "Doctor has been poached.", --unused
+  sorry001 = "We apologise for the amount of litter.", --unused
+  sorry002 = "We apologise for the extreme cold.",
+  sorry003 = "We're sorry for the excessive heat.",
+  sorry004 = "Apologies to patients, the radiators are malfunctioning.",
+  sorry005 = "Vomit warning, mind your feet.", --unused
+  sorry006 = "Maintenance, puke alert in the corridor.", --unused
+  vip001 = "Watch out, we've got a VIP in the building.",
+  vip002 = "A VIP has entered the building.",
+  vip003 = "A VIP is currently visiting.",
+  vip004 = "A VIP is touring the building.",
+  vip005 = "We have a VIP with us.",
+  vip008 = "A man from the ministry's in the hospital.",
+}
+
 --------------------------------  UNUSED  -----------------------------------
 ------------------- (kept for backwards compatibility) ----------------------
 
 options_window.change_resolution = "Change resolution"
 tooltip.options_window.change_resolution = "Change the window resolution to the dimensions entered on the left"
 information.very_old_save = "There have been a lot of updates to the game since you started this level. To be sure that all features work as intended please consider restarting it."
-
+machine_menu = {
+  ratio = "Ratio",
+  percentage = "%d%",
+}
+tooltip.machine_menu = {
+  ratio = "This value shows ratio of remaining strength and total strength",
+  header = {
+    ratio = "Remaining Strength to Total Strength percentage ratio of the machines.",
+  }
+}
 cheats_window.cheats = {
  toggle_infected = show_infected,
 }

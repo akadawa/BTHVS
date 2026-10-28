@@ -66,8 +66,10 @@ This file contains UTF-8 text. Make sure your editor is set to UTF-8.
 -------------------------------------------------------------------------------
 
 -- 1. Global settings (do not edit!)
+Font("cp437")
 Language("Suomi", "Finnish", "fi", "fin")
 Inherit("english")
+IsArabicNumerals(true)
 
 -- 2. Faxes
 fax = {
@@ -241,7 +243,7 @@ errors = {
   save_prefix                   = "Virhe tallennettaessa peliä: ",
   load_prefix                   = "Virhe ladattaessa peliä: ",
   map_file_missing              = "Tasolle %s ei löydetty karttatiedostoa!",
-  minimum_screen_size           = "Ole hyvä ja syötä resoluutio, joka on vähintään 640x480.",
+  minimum_screen_size           = "Ole hyvä ja syötä resoluutio, joka on vähintään %dx%d.",
   maximum_screen_size           = "Ole hyvä ja syötä resoluutio, joka on enintään 3000x2000.",
   unavailable_screen_size       = "Syöttämäsi resoluutio ei ole käytettävissä koko ruutu -tilassa.",
 }
