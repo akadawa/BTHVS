@@ -376,6 +376,67 @@
 
   function fmtMB(b) { return (b / 1048576).toFixed(1) + " MB"; }
 
+  const THEME_HOSPITAL_LANGUAGES = [
+    { id: "English", file: "lang-0.dat", label: "English" },
+    { id: "German", file: "lang-2.dat", label: "German (Deutsch)" },
+    { id: "French", file: "lang-1.dat", label: "French (Français)" },
+    { id: "Spanish", file: "lang-4.dat", label: "Spanish (Español)" },
+    { id: "Italian", file: "lang-3.dat", label: "Italian (Italiano)" },
+    { id: "Swedish", file: "lang-5.dat", label: "Swedish (Svenska)" },
+  ];
+
+  function updateLanguageOptions() {
+    const sel = $("#language");
+    const badge = $("#lang-detected-badge");
+    const hint = $("#game-language-hint");
+    if (!sel) return;
+
+    const saved = localStorage.getItem("bth-lang") || "English";
+    const d = state.data;
+
+    let available = THEME_HOSPITAL_LANGUAGES;
+    let isDetected = false;
+
+    if (d && Array.isArray(d.files) && d.files.length > 0) {
+      const paths = d.files.map(([p]) => (p || "").toLowerCase().replace(/\\/g, "/"));
+      const detected = THEME_HOSPITAL_LANGUAGES.filter((lang) => {
+        return paths.some((p) => p.endsWith("/" + lang.file) || p === lang.file || p === "data/" + lang.file || p === "datam/" + lang.file);
+      });
+      if (detected.length > 0) {
+        available = detected;
+        isDetected = true;
+      }
+    }
+
+    sel.innerHTML = "";
+    available.forEach((lang) => {
+      const opt = document.createElement("option");
+      opt.value = lang.id;
+      opt.textContent = lang.label;
+      sel.appendChild(opt);
+    });
+
+    const match = available.find((l) => l.id.toLowerCase() === saved.toLowerCase());
+    const chosen = match ? match.id : available[0].id;
+    sel.value = chosen;
+    localStorage.setItem("bth-lang", chosen);
+
+    if (badge) {
+      badge.hidden = !isDetected;
+      if (isDetected) {
+        badge.textContent = `${available.length} Detected`;
+      }
+    }
+
+    if (hint) {
+      if (isDetected) {
+        hint.textContent = `Available in loaded game files: ${available.map((l) => l.id).join(", ")}`;
+      } else {
+        hint.textContent = "Available languages will be verified when game files are loaded.";
+      }
+    }
+  }
+
   function renderDataStatus() {
     const st = $("#data-status");
     const d = state.data;
@@ -398,6 +459,7 @@
     if (notice) notice.hidden = !!d;
     for (const id of ["#btn-create", "#btn-join"]) if ($(id)) $(id).disabled = !d;
     refreshLevelOptions();
+    updateLanguageOptions();
   }
 
   async function setData(data) {
@@ -3292,8 +3354,18 @@
         }
       };
     }
-    $("#language").value = localStorage.getItem("bth-lang") || "English";
-    $("#language").onchange = () => localStorage.setItem("bth-lang", $("#language").value);
+    const langSel = $("#language");
+    if (langSel) {
+      langSel.onchange = () => localStorage.setItem("bth-lang", langSel.value);
+    }
+    const notesDetails = $("#project-notes-details");
+    const notesIndicator = $("#notes-toggle-indicator");
+    if (notesDetails && notesIndicator) {
+      notesDetails.addEventListener("toggle", () => {
+        notesIndicator.textContent = notesDetails.open ? "Hide" : "Show";
+      });
+    }
+    updateLanguageOptions();
 
     try { state.data = (await kvGet("thdata")) || null; } catch (e) { state.data = null; }
     renderDataStatus();

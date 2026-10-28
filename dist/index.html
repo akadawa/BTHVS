@@ -45,16 +45,40 @@
         <input type="file" id="file-zip" accept=".zip" hidden>
         <input type="file" id="file-folder" webkitdirectory directory multiple hidden>
 
+        <div class="card-field-row" id="row-game-language">
+          <label class="field" id="field-game-language">
+            <span class="field-title">
+              Game Language
+              <span class="field-title-sub muted small">(Choose your game language)</span>
+              <span id="lang-detected-badge" class="name-status-pill" hidden>Detected</span>
+            </span>
+            <select id="language" name="gameLanguage">
+              <option value="English" selected>English</option>
+              <option value="German">German (Deutsch)</option>
+              <option value="French">French (Français)</option>
+              <option value="Spanish">Spanish (Español)</option>
+              <option value="Italian">Italian (Italiano)</option>
+              <option value="Swedish">Swedish (Svenska)</option>
+            </select>
+            <div id="game-language-hint" class="field-hint-text muted small">Available languages will be verified when game files are loaded.</div>
+          </label>
+        </div>
+
         <div class="data-project-notes">
-          <div class="project-note-summary">
-            <div class="note-summary-title">Project Notes & Match Information</div>
-            <div class="note-summary-content">
-              This open-source project is hosted on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a> — bug reports, feedback, and feature requests are welcome and will gladly be implemented. Currently running serverless on Vercel for prototype testing, while a dedicated multiplayer server is in active roadmap development to deliver persistent matches and authoritative synchronization.
+          <details class="project-notes-details" id="project-notes-details">
+            <summary class="project-notes-summary">
+              <span class="note-summary-title">Project Notes & Match Information</span>
+              <span class="notes-toggle-indicator" id="notes-toggle-indicator">Show</span>
+            </summary>
+            <div class="project-notes-body">
+              <div class="note-summary-content">
+                This open-source project is hosted on <a href="https://github.com/akadawa/BTHVS" target="_blank" rel="noopener">GitHub (akadawa/BTHVS)</a> — bug reports, feedback, and feature requests are welcome and will gladly be implemented. Currently running serverless on Vercel for prototype testing, while a dedicated multiplayer server is in active roadmap development to deliver persistent matches and authoritative synchronization.
+              </div>
+              <div class="note-summary-pause">
+                Note: During essential in-game decisions requiring player input (such as incoming fax messages, salary reviews, or modal dialogs), the CorsixTH engine momentarily pauses the match for all players as intended by design.
+              </div>
             </div>
-            <div class="note-summary-pause">
-              Note: During essential in-game decisions requiring player input (such as incoming fax messages, salary reviews, or modal dialogs), the CorsixTH engine momentarily pauses the match for all players as intended by design.
-            </div>
-          </div>
+          </details>
         </div>
       </section>
 
@@ -63,10 +87,10 @@
         <div class="card-mode-inner">
         <h2><span class="step">2</span> Play</h2>
         <div class="row">
-          <label class="field" id="field-player-name">
+          <label class="field" id="field-player-name" style="flex: 1; min-width: 260px;">
             <span class="field-title">
-              Your Name
-              <span id="btn-username-info" class="btn-help-inline" title="Notice: Username reserved for the Leaderboard in browser cache">?</span>
+              Player Name
+              <span id="btn-username-info" class="btn-help-inline" title="Notice: Player name reserved for the Leaderboard in browser cache">?</span>
               <span id="player-name-lock-badge" class="name-status-pill" hidden>Reserved</span>
             </span>
             <div class="player-name-wrap-input">
@@ -75,17 +99,8 @@
             </div>
             <div id="username-info-box" class="field-hint-card">
               <span class="hint-mark-pill">?</span>
-              <span class="hint-mark-text">Notice: Your username is permanently stored in your browser cache and reserved for the Leaderboard. If you clear your browser cache or site data, your username and recorded leaderboard statistics will be reset.</span>
+              <span class="hint-mark-text">Notice: Your player name is permanently stored in your browser cache and reserved for the Leaderboard. If you clear your browser cache or site data, your player name and recorded leaderboard statistics will be reset.</span>
             </div>
-          </label>
-          <label class="field">Language
-            <select id="language">
-              <option value="English" selected>English</option>
-              <option value="German">German</option>
-              <option value="French">French</option>
-              <option value="Spanish">Spanish</option>
-              <option value="Italian">Italian</option>
-            </select>
           </label>
         </div>
 

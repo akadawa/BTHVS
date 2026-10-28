@@ -243,20 +243,65 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
 .goal-summary-title { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
 .goal-summary-content { font-size: 14px; font-weight: 600; color: var(--txt); line-height: 1.5; margin-bottom: 4px; }
 
-.data-project-notes { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.project-note-summary {
+.data-project-notes { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.project-notes-details {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.project-notes-details[open] {
+  border-color: rgba(25, 181, 165, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.project-notes-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  transition: background 0.15s ease;
+}
+.project-notes-summary::-webkit-details-marker {
+  display: none;
+}
+.project-notes-summary:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.project-notes-summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.notes-toggle-indicator {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.project-notes-details[open] .notes-toggle-indicator {
+  background: rgba(25, 181, 165, 0.18);
+  color: var(--accent);
+  border-color: rgba(25, 181, 165, 0.4);
+}
+.project-notes-body {
+  padding: 10px 14px 12px 14px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--muted);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .note-summary-title {
   font-weight: 700;
   color: var(--txt);
-  margin-bottom: 6px;
   font-size: 13px;
   letter-spacing: 0.2px;
 }
@@ -273,6 +318,21 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
   color: #94a3b8;
   border-top: 1px dashed rgba(255, 255, 255, 0.08);
   padding-top: 6px;
+}
+.card-field-row {
+  margin-top: 12px;
+}
+.field-title-sub {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 4px;
+}
+.field-hint-text {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 .match-notice-banner { background: rgba(255, 179, 0, 0.08); border: 1px solid rgba(255, 179, 0, 0.22); border-radius: 8px; padding: 8px 12px; font-size: 12px; line-height: 1.45; color: #ffca28; }
 

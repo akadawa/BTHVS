@@ -121,6 +121,7 @@ BrowserTHospital/
 │       └── web_bridge.cpp      # JS <-> Lua bridge (_th_resize, _th_eval_lua)
 ├── tests/
 │   ├── lib.js                  # Shared Playwright test runner & local server helpers
+│   ├── test_game_language_and_notes.js
 │   ├── test_patchnotes_drawer.js
 │   ├── test_leaderboard_and_username.js
 │   ├── test_ui_improvements_oct28.js
@@ -140,12 +141,14 @@ BrowserTHospital/
 - Theme Hospital data (`HOSP.zip` or folder) is imported via `fflate.js` directly in the browser.
 - Assets are stored in IndexedDB (`bth/kv`).
 - When data is missing, the Play section is disabled with a centered `Game Files Needed` badge.
+- **Game Language Detection**: Relocated to the Game Data card (`#field-game-language`) as `Game Language (Choose your game language)`. Detects available languages directly from original game data files (`data/lang-*.dat`: English, German, French, Spanish, Italian, Swedish). The dropdown dynamically filters to only the languages present in the loaded game files while preserving the user's selected choice in `localStorage` (`bth-lang`).
+- **Collapsible Project Notes**: The Project Notes & Match Information card in Game Data is an accordion (`<details id="project-notes-details">`) with a dynamic `Show`/`Hide` toggle badge, keeping the UI tidy while keeping documentation accessible.
 
-### B. Fixed Username & Leaderboard Reservation
-- Usernames are locked via the **Lock In** button or automatically upon entering a room.
+### B. Fixed Player Name & Leaderboard Reservation
+- Player names are locked via the **Lock In** button or automatically upon entering a room.
 - State is stored in `localStorage`: `bth-name` and `bth-name-locked`.
-- The `?` indicator mark (`#btn-username-info`) visually references the permanently visible notice card below the input (`#username-info-box`), informing players that their name is stored in browser cache and reserved for the Leaderboard. Clicking the mark highlights the card.
-- A "Change" button allows unlocking the name if needed.
+- The `?` indicator mark (`#btn-username-info`) visually references the permanently visible notice card below the input (`#username-info-box`), informing players that their player name is stored in browser cache and reserved for the Leaderboard. Clicking the mark highlights the card.
+- A "Change" button allows unlocking the player name if needed.
 
 ### C. Patchnotes Drawer (Left)
 - Slide-out drawer docked on the far left.
@@ -178,6 +181,9 @@ BrowserTHospital/
 
 Run tests before committing any changes:
 ```powershell
+# Run the game language & collapsible notes verification
+node tests/test_game_language_and_notes.js
+
 # Run the patchnotes drawer verification (checks 0 SVG, 0 emojis, left dock, live commits)
 node tests/test_patchnotes_drawer.js
 
