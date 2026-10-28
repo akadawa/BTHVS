@@ -60,8 +60,19 @@
         <div class="card-mode-inner">
         <h2><span class="step">2</span> Play</h2>
         <div class="row">
-          <label class="field">Your Name
-            <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
+          <label class="field" id="field-player-name">
+            <span class="field-title">
+              Your Name
+              <button type="button" id="btn-username-info" class="btn-help-inline" title="Username notice for leaderboard">?</button>
+              <span id="player-name-lock-badge" class="name-status-pill" hidden>Reserved</span>
+            </span>
+            <div class="player-name-wrap-input">
+              <input id="player-name" maxlength="20" placeholder="Dr. Who" autocomplete="off">
+              <button type="button" id="btn-lock-name" class="btn-name-action" title="Lock in your doctor name for the leaderboard">Lock In</button>
+            </div>
+            <div id="username-info-box" class="field-hint-card" hidden>
+              Notice: Your username is permanently stored in your browser cache and reserved for the Leaderboard. If you clear your browser cache or site data, your username and recorded leaderboard statistics will be reset.
+            </div>
           </label>
           <label class="field">Language
             <select id="language">
@@ -392,6 +403,86 @@
     <div class="patchnotes-body">
       <div id="patchnotes-status" class="patchnotes-status muted">Loading updates...</div>
       <div id="patchnotes-list" class="patchnotes-list"></div>
+    </div>
+  </aside>
+
+  <!-- Leaderboard Button on Far Right -->
+  <button id="leaderboard-btn" class="leaderboard-toggle" type="button" title="View Leaderboard">
+    <span class="leaderboard-toggle-text">Leaderboard</span>
+  </button>
+
+  <!-- Leaderboard Side Drawer -->
+  <div id="leaderboard-backdrop" class="leaderboard-backdrop" hidden></div>
+  <aside id="leaderboard-drawer" class="leaderboard-drawer" aria-label="Leaderboard">
+    <div class="leaderboard-header">
+      <div class="leaderboard-title-wrap">
+        <div class="leaderboard-title-row">
+          <h2 class="leaderboard-title">Leaderboard</h2>
+          <span class="version-badge">Rankings</span>
+        </div>
+        <span class="leaderboard-subtitle">BTHVS Doctor Hall of Fame &amp; Statistics</span>
+      </div>
+      <button id="leaderboard-close" type="button" class="btn-chip modal-close-btn" title="Close">&times;</button>
+    </div>
+
+    <div class="leaderboard-stats-overview">
+      <div class="lb-stat-box">
+        <span class="lb-stat-label">Active Doctors</span>
+        <span class="lb-stat-val" id="lb-active-count">1</span>
+      </div>
+      <div class="lb-stat-box">
+        <span class="lb-stat-label">Games Played</span>
+        <span class="lb-stat-val" id="lb-games-count">0</span>
+      </div>
+      <div class="lb-stat-box">
+        <span class="lb-stat-label">Lobbies Hosted</span>
+        <span class="lb-stat-val" id="lb-lobbies-count">0</span>
+      </div>
+    </div>
+
+    <div class="leaderboard-player-card">
+      <div class="lb-player-card-header">
+        <div class="lb-player-card-name-row">
+          <span class="lb-player-name-tag" id="lb-my-name">Doctor</span>
+          <span class="name-status-pill" id="lb-my-status">Local Doctor</span>
+        </div>
+        <span class="lb-player-rank-pill" id="lb-my-rank">Rank #1</span>
+      </div>
+      <div class="lb-player-stats-grid">
+        <div class="lb-my-stat-cell">
+          <span class="lb-my-stat-num" id="lb-my-cured">0</span>
+          <span class="lb-my-stat-lbl">Cured</span>
+        </div>
+        <div class="lb-my-stat-cell">
+          <span class="lb-my-stat-num" id="lb-my-cash">$0</span>
+          <span class="lb-my-stat-lbl">High Cash</span>
+        </div>
+        <div class="lb-my-stat-cell">
+          <span class="lb-my-stat-num" id="lb-my-matches">0</span>
+          <span class="lb-my-stat-lbl">Matches</span>
+        </div>
+        <div class="lb-my-stat-cell">
+          <span class="lb-my-stat-num" id="lb-my-playtime">0m</span>
+          <span class="lb-my-stat-lbl">Playtime</span>
+        </div>
+      </div>
+      <div class="lb-player-backup-row">
+        <button type="button" id="btn-export-stats" class="btn-subtle" title="Export your stats JSON as a backup">Export Stats</button>
+        <button type="button" id="btn-import-stats" class="btn-subtle" title="Import previously exported stats JSON">Import Stats</button>
+        <input type="file" id="file-import-stats" accept=".json" hidden>
+      </div>
+    </div>
+
+    <div class="leaderboard-tabs-bar">
+      <button type="button" class="lb-tab active" data-tab="cured">Patients Cured</button>
+      <button type="button" class="lb-tab" data-tab="cash">Cash Balance</button>
+      <button type="button" class="lb-tab" data-tab="playtime">Longest Games</button>
+      <button type="button" class="lb-tab" data-tab="lobbies">Lobbies Hosted</button>
+      <button type="button" class="lb-tab" data-tab="wins">Versus Wins</button>
+    </div>
+
+    <div class="leaderboard-body">
+      <div id="leaderboard-list" class="leaderboard-list"></div>
     </div>
   </aside>
 

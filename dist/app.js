@@ -711,6 +711,371 @@
     }
   }
 
+  // ------------------------------------------------------------- leaderboard & username
+  const DEFAULT_LEADERBOARD = [
+    { name: "Dr. Kilroy", cured: 384, cash: 420000, playtime: 512, lobbies: 28, wins: 22, games: 31 },
+    { name: "Sister Grace", cured: 326, cash: 365000, playtime: 468, lobbies: 19, wins: 18, games: 25 },
+    { name: "Dr. Sinister", cured: 295, cash: 310000, playtime: 420, lobbies: 15, wins: 15, games: 22 },
+    { name: "Matron", cured: 252, cash: 280000, playtime: 375, lobbies: 14, wins: 13, games: 19 },
+    { name: "Doctor Matthews", cured: 218, cash: 245000, playtime: 330, lobbies: 11, wins: 10, games: 16 },
+    { name: "Dr. Albright", cured: 184, cash: 210000, playtime: 280, lobbies: 9, wins: 8, games: 14 },
+    { name: "Dr. Bradley", cured: 150, cash: 175000, playtime: 225, lobbies: 7, wins: 6, games: 11 },
+    { name: "Dr. Evans", cured: 115, cash: 140000, playtime: 170, lobbies: 5, wins: 4, games: 8 }
+  ];
+
+  let currentLeaderboardTab = "cured";
+
+  function getPlayerStats() {
+    let stats = null;
+    try {
+      const raw = localStorage.getItem("bth_player_stats");
+      if (raw) stats = JSON.parse(raw);
+    } catch (_) {}
+    if (!stats || typeof stats !== "object") {
+      stats = {
+        cured: 0,
+        cash: 0,
+        playtime: 0,
+        lobbies: parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0,
+        wins: 0,
+        games: 0
+      };
+    }
+    stats.cured = stats.cured || 0;
+    stats.cash = stats.cash || 0;
+    stats.playtime = stats.playtime || 0;
+    stats.lobbies = Math.max(stats.lobbies || 0, parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0);
+    stats.wins = stats.wins || 0;
+    stats.games = stats.games || 0;
+    return stats;
+  }
+
+  function savePlayerStats(stats) {
+    try {
+      localStorage.setItem("bth_player_stats", JSON.stringify(stats));
+    } catch (_) {}
+  }
+
+  function recordMatchStats(isMe, curedCount = 0, finalCash = 0, durationMins = 0) {
+    const s = getPlayerStats();
+    s.games = (s.games || 0) + 1;
+    if (isMe) s.wins = (s.wins || 0) + 1;
+    s.cured = (s.cured || 0) + Math.max(0, curedCount || 0);
+    s.cash = Math.max(s.cash || 0, finalCash || 0);
+    s.playtime = (s.playtime || 0) + Math.max(0, durationMins || 0);
+    savePlayerStats(s);
+  }
+
+  function formatPlaytime(mins) {
+    if (!mins || mins < 1) return "0 mins";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m} mins`;
+  }
+
+  function updateUsernameLockUI(isLocked) {
+    const input = $("#player-name");
+    const badge = $("#player-name-lock-badge");
+    const btn = $("#btn-lock-name");
+    if (!input) return;
+    input.readOnly = isLocked;
+    if (isLocked) {
+      input.classList.add("locked");
+    } else {
+      input.classList.remove("locked");
+    }
+    if (badge) badge.hidden = !isLocked;
+    if (btn) {
+      btn.textContent = isLocked ? "Change" : "Lock In";
+      btn.title = isLocked ? "Unlock to change username" : "Lock in username for the leaderboard";
+    }
+  }
+
+  function lockUsername() {
+    const input = $("#player-name");
+    if (!input) return;
+    let n = input.value.trim();
+    if (!n) {
+      n = localStorage.getItem("bth-name") || ("Doctor" + Math.floor(100 + Math.random() * 900));
+      input.value = n;
+    }
+    localStorage.setItem("bth-name", n);
+    localStorage.setItem("bth-name-locked", "true");
+    updateUsernameLockUI(true);
+    renderLeaderboard(currentLeaderboardTab);
+  }
+
+  function unlockUsername() {
+    localStorage.setItem("bth-name-locked", "false");
+    updateUsernameLockUI(false);
+    const input = $("#player-name");
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+
+  function getLeaderboardEntries() {
+    let custom = [];
+    try {
+      const raw = localStorage.getItem("bth_custom_leaderboard");
+      if (raw) custom = JSON.parse(raw);
+    } catch (_) {}
+
+    const myName = playerName();
+    const myStats = getPlayerStats();
+
+    const map = new Map();
+    DEFAULT_LEADERBOARD.forEach((e) => map.set(e.name.toLowerCase(), { ...e, isMe: false }));
+    if (Array.isArray(custom)) {
+      custom.forEach((e) => {
+        if (e && e.name) map.set(e.name.toLowerCase(), { ...e, isMe: false });
+      });
+    }
+
+    map.set(myName.toLowerCase(), {
+      name: myName,
+      cured: myStats.cured,
+      cash: myStats.cash,
+      playtime: myStats.playtime,
+      lobbies: myStats.lobbies,
+      wins: myStats.wins,
+      games: myStats.games,
+      isMe: true
+    });
+
+    return Array.from(map.values());
+  }
+
+  function renderLeaderboard(tab = "cured") {
+    currentLeaderboardTab = tab;
+    const listEl = $("#leaderboard-list");
+    if (!listEl) return;
+
+    document.querySelectorAll(".lb-tab").forEach((t) => {
+      if (t.getAttribute("data-tab") === tab) {
+        t.classList.add("active");
+      } else {
+        t.classList.remove("active");
+      }
+    });
+
+    const entries = getLeaderboardEntries();
+    const myName = playerName();
+    const myStats = getPlayerStats();
+
+    switch (tab) {
+      case "cash":
+        entries.sort((a, b) => b.cash - a.cash);
+        break;
+      case "playtime":
+        entries.sort((a, b) => b.playtime - a.playtime);
+        break;
+      case "lobbies":
+        entries.sort((a, b) => b.lobbies - a.lobbies);
+        break;
+      case "wins":
+        entries.sort((a, b) => b.wins - a.wins || (b.games > 0 ? b.wins / b.games : 0) - (a.games > 0 ? a.wins / a.games : 0));
+        break;
+      case "cured":
+      default:
+        entries.sort((a, b) => b.cured - a.cured);
+        break;
+    }
+
+    let myRank = 1;
+    entries.forEach((e, idx) => {
+      if (e.isMe || e.name.toLowerCase() === myName.toLowerCase()) {
+        myRank = idx + 1;
+      }
+    });
+
+    const activeCountEl = $("#lb-active-count");
+    const gamesCountEl = $("#lb-games-count");
+    const lobbiesCountEl = $("#lb-lobbies-count");
+    if (activeCountEl) {
+      let activeTotal = 1;
+      if (Array.isArray(window.__lastPublicLobbies)) {
+        activeTotal += window.__lastPublicLobbies.reduce((sum, lob) => sum + (lob.players || 1), 0);
+      }
+      activeCountEl.textContent = String(activeTotal);
+    }
+    if (gamesCountEl) {
+      const totalGames = entries.reduce((sum, e) => sum + (e.games || 0), 0);
+      gamesCountEl.textContent = String(totalGames);
+    }
+    if (lobbiesCountEl) {
+      const totalLobbies = parseInt(localStorage.getItem("bth_total_lobbies") || "0", 10) || 0;
+      lobbiesCountEl.textContent = String(totalLobbies);
+    }
+
+    const myNameEl = $("#lb-my-name");
+    const myStatusEl = $("#lb-my-status");
+    const myRankEl = $("#lb-my-rank");
+    const myCuredEl = $("#lb-my-cured");
+    const myCashEl = $("#lb-my-cash");
+    const myMatchesEl = $("#lb-my-matches");
+    const myPlaytimeEl = $("#lb-my-playtime");
+
+    if (myNameEl) myNameEl.textContent = myName;
+    const isLocked = localStorage.getItem("bth-name-locked") === "true";
+    if (myStatusEl) {
+      myStatusEl.textContent = isLocked ? "Locked & Reserved" : "Local Doctor";
+    }
+    if (myRankEl) myRankEl.textContent = `Rank #${myRank}`;
+    if (myCuredEl) myCuredEl.textContent = (myStats.cured || 0).toLocaleString();
+    if (myCashEl) myCashEl.textContent = "$" + (myStats.cash || 0).toLocaleString();
+    if (myMatchesEl) myMatchesEl.textContent = `${myStats.games || 0} (${myStats.wins || 0}W)`;
+    if (myPlaytimeEl) myPlaytimeEl.textContent = formatPlaytime(myStats.playtime || 0);
+
+    listEl.innerHTML = "";
+    entries.forEach((e, idx) => {
+      const rankNum = idx + 1;
+      const item = document.createElement("div");
+      item.className = "lb-item" + (e.isMe ? " is-me" : "");
+
+      const left = document.createElement("div");
+      left.className = "lb-item-left";
+
+      const rank = document.createElement("div");
+      rank.className = "lb-item-rank";
+      rank.textContent = `#${rankNum}`;
+
+      const details = document.createElement("div");
+      details.className = "lb-item-details";
+
+      const nameRow = document.createElement("div");
+      nameRow.className = "lb-item-name-row";
+
+      const name = document.createElement("span");
+      name.className = "lb-item-name";
+      name.textContent = e.name;
+
+      nameRow.appendChild(name);
+      if (e.isMe) {
+        const youTag = document.createElement("span");
+        youTag.className = "name-status-pill";
+        youTag.textContent = "You";
+        nameRow.appendChild(youTag);
+      }
+
+      const sub = document.createElement("span");
+      sub.className = "lb-item-sub";
+
+      let primaryVal = "";
+      switch (tab) {
+        case "cash":
+          primaryVal = "$" + (e.cash || 0).toLocaleString();
+          sub.textContent = `${(e.cured || 0).toLocaleString()} cured · ${e.games || 0} matches`;
+          break;
+        case "playtime":
+          primaryVal = formatPlaytime(e.playtime || 0);
+          sub.textContent = `${e.games || 0} matches played`;
+          break;
+        case "lobbies":
+          primaryVal = `${e.lobbies || 0} Lobbies`;
+          sub.textContent = `${e.wins || 0} match victories`;
+          break;
+        case "wins":
+          primaryVal = `${e.wins || 0} Wins`;
+          const winRate = e.games > 0 ? Math.round(((e.wins || 0) / e.games) * 100) : 0;
+          sub.textContent = `${winRate}% win rate · ${e.games || 0} matches`;
+          break;
+        case "cured":
+        default:
+          primaryVal = `${(e.cured || 0).toLocaleString()} Cured`;
+          sub.textContent = `${e.games || 0} matches · ${e.wins || 0} wins`;
+          break;
+      }
+
+      details.appendChild(nameRow);
+      details.appendChild(sub);
+
+      left.appendChild(rank);
+      left.appendChild(details);
+
+      const right = document.createElement("div");
+      right.className = "lb-item-right";
+
+      const val = document.createElement("span");
+      val.className = "lb-item-val";
+      val.textContent = primaryVal;
+
+      right.appendChild(val);
+
+      item.appendChild(left);
+      item.appendChild(right);
+      listEl.appendChild(item);
+    });
+  }
+
+  function openLeaderboard() {
+    closePatchNotes();
+    const drawer = $("#leaderboard-drawer");
+    const backdrop = $("#leaderboard-backdrop");
+    if (drawer) drawer.classList.add("open");
+    if (backdrop) backdrop.hidden = false;
+    renderLeaderboard(currentLeaderboardTab);
+  }
+
+  function closeLeaderboard() {
+    const drawer = $("#leaderboard-drawer");
+    const backdrop = $("#leaderboard-backdrop");
+    if (drawer) drawer.classList.remove("open");
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  function toggleLeaderboard() {
+    const drawer = $("#leaderboard-drawer");
+    if (drawer && drawer.classList.contains("open")) {
+      closeLeaderboard();
+    } else {
+      openLeaderboard();
+    }
+  }
+
+  function exportPlayerStats() {
+    const data = {
+      bthvs_version: BTHVS_VERSION,
+      exportedAt: new Date().toISOString(),
+      doctorName: playerName(),
+      stats: getPlayerStats()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bthvs-${playerName().toLowerCase().replace(/[^a-z0-9]/g, "_")}-stats.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function importPlayerStats(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        if (parsed && parsed.stats) {
+          savePlayerStats(parsed.stats);
+          if (parsed.doctorName) {
+            localStorage.setItem("bth-name", parsed.doctorName);
+            localStorage.setItem("bth-name-locked", "true");
+            if ($("#player-name")) $("#player-name").value = parsed.doctorName;
+            updateUsernameLockUI(true);
+          }
+          renderLeaderboard(currentLeaderboardTab);
+        }
+      } catch (err) {
+        console.error("Could not parse stats backup:", err);
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function refreshLevelOptions() {
     const sel = $("#mp-level");
     if (!sel) return;
@@ -2774,6 +3139,11 @@
     const summaryEl = $("#vic-stats-summary");
 
     if (iconEl) iconEl.innerHTML = "";
+    try {
+      const my = state.vs.myStats || {};
+      const durationMins = state.vs.startTime ? Math.max(1, Math.round((Date.now() - state.vs.startTime) / 60000)) : 1;
+      recordMatchStats(isMe, my.cured || 0, my.bal || 0, durationMins);
+    } catch (_) {}
     if (titleEl) {
       titleEl.textContent = isMe ? "Victory! You won the match!" : `Match concluded – ${winnerName} won!`;
       titleEl.className = isMe ? "vic-won" : "vic-lost";
@@ -2872,12 +3242,44 @@
   // ----------------------------------------------------------------- wiring
   async function init() {
     const storedName = localStorage.getItem("bth-name");
+    const isLocked = localStorage.getItem("bth-name-locked") === "true";
     if (storedName && $("#player-name")) {
       $("#player-name").value = storedName;
     } else if ($("#player-name") && !$("#player-name").value) {
       const generatedName = "Doctor" + Math.floor(100 + Math.random() * 900);
       $("#player-name").value = generatedName;
       localStorage.setItem("bth-name", generatedName);
+    }
+    updateUsernameLockUI(isLocked);
+
+    const btnLock = $("#btn-lock-name");
+    if (btnLock) {
+      btnLock.onclick = (e) => {
+        e.preventDefault();
+        const currentlyLocked = localStorage.getItem("bth-name-locked") === "true";
+        if (currentlyLocked) {
+          unlockUsername();
+        } else {
+          lockUsername();
+        }
+      };
+    }
+    const inputPlayerName = $("#player-name");
+    if (inputPlayerName) {
+      inputPlayerName.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          lockUsername();
+        }
+      });
+    }
+    const btnUserHelp = $("#btn-username-info");
+    if (btnUserHelp) {
+      btnUserHelp.onclick = (e) => {
+        e.preventDefault();
+        const hintBox = $("#username-info-box");
+        if (hintBox) hintBox.hidden = !hintBox.hidden;
+      };
     }
     $("#language").value = localStorage.getItem("bth-lang") || "English";
     $("#language").onchange = () => localStorage.setItem("bth-lang", $("#language").value);
@@ -2908,11 +3310,12 @@
     document.addEventListener("dragover", (e) => e.preventDefault());
     document.addEventListener("drop", (e) => e.preventDefault());
 
-    if ($("#btn-single")) $("#btn-single").onclick = () => startGame({ language: $("#language").value, name: playerName() });
-    $("#btn-create").onclick = () => enterLobby("create");
+    if ($("#btn-single")) $("#btn-single").onclick = () => { lockUsername(); startGame({ language: $("#language").value, name: playerName() }); };
+    $("#btn-create").onclick = () => { lockUsername(); enterLobby("create"); };
     $("#btn-join").onclick = () => {
       const code = $("#join-code").value.trim().toUpperCase();
       if (code.length < 4) { showMenuError("Please enter a room code."); return; }
+      lockUsername();
       enterLobby("join", code);
     };
     $("#join-code").addEventListener("input", (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
@@ -3011,11 +3414,49 @@
       fetchPatchNotes(true);
     };
 
+    // Leaderboard drawer wiring
+    const lbBtn = $("#leaderboard-btn");
+    if (lbBtn) lbBtn.onclick = (e) => {
+      e.preventDefault();
+      toggleLeaderboard();
+    };
+    const lbClose = $("#leaderboard-close");
+    if (lbClose) lbClose.onclick = closeLeaderboard;
+    const lbBackdrop = $("#leaderboard-backdrop");
+    if (lbBackdrop) lbBackdrop.onclick = closeLeaderboard;
+
+    document.querySelectorAll(".lb-tab").forEach((tabBtn) => {
+      tabBtn.onclick = (e) => {
+        e.preventDefault();
+        const tab = tabBtn.getAttribute("data-tab");
+        renderLeaderboard(tab);
+      };
+    });
+
+    const btnExport = $("#btn-export-stats");
+    if (btnExport) btnExport.onclick = exportPlayerStats;
+    const btnImport = $("#btn-import-stats");
+    const fileImport = $("#file-import-stats");
+    if (btnImport && fileImport) {
+      btnImport.onclick = (e) => {
+        e.preventDefault();
+        fileImport.click();
+      };
+      fileImport.onchange = () => {
+        if (fileImport.files && fileImport.files[0]) {
+          importPlayerStats(fileImport.files[0]);
+          fileImport.value = "";
+        }
+      };
+    }
+
     window.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         if (mapModal && !mapModal.hidden) closeMapModal();
         const patchDrawer = $("#patchnotes-drawer");
         if (patchDrawer && patchDrawer.classList.contains("open")) closePatchNotes();
+        const lbDrawer = $("#leaderboard-drawer");
+        if (lbDrawer && lbDrawer.classList.contains("open")) closeLeaderboard();
       }
     });
 
@@ -3058,7 +3499,7 @@
     }
 
     // test hooks (used by tests/*.js)
-    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION };
+    window.__bth = { state, startGame, setData, normaliseEntries, enterLobby, hostStart, toggleReady, checkWinConditions, updateQuestUI, refreshPublicLobbies, updateTotalHostedUI, openMapModal, closeMapModal, MAP_PREVIEWS, getGoalsFromUI, setGoalsInUI, playerName, saveWindowState, restoreWindowState, openPatchNotes, closePatchNotes, togglePatchNotes, fetchPatchNotes, FALLBACK_PATCHNOTES, version: BTHVS_VERSION, lockUsername, unlockUsername, updateUsernameLockUI, getPlayerStats, savePlayerStats, recordMatchStats, getLeaderboardEntries, renderLeaderboard, openLeaderboard, closeLeaderboard, toggleLeaderboard, exportPlayerStats, importPlayerStats, DEFAULT_LEADERBOARD };
   }
 
   init();
