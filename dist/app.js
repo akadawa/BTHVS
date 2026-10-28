@@ -1196,7 +1196,7 @@
 
     const line = document.createElement("div");
     line.className = "chat-line chat-sys";
-    line.textContent = `ℹ ${text}`;
+    line.textContent = text;
 
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
