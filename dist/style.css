@@ -247,7 +247,6 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
 .project-note-summary {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-left: 3px solid var(--accent);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 12px;
@@ -627,7 +626,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); }
   position: fixed;
   left: 0;
   top: 50%;
-  transform: translateY(-50%) rotate(180deg);
+  transform: translateY(-50%);
   z-index: 95;
   background: var(--card2);
   border: 1px solid var(--line);
